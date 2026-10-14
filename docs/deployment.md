@@ -26,14 +26,18 @@ FROM pg_available_extensions WHERE name IN ('pg_trgm', 'vector');
 
 pg-boss creates and manages its own schema `pgboss` inside the same database.
 
-## 2. Storage directory
+## 2. Storage directories
 
-```sh
-sudo mkdir -p /mnt/ssd/magpie/media /mnt/ssd/magpie/secrets
-sudo chown -R 1000:1000 /mnt/ssd/magpie   # matches container user
-```
+Nothing to prepare by default. Media and cookies live in host directories that default to the home of the user running compose (under Coolify: the user Coolify connects with over SSH):
 
-Put per-source cookie files in `/mnt/ssd/magpie/secrets/cookies/` named `<source-id>.txt`, e.g. `instagram.txt` (`chmod 600`).
+| Var | Default | Mounted into |
+|---|---|---|
+| `MEDIA_DIR` | `~/magpie/media` | api, worker (`/data/media`) |
+| `COOKIES_HOST_DIR` | `~/magpie/cookies` | worker, read-only (`/run/secrets/cookies`) |
+
+Point `MEDIA_DIR` at a big disk (e.g. an SSD mount) for real use. A one-shot `init` service creates missing directories and gives them to uid 1000 (the container user), so no manual `mkdir`/`chown` is needed. Under Coolify it shows as *exited* after it runs; that is expected.
+
+Put per-source cookie files in the cookies dir named `<source-id>.txt`, e.g. `instagram.txt`. `init` makes them `600` and owned by uid 1000 on the next deploy.
 
 ## 3. Coolify
 
@@ -43,9 +47,11 @@ Services:
 - `api` — exposed through Coolify proxy on your domain, HTTPS. Runs migrations on start, then serves.
 - `worker` — no ports.
 
-Volumes (bind mounts):
-- `/mnt/ssd/magpie/media:/data/media` → api, worker
-- `/mnt/ssd/magpie/secrets/cookies:/run/secrets/cookies:ro` → worker
+- `init` — one-shot, fixes ownership of the host directories, then exits.
+
+Volumes: bind mounts from `MEDIA_DIR` and `COOKIES_HOST_DIR` (see above).
+
+Redeploys can be triggered from GitHub Actions (the **Deploy** workflow, also run at the end of every release); it calls the resource's deploy webhook. Setup in [releases.md](releases.md#4-coolify-deploy-webhook).
 
 Images can build on the Pi via Coolify, or be pulled from GHCR: each release publishes `ghcr.io/sandoramix/slop-magpie-{api,worker}:<version>` (ARM64). See [releases.md](releases.md).
 
@@ -67,7 +73,7 @@ Optional: `LOG_LEVEL`, `MAX_VIDEO_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`
 
 `TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.
 
-Compose-only: `MEDIA_DIR` (host media dir, default `/mnt/ssd/magpie/media`) and `COOKIES_HOST_DIR` (default `/mnt/ssd/magpie/secrets/cookies`).
+Compose-only: `MEDIA_DIR` (default `~/magpie/media`) and `COOKIES_HOST_DIR` (default `~/magpie/cookies`); see step 2.
 
 Containers run as the `node` user (uid 1000) with a read-only root filesystem; only the media volume and `/tmp` (tmpfs) are writable.
 

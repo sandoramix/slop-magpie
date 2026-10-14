@@ -52,8 +52,9 @@ On a pushed `v*.*.*` tag:
 2. **android**: `expo prebuild`, then `gradlew assembleRelease`, signed with the release keystore from repository secrets. Produces `magpie-<version>.apk`.
 3. **images**: `api` and `worker` images built natively on an ARM64 runner and pushed to GHCR as `ghcr.io/<owner>/<repo>-<app>:<version>` and `:latest`.
 4. **publish**: GitHub release `Magpie <version>` with the changelog entry, install instructions, a compare link to the previous tag, the APK and `SHA256SUMS`.
+5. **deploy**: calls the Coolify deploy webhook ([`deploy.yml`](../.github/workflows/deploy.yml)), so the server redeploys. Coolify rebuilds the branch configured in the resource, so point the resource at `main`.
 
-If any job fails, nothing is published.
+If any job before **publish** fails, nothing is published. If only **deploy** fails, the release stands; re-run the job or run **Deploy** by hand from the Actions tab.
 
 ## One-time setup
 
@@ -77,11 +78,23 @@ gh secret set ANDROID_KEY_ALIAS --body magpie
 gh secret set ANDROID_KEY_PASSWORD
 ```
 
-On macOS, use `base64 -i magpie-release.jks` instead of `base64 -w0`. `GITHUB_TOKEN` covers the release and GHCR, so no other secrets are needed.
+On macOS, use `base64 -i magpie-release.jks` instead of `base64 -w0`. `GITHUB_TOKEN` covers the release and GHCR.
 
 ### 3. GHCR package visibility
 
 After the first release, the images appear under the repository's **Packages**. To pull them without logging in, set each package's visibility to public. Otherwise, run `docker login ghcr.io` on the server with a token that has the `read:packages` scope.
+
+### 4. Coolify deploy webhook
+
+The **Deploy** workflow needs two more repository secrets:
+
+- `COOLIFY_WEBHOOK`: the resource's deploy URL, from Coolify → resource → **Webhooks** (`https://<coolify>/api/v1/deploy?uuid=<resource uuid>&force=false`).
+- `COOLIFY_TOKEN`: a Coolify API token with the **deploy** permission (Coolify → **Keys & Tokens** → API tokens). API access must be enabled in Coolify's settings.
+
+```sh
+gh secret set COOLIFY_WEBHOOK   # paste the URL
+gh secret set COOLIFY_TOKEN     # paste the token
+```
 
 ## How to release
 
@@ -111,7 +124,7 @@ git switch dev
 
 Then follow the run with `gh run watch` (or in the **Actions** tab). When it finishes, the release appears under **Releases**.
 
-To deploy the server, point Coolify at the new image tag (or `:latest`) and redeploy. Install the APK from the release page on the phone.
+The server redeploys automatically through the **deploy** job. Install the APK from the release page on the phone.
 
 ### If the workflow fails
 
