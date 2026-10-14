@@ -3,9 +3,6 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "exports": {
-    "./app-type": "./src/app-type.ts"
-  },
   "scripts": {
     "dev": "node --env-file-if-exists=../../.env --watch src/index.ts",
     "start": "node src/index.ts",
@@ -17,6 +14,7 @@
     "@hono/node-server": "^2.1.5",
     "@hono/zod-validator": "^0.9.1",
     "@magpie/db": "workspace:*",
+    "@magpie/jobs": "workspace:*",
     "@magpie/shared": "workspace:*",
     "@magpie/storage": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",

@@ -12,12 +12,14 @@
   },
   "dependencies": {
     "@magpie/db": "workspace:*",
+    "@magpie/jobs": "workspace:*",
     "@magpie/shared": "workspace:*",
     "@magpie/storage": "workspace:*",
     "@t3-oss/env-core": "^0.13.11",
     "drizzle-orm": "^0.45.4",
     "pg-boss": "^12.38.0",
     "pino": "^10.4.0",
+    "sharp": "^0.35.5",
     "undici": "^8.12.0",
     "zod": "^4.6.7"
   }

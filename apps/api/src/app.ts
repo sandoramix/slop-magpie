@@ -8,6 +8,9 @@ import { ApiError, errorBody, errorResponse } from "./http/errors.ts";
 import { bearerAuth } from "./middleware/auth.ts";
 import { createFailureLimiter } from "./middleware/rate-limit.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { itemsRoutes } from "./routes/items.ts";
+import { mediaRoutes } from "./routes/media.ts";
+import { fieldsRoutes, foldersRoutes, smartFoldersRoutes, statsRoutes, tagsRoutes } from "./routes/organize.ts";
 import { sourcesRoutes } from "./routes/sources.ts";
 
 export const API_PREFIX = "/api/v1";
@@ -19,9 +22,17 @@ export function createApp(deps: AppDeps) {
   const api = new Hono()
     // public: no bearer token
     .route("/health", healthRoutes(deps))
+    // authorized by the URL signature instead
+    .route("/media", mediaRoutes(deps))
     // everything below needs the token, including unknown paths (401 before 404)
     .use("*", bearerAuth({ token: deps.apiToken, limiter, trustProxy: deps.trustProxy, audit: deps.audit }))
-    .route("/sources", sourcesRoutes(deps));
+    .route("/sources", sourcesRoutes(deps))
+    .route("/items", itemsRoutes(deps))
+    .route("/folders", foldersRoutes(deps))
+    .route("/tags", tagsRoutes(deps))
+    .route("/fields", fieldsRoutes(deps))
+    .route("/smart-folders", smartFoldersRoutes(deps))
+    .route("/stats", statsRoutes(deps));
 
   const app = new Hono();
 
@@ -67,5 +78,3 @@ export function createApp(deps: AppDeps) {
 
   return { app, api };
 }
-
-export type ApiRoutes = ReturnType<typeof createApp>["api"];
