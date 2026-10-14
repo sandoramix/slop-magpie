@@ -37,6 +37,16 @@ Magpie: single-user, self-hosted archive for content from any site (Instagram fi
 - Naming: files `kebab-case.ts`, types `PascalCase`, DB tables/columns `snake_case`, TS fields `camelCase` (Drizzle maps).
 - Keep comments sparse; explain *why*, not *what*.
 
+## Branches and releases
+
+- **`main` is the release branch.** Never commit to it directly; it only moves when the owner says to "release".
+- **All development happens on `dev`.** Branch from and commit to `dev` (short-lived feature branches off `dev` are fine, merge back into `dev`).
+- **Versioning: SemVer `<major>.<minor>.<patch>`**, single source of truth is the `version` field in `apps/mobile/app.config.ts`. It is edited by hand; no bump scripts or CI auto-versioning. Anything else that needs the version (Android `versionCode`, API `/health`) derives it from that value — e.g. `versionCode = major * 10000 + minor * 100 + patch`.
+- **Release procedure** (only on the owner's explicit "release"):
+  1. On `dev`, confirm the bump with the owner (patch / minor / major) and update `version` in `app.config.ts`; commit `chore(release): vX.Y.Z`.
+  2. `pnpm typecheck && pnpm lint && pnpm test` pass.
+  3. Merge `dev` into `main`, tag `vX.Y.Z` on `main`, push `main`, `dev` and the tag.
+
 ## Commands
 
 ```sh
