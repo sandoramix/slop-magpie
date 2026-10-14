@@ -1,0 +1,29 @@
+node_modules/
+dist/
+build/
+.turbo/
+.expo/
+*.tsbuildinfo
+coverage/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+*.cookies.txt
+secrets/
+
+# local data
+data/
+tmp/
+
+# native builds
+apps/mobile/android/
+apps/mobile/ios/
+*.apk
+*.aab
+
+.DS_Store
+*.jks
+*.keystore
+credentials.json
