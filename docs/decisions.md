@@ -65,3 +65,7 @@ Owner wants a shadcn-like component library.
 Owner wants Expo + Expo Router for easy routing, development and deployment, without committing `android/` / `ios/`.
 **Decision:** managed Expo with Continuous Native Generation: `expo prebuild` generates native dirs (gitignored); all native config in `app.config.ts` + config plugins; development builds via `expo-dev-client`; release via EAS Build (free tier) or local `expo run:android`.
 **Consequences:** native config is reproducible from code; SDK upgrades are simpler. Any native tweak must be expressed as a config plugin. Expo Go is not usable (custom native modules).
+
+## D15 — `dev` / `main` branches, manual SemVer (2026-10-14)
+**Decision:** all work lands on `dev`; `main` is the release branch and only moves on an explicit release (merge `dev` → `main`, tag `vX.Y.Z`). Version is SemVer, edited by hand in `apps/mobile/app.config.ts`; derived values (Android `versionCode`, API version) are computed from it.
+**Consequences:** `main` always matches the latest release; one place to bump the version.
