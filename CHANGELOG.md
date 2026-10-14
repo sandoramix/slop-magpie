@@ -12,3 +12,6 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 - Organize items with nested folders (an item can be in several), tags, keywords, notes, favorites, ratings, a status (inbox, to try, done, reference) and your own custom fields.
 - Search with free text, typo tolerance and filters such as `tag:`, `folder:`, `is:fav`, `from:@author`, `source:`, `kind:`, `saved:>2026-01-01` and `field:minutes<20`.
 - Smart folders that save a search.
+- Saved links are archived in the background: video, images and carousels (Instagram first, any other site through a generic fetcher), with a thumbnail, caption, author and keywords. Pages without media are kept as bookmarks with a preview image.
+- Folder and tag suggestions learned from how you file items; confident ones are applied automatically, the rest wait for you to accept or dismiss.
+- Items whose original post was removed are detected by a weekly check.

@@ -56,7 +56,7 @@ Expo + Expo Router. Android first; the same code targets web (react-native-web) 
 
 Rule of thumb: **anything that comes from the API lives in TanStack Query, never copied into Zustand.** Zustand holds only local UI/preferences.
 
-The API client is typed from `packages/shared` (Hono RPC client `hc<AppType>`), so endpoints, params and responses are checked at compile time.
+The API client is a small fetch wrapper that validates every response with the zod schemas from `packages/shared` (see D19).
 
 ### apps/api
 Hono on Node 24. Stateless; can be restarted any time.

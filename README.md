@@ -46,7 +46,7 @@ docs/             design documentation
 
 ## Status
 
-The server scaffold (API, worker, database, storage) is in place; the mobile app scaffold is next. See the [roadmap](docs/roadmap.md).
+The server (API, worker pipeline, search, organization, auto-categorization) is implemented; the mobile app is next. See the [roadmap](docs/roadmap.md).
 
 ## Getting started
 

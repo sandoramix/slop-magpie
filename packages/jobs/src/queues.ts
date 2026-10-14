@@ -14,6 +14,7 @@ export const queues = {
   blobDelete: { name: "blob-delete", options: { retryLimit: 5, retryDelay: 300, retryBackoff: true } },
   auditPrune: { name: "audit-prune", options: { retryLimit: 1 } },
   sourceCheck: { name: "source-check", options: { retryLimit: 1, expireInSeconds: 60 * 60 } },
+  sweep: { name: "sweep", options: { retryLimit: 0 } },
 } as const satisfies Record<string, { name: string; options: Omit<Queue, "name"> }>;
 
 export type QueueKey = keyof typeof queues;

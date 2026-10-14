@@ -62,6 +62,7 @@ services:
       WORKER_TMP_DIR: /tmp/magpie
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
       MAX_VIDEO_MB: ${MAX_VIDEO_MB:-60}
+      MAX_DOWNLOAD_MB: ${MAX_DOWNLOAD_MB:-500}
       AUTO_ASSIGN_THRESHOLD: ${AUTO_ASSIGN_THRESHOLD:-0.8}
     volumes:
       - ${MEDIA_DIR:-~/magpie/media}:/data/media
