@@ -180,3 +180,10 @@ jobs:
             --title "Magpie $VERSION" \
             --notes-file notes.md \
             --verify-tag
+
+  deploy:
+    needs: publish
+    uses: ./.github/workflows/deploy.yml
+    secrets:
+      COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+      COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}

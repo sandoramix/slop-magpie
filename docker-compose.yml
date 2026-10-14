@@ -1,5 +1,6 @@
-# Coolify "Docker Compose" resource. Env vars are set in Coolify (see .env.example, docs/deployment.md).
+# Coolify "Docker Compose" resource (or plain `docker compose up -d`). Env vars: .env.example, docs/deployment.md.
 # Postgres is an existing external instance reached through DATABASE_URL.
+# Host dirs default to ~/magpie/... of the user running compose; override with MEDIA_DIR / COOKIES_HOST_DIR.
 x-common-env: &common-env
   DATABASE_URL: ${DATABASE_URL:?}
   MEDIA_SIGNING_SECRET: ${MEDIA_SIGNING_SECRET:?}
@@ -15,6 +16,23 @@ x-hardening: &hardening
   restart: unless-stopped
 
 services:
+  # one-shot: Docker creates missing bind-mount dirs as root, but the apps run as uid 1000
+  init:
+    image: busybox:1.37
+    user: "0:0"
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
+    command: >-
+      sh -c "chown 1000:1000 /data/media &&
+      chown -R 1000:1000 /cookies &&
+      find /cookies -type f -exec chmod 600 {} + &&
+      chmod 700 /cookies"
+    volumes:
+      - ${MEDIA_DIR:-~/magpie/media}:/data/media
+      - ${COOKIES_HOST_DIR:-~/magpie/cookies}:/cookies
+    restart: "no"
+
   api:
     build: { context: ., dockerfile: apps/api/Dockerfile }
     <<: *hardening
@@ -26,8 +44,10 @@ services:
       MEDIA_URL_TTL_SECONDS: ${MEDIA_URL_TTL_SECONDS:-3600}
       TRUST_PROXY: ${TRUST_PROXY:-true}
     volumes:
-      - ${MEDIA_DIR:-/mnt/ssd/magpie/media}:/data/media
+      - ${MEDIA_DIR:-~/magpie/media}:/data/media
     tmpfs: [/tmp]
+    depends_on:
+      init: { condition: service_completed_successfully }
     expose: ["3000"]
     deploy:
       resources:
@@ -44,8 +64,8 @@ services:
       MAX_VIDEO_MB: ${MAX_VIDEO_MB:-60}
       AUTO_ASSIGN_THRESHOLD: ${AUTO_ASSIGN_THRESHOLD:-0.8}
     volumes:
-      - ${MEDIA_DIR:-/mnt/ssd/magpie/media}:/data/media
-      - ${COOKIES_HOST_DIR:-/mnt/ssd/magpie/secrets/cookies}:/run/secrets/cookies:ro
+      - ${MEDIA_DIR:-~/magpie/media}:/data/media
+      - ${COOKIES_HOST_DIR:-~/magpie/cookies}:/run/secrets/cookies:ro
     # downloads land here before moving to the media volume
     tmpfs: ["/tmp:size=4g"]
     depends_on:
