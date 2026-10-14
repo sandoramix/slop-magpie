@@ -39,7 +39,7 @@ Expo + Expo Router. Android first; the same code targets web (react-native-web) 
 | Routing | **Expo Router** (file-based, typed routes, deep links `magpie://`) |
 | Native config | `app.config.ts` (typed, reads t3-env) + config plugins; local plugins in `plugins/` |
 | Dev | `expo run:android` → dev build on device/emulator, Metro with fast refresh |
-| Builds | EAS Build (free tier) or local `expo run:android --variant release`; profiles in `eas.json` |
+| Builds | release APK built by GitHub Actions on `v*` tags ([releases.md](releases.md)); local `expo run:android --variant release` for testing |
 | Updates | `expo-updates` (EAS Update) for JS-only changes, optional |
 | UI components | **React Native Reusables** (shadcn/ui port for RN: copy-paste components in `components/ui/`, built on rn-primitives) |
 | Styling | **NativeWind v4** (Tailwind classes, shadcn CSS-variable theme, light/dark) |
