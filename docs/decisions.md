@@ -67,10 +67,20 @@ Owner wants Expo + Expo Router for easy routing, development and deployment, wit
 **Consequences:** native config is reproducible from code; SDK upgrades are simpler. Any native tweak must be expressed as a config plugin. Expo Go is not usable (custom native modules).
 
 ## D15 — `dev` / `main` branches, manual SemVer (2026-10-14)
-**Decision:** all work lands on `dev`; `main` is the release branch and only moves on an explicit release (merge `dev` → `main`, tag `vX.Y.Z`). Version is SemVer, edited by hand in `apps/mobile/app.config.ts`; derived values (Android `versionCode`, API version) are computed from it.
+**Decision:** all work lands on `dev`; `main` is the release branch and only moves on an explicit release (merge `dev` → `main`, tag `vX.Y.Z`). Version is SemVer, edited by hand in one place (see D17); derived values (Android `versionCode`, API version) are computed from it.
 **Consequences:** `main` always matches the latest release; one place to bump the version.
 
 ## D16 — Changelog file + tag-triggered GitHub releases (2026-10-14)
 Owner's commit messages are not always conventional, so commit-derived changelogs are unreliable.
-**Decision:** hand-written `CHANGELOG.md` (Keep a Changelog) is the single source for release notes and the in-app "What's new" (embedded at build time via `app.config.ts` `extra`). Pushing `v<version>` on `main` runs a GitHub Actions workflow: verify (tag = `app.config.ts` version, changelog entry, checks) → signed APK built on the runner (no EAS dependency) + ARM64 `api`/`worker` images to GHCR → GitHub release with notes, APK and checksums.
+**Decision:** hand-written `CHANGELOG.md` (Keep a Changelog) is the single source for release notes and the in-app "What's new" (embedded at build time via `app.config.ts` `extra`). Pushing `v<version>` on `main` runs a GitHub Actions workflow: verify (tag = root `package.json` version, changelog entry, checks) → signed APK built on the runner (no EAS dependency) + ARM64 `api`/`worker` images to GHCR → GitHub release with notes, APK and checksums.
 **Consequences:** release keystore lives in repo secrets and must be backed up; one changelog edit per user-visible change; Coolify can deploy pinned image tags instead of building on the host.
+
+## D17 — Release version lives in the root `package.json` (2026-10-14)
+Supersedes the `app.config.ts` location from D15. `app.config.ts` is code, so reading its version needs Expo's config loader; the API and CI need the version too.
+**Decision:** `version` in the root `package.json` is the single source. `app.config.ts` reads it (and derives `versionCode`), api/worker import it as JSON (`src/version.ts`), CI reads it with `jq`. Workspace packages stay at `0.0.0`.
+**Consequences:** plain JSON, readable everywhere without tooling; no `APP_VERSION` Docker build arg. The root `package.json` must be copied into server images (pnpm needs it anyway).
+
+## D18 — Run TypeScript directly, no build step (2026-10-14)
+Node 24 strips types natively (`scripts/changelog.ts` already relied on it).
+**Decision:** api, worker and workspace packages run their `.ts` sources with plain `node`, in dev and in Docker; packages export `src/` instead of `dist/`. `tsc` only typechecks (`noEmit`).
+**Consequences:** no bundler/emit config, no source maps to manage, identical code paths in dev and prod. Only erasable TS syntax is allowed (`erasableSyntaxOnly`), and relative imports carry `.ts`. Workspace packages must stay outside `node_modules` paths (pnpm symlinks resolve to the real path, so they do) because Node does not strip types under `node_modules`. TypeScript is pinned to 6.0 until typescript-eslint supports 7.

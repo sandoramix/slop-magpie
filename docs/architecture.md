@@ -78,7 +78,7 @@ Node 24 process consuming pg-boss queues. Runs heavy, slow, failure-prone work.
 The API contract: zod schemas, inferred types, enums, the source registry (URL matching/normalization, see [sources.md](sources.md)), query-language parser. Imported by api, worker and mobile. No Node-only APIs (must run in React Native).
 
 ### Env
-Every app validates its env with **t3-env** (`@t3-oss/env-core` + zod) in `src/env.ts`. Shared fragments (e.g. storage, database) live in `packages/shared/src/env/` and are composed with `extends`.
+Every app validates its env with **t3-env** (`@t3-oss/env-core` + zod) in `src/env.ts`. Shared fragments (zod shapes for database, storage, logging) live in `packages/shared/src/env/` and are spread into each app's `createEnv({ server: { ...databaseEnv, ... } })`.
 
 ### packages/db
 Drizzle schema, migrations and a configured client. Used by api and worker.

@@ -1,0 +1,21 @@
+{
+  "name": "@magpie/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./api": "./src/api/index.ts",
+    "./sources": "./src/sources/index.ts",
+    "./net": "./src/net/index.ts",
+    "./env": "./src/env/index.ts",
+    "./changelog": "./src/changelog.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

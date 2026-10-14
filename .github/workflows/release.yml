@@ -32,13 +32,13 @@ jobs:
       - name: Tag is on main
         run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
 
-      - name: Tag matches app version and changelog
+      # the version comes from package.json; the tag only triggers the run and must agree
+      - name: Read version from package.json, check tag and changelog
         id: version
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          app_version="$(cd apps/mobile && npx expo config --type public --json | jq -r .version)"
-          if [ "$app_version" != "$version" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match apps/mobile/app.config.ts version $app_version"
+          version="$(jq -r .version package.json)"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version (expected v$version)"
             exit 1
           fi
           node scripts/changelog.ts check "$version"
@@ -122,7 +122,6 @@ jobs:
           file: apps/${{ matrix.app }}/Dockerfile
           platforms: linux/arm64
           push: true
-          build-args: APP_VERSION=${{ env.VERSION }}
           tags: |
             ghcr.io/${{ github.repository }}-${{ matrix.app }}:${{ env.VERSION }}
             ghcr.io/${{ github.repository }}-${{ matrix.app }}:latest

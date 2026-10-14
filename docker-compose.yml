@@ -1,0 +1,55 @@
+# Coolify "Docker Compose" resource. Env vars are set in Coolify (see .env.example, docs/deployment.md).
+# Postgres is an existing external instance reached through DATABASE_URL.
+x-common-env: &common-env
+  DATABASE_URL: ${DATABASE_URL:?}
+  MEDIA_SIGNING_SECRET: ${MEDIA_SIGNING_SECRET:?}
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?}
+  STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+  STORAGE_LOCAL_ROOT: /data/media
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+
+x-hardening: &hardening
+  read_only: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  restart: unless-stopped
+
+services:
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    <<: *hardening
+    environment:
+      <<: *common-env
+      PORT: 3000
+      API_TOKEN: ${API_TOKEN:?}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      MEDIA_URL_TTL_SECONDS: ${MEDIA_URL_TTL_SECONDS:-3600}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+    volumes:
+      - ${MEDIA_DIR:-/mnt/ssd/magpie/media}:/data/media
+    tmpfs: [/tmp]
+    expose: ["3000"]
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 512M }
+
+  worker:
+    build: { context: ., dockerfile: apps/worker/Dockerfile }
+    <<: *hardening
+    environment:
+      <<: *common-env
+      COOKIES_DIR: /run/secrets/cookies
+      WORKER_TMP_DIR: /tmp/magpie
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+      MAX_VIDEO_MB: ${MAX_VIDEO_MB:-60}
+      AUTO_ASSIGN_THRESHOLD: ${AUTO_ASSIGN_THRESHOLD:-0.8}
+    volumes:
+      - ${MEDIA_DIR:-/mnt/ssd/magpie/media}:/data/media
+      - ${COOKIES_HOST_DIR:-/mnt/ssd/magpie/secrets/cookies}:/run/secrets/cookies:ro
+    # downloads land here before moving to the media volume
+    tmpfs: ["/tmp:size=4g"]
+    depends_on:
+      api: { condition: service_healthy }
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 2G }

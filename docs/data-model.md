@@ -90,7 +90,7 @@ Nested tree. An item can be in **many** folders (folders behave like hierarchica
 | position | int | manual ordering among siblings |
 | created_at | timestamptz | |
 
-Unique `(parent_id, lower(name))` (with `NULLS NOT DISTINCT` for roots). Cycles prevented in the API (move checks ancestry with a recursive CTE).
+Unique `(coalesce(parent_id, <nil uuid>), lower(name))` — the coalesce makes root names unique too, on any Postgres version. Cycles prevented in the API (move checks ancestry with a recursive CTE).
 
 ### item_folders
 

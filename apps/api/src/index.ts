@@ -1,0 +1,58 @@
+import { serve } from "@hono/node-server";
+import { auditLog, createDb, items, runMigrations } from "@magpie/db";
+import { count } from "drizzle-orm";
+import { createApp } from "./app.ts";
+import type { AppDeps } from "./deps.ts";
+import { env } from "./env.ts";
+import { createLogger } from "./logger.ts";
+import { APP_VERSION } from "./version.ts";
+
+const log = createLogger(env.LOG_LEVEL);
+
+await runMigrations(env.DATABASE_URL);
+log.info("migrations applied");
+
+const database = createDb(env.DATABASE_URL);
+const { db } = database;
+
+const deps: AppDeps = {
+  version: APP_VERSION,
+  apiToken: env.API_TOKEN,
+  corsOrigins: env.CORS_ORIGINS,
+  trustProxy: env.TRUST_PROXY,
+  log,
+  checkDb: database.ping,
+  async audit(event) {
+    try {
+      await db.insert(auditLog).values(event);
+    } catch (error) {
+      log.error({ err: error, action: event.action }, "audit write failed");
+    }
+  },
+  async countItemsBySource() {
+    const rows = await db.select({ source: items.source, n: count() }).from(items).groupBy(items.source);
+    return new Map(rows.map((r) => [r.source, r.n]));
+  },
+};
+
+const { app } = createApp(deps);
+const server = serve({ fetch: app.fetch, port: env.PORT }, (info) => {
+  log.info({ port: info.port, version: APP_VERSION }, "api listening");
+});
+
+let stopping = false;
+const shutdown = (signal: string) => {
+  if (stopping) return;
+  stopping = true;
+  log.info({ signal }, "shutting down");
+  server.close(() => {
+    void database.close().finally(() => process.exit(0));
+  });
+  setTimeout(() => process.exit(1), 10_000).unref();
+};
+process.on("SIGTERM", () => {
+  shutdown("SIGTERM");
+});
+process.on("SIGINT", () => {
+  shutdown("SIGINT");
+});

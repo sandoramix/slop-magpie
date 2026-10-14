@@ -27,6 +27,7 @@ Magpie: single-user, self-hosted archive for content from any site (Instagram fi
 
 - Package manager: **pnpm** workspaces + turborepo. Node 24 (`.nvmrc`).
 - ESM everywhere (`"type": "module"`).
+- **No build step for Node code.** Node 24 strips types, so api/worker/packages run their `.ts` sources directly (also in Docker); workspace packages export `src/`. Consequences: relative imports use the `.ts` extension, and only erasable syntax is allowed (no `enum`, `namespace`, parameter properties) — enforced by `erasableSyntaxOnly`. Use `as const` arrays + `z.enum` instead of enums.
 - IDs: UUIDv7 (time-sortable), generated in app code.
 - Timestamps: `timestamptz`, stored UTC.
 - Env vars parsed once at startup with t3-env (`src/env.ts` per app); fail fast on invalid config.
@@ -41,10 +42,10 @@ Magpie: single-user, self-hosted archive for content from any site (Instagram fi
 
 - **`main` is the release branch.** Never commit to it directly; it only moves when the owner says to "release".
 - **All development happens on `dev`.** Branch from and commit to `dev` (short-lived feature branches off `dev` are fine, merge back into `dev`).
-- **Versioning: SemVer `<major>.<minor>.<patch>`**, single source of truth is the `version` field in `apps/mobile/app.config.ts`. It is edited by hand; no bump scripts or CI auto-versioning. Anything else that needs the version (Android `versionCode`, API `/health`) derives it from that value — e.g. `versionCode = major * 10000 + minor * 100 + patch`.
+- **Versioning: SemVer `<major>.<minor>.<patch>`**, single source of truth is the `version` field in the **root `package.json`**. It is edited by hand; no bump scripts or CI auto-versioning. Workspace packages keep `0.0.0` (private, never published). Anything else that needs the version derives it from the root value: `app.config.ts` (app `version`, Android `versionCode = major * 10000 + minor * 100 + patch`), API/worker (`src/version.ts`, JSON import → `/health`), CI (`jq -r .version package.json`).
 - **Changelog: `CHANGELOG.md`** (Keep a Changelog) is the only source of release notes and of the in-app "What's new". Every user-visible change on `dev` adds a bullet under `## [Unreleased]` in the same change, written for app users (not commit-style). Commits are not parsed; the owner's commit messages may not be conventional.
 - **Release procedure** (only on the owner's explicit "release"; full steps in [docs/releases.md](docs/releases.md)):
-  1. On `dev`, confirm the bump with the owner (patch / minor / major) and update `version` in `app.config.ts`.
+  1. On `dev`, confirm the bump with the owner (patch / minor / major) and update `version` in the root `package.json`.
   2. Fill gaps in `[Unreleased]` from `git log <last tag>..dev`, then `node scripts/changelog.ts release X.Y.Z`; show the owner the entry.
   3. `pnpm typecheck && pnpm lint && pnpm test` pass; commit `chore(release): vX.Y.Z`.
   4. Merge `dev` into `main` (`--no-ff`), tag `vX.Y.Z` on `main`, push `main`, `dev` and the tag. CI (`.github/workflows/release.yml`) builds the APK and images and publishes the GitHub release.

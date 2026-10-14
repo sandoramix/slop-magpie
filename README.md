@@ -46,7 +46,7 @@ docs/             design documentation
 
 ## Status
 
-The project is in the design phase. Documentation is written, and the code scaffold is next. See the [roadmap](docs/roadmap.md).
+The server scaffold (API, worker, database, storage) is in place; the mobile app scaffold is next. See the [roadmap](docs/roadmap.md).
 
 ## Getting started
 
