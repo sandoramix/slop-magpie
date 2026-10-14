@@ -1,4 +1,4 @@
-import type { ItemListQuery } from "@magpie/shared/api";
+import type { SmartFolderQuery } from "@magpie/shared/api";
 import { sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
@@ -105,7 +105,6 @@ export const fieldDefs = pgTable(
   (t) => [uniqueIndex("field_defs_key_key").on(t.key)],
 );
 
-export type SmartFolderQuery = Omit<ItemListQuery, "cursor" | "limit">;
 
 export const smartFolders = pgTable("smart_folders", {
   id: id(),
@@ -115,3 +114,35 @@ export const smartFolders = pgTable("smart_folders", {
   query: jsonb().$type<SmartFolderQuery>().notNull(),
   position: integer().notNull().default(0),
 });
+
+// Suggestions below AUTO_ASSIGN_THRESHOLD, waiting for accept/dismiss. Two tables (not one
+// polymorphic one) so deleting a folder/tag cascades.
+export const itemFolderSuggestions = pgTable(
+  "item_folder_suggestions",
+  {
+    itemId: uuid()
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    folderId: uuid()
+      .notNull()
+      .references(() => folders.id, { onDelete: "cascade" }),
+    confidence: real().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.folderId] })],
+);
+
+export const itemTagSuggestions = pgTable(
+  "item_tag_suggestions",
+  {
+    itemId: uuid()
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    tagId: uuid()
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    confidence: real().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.tagId] })],
+);

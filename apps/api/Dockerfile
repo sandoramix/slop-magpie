@@ -11,6 +11,7 @@ COPY apps/api/package.json apps/api/
 COPY packages/shared/package.json packages/shared/
 COPY packages/db/package.json packages/db/
 COPY packages/storage/package.json packages/storage/
+COPY packages/jobs/package.json packages/jobs/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod --filter "@magpie/api..."
 
@@ -20,6 +21,7 @@ COPY --from=deps /app ./
 COPY packages/shared packages/shared
 COPY packages/db packages/db
 COPY packages/storage packages/storage
+COPY packages/jobs packages/jobs
 COPY apps/api apps/api
 USER node
 EXPOSE 3000

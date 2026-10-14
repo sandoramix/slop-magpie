@@ -52,6 +52,8 @@ export const items = pgTable(
     index("items_source_idx").on(t.source),
     index("items_saved_at_idx").on(t.savedAt.desc()),
     index("items_workflow_idx").on(t.workflow),
+    index("items_fetch_status_idx").on(t.fetchStatus).where(sql`${t.fetchStatus} <> 'ready'`),
+    index("items_availability_checked_idx").on(t.availabilityCheckedAt.asc().nullsFirst()),
     index("items_favorite_idx").on(t.savedAt.desc()).where(sql`${t.favorite}`),
     index("items_search_idx").using("gin", t.searchTsv),
     index("items_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),

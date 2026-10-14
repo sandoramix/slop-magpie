@@ -1,31 +1,14 @@
 import { pino } from "pino";
 import { describe, expect, it, vi } from "vitest";
 import { createApp } from "./app.ts";
-import type { AppDeps, AuditEvent } from "./deps.ts";
-
-const TOKEN = "t".repeat(48);
+import type { AppDeps } from "./deps.ts";
+import { auth, unitDeps } from "./testing.ts";
 
 function setup(overrides: Partial<AppDeps> = {}) {
-  const audits: AuditEvent[] = [];
-  const deps: AppDeps = {
-    version: "1.2.3",
-    apiToken: TOKEN,
-    corsOrigins: [],
-    trustProxy: true,
-    log: pino({ level: "silent" }),
-    checkDb: () => Promise.resolve(),
-    audit: (e) => {
-      audits.push(e);
-      return Promise.resolve();
-    },
-    countItemsBySource: () => Promise.resolve(new Map([["instagram", 3]])),
-    ...overrides,
-  };
+  const { deps, audits } = unitDeps(overrides);
   const { app } = createApp(deps);
   return { app, audits };
 }
-
-const auth = { Authorization: `Bearer ${TOKEN}` };
 
 describe("health", () => {
   it("is public and reports the version", async () => {

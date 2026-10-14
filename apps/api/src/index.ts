@@ -1,5 +1,7 @@
 import { serve } from "@hono/node-server";
 import { auditLog, createDb, items, runMigrations } from "@magpie/db";
+import { createPgBossSender } from "@magpie/jobs";
+import { createBlobStore } from "@magpie/storage";
 import { count } from "drizzle-orm";
 import { createApp } from "./app.ts";
 import type { AppDeps } from "./deps.ts";
@@ -14,6 +16,9 @@ log.info("migrations applied");
 
 const database = createDb(env.DATABASE_URL);
 const { db } = database;
+const jobs = await createPgBossSender(env.DATABASE_URL, (error) => {
+  log.error({ err: error }, "pg-boss error");
+});
 
 const deps: AppDeps = {
   version: APP_VERSION,
@@ -33,6 +38,11 @@ const deps: AppDeps = {
     const rows = await db.select({ source: items.source, n: count() }).from(items).groupBy(items.source);
     return new Map(rows.map((r) => [r.source, r.n]));
   },
+  db,
+  store: createBlobStore(env),
+  jobs,
+  mediaSigningSecret: env.MEDIA_SIGNING_SECRET,
+  mediaUrlTtlSeconds: env.MEDIA_URL_TTL_SECONDS,
 };
 
 const { app } = createApp(deps);
@@ -46,7 +56,7 @@ const shutdown = (signal: string) => {
   stopping = true;
   log.info({ signal }, "shutting down");
   server.close(() => {
-    void database.close().finally(() => process.exit(0));
+    void Promise.allSettled([jobs.stop(), database.close()]).finally(() => process.exit(0));
   });
   setTimeout(() => process.exit(1), 10_000).unref();
 };

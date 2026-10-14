@@ -1,3 +1,6 @@
+import type { Database } from "@magpie/db";
+import type { JobSender } from "@magpie/jobs";
+import type { BlobStore } from "@magpie/storage";
 import type { Logger } from "./logger.ts";
 
 export interface AuditEvent {
@@ -18,4 +21,14 @@ export interface AppDeps {
   checkDb: () => Promise<void>;
   audit: (event: AuditEvent) => Promise<void>;
   countItemsBySource: () => Promise<ReadonlyMap<string, number>>;
+  db: Database;
+  store: BlobStore;
+  jobs: JobSender;
+  mediaSigningSecret: string;
+  mediaUrlTtlSeconds: number;
+  /** `POST /items` per minute. */
+  createItemLimit?: number;
 }
+
+/** Subset handed to services. */
+export type ServiceDeps = Pick<AppDeps, "db" | "store" | "jobs" | "log" | "mediaUrlTtlSeconds">;
