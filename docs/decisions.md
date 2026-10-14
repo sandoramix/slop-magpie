@@ -84,3 +84,18 @@ Supersedes the `app.config.ts` location from D15. `app.config.ts` is code, so re
 Node 24 strips types natively (`scripts/changelog.ts` already relied on it).
 **Decision:** api, worker and workspace packages run their `.ts` sources with plain `node`, in dev and in Docker; packages export `src/` instead of `dist/`. `tsc` only typechecks (`noEmit`).
 **Consequences:** no bundler/emit config, no source maps to manage, identical code paths in dev and prod. Only erasable TS syntax is allowed (`erasableSyntaxOnly`), and relative imports carry `.ts`. Workspace packages must stay outside `node_modules` paths (pnpm symlinks resolve to the real path, so they do) because Node does not strip types under `node_modules`. TypeScript is pinned to 6.0 until typescript-eslint supports 7.
+
+## D19 — Schema-validated fetch client instead of Hono RPC (2026-10-14)
+`hc<AppType>` would make `apps/mobile` typecheck the API's Node sources and gives no runtime validation.
+**Decision:** the app uses a small fetch client that parses every response with the zod schemas in `@magpie/shared/api`. `apps/api/src/app-type.ts` was removed.
+**Consequences:** one source of truth (the schemas) on both sides; responses are checked at the boundary.
+
+## D20 — Suggestions in their own tables (2026-10-14)
+Suggestions below the auto-assign threshold must survive until the user accepts or dismisses them.
+**Decision:** `item_folder_suggestions` / `item_tag_suggestions` with FKs, rebuilt by `categorize`. Rules learn only from `manual` assignments; accepting a suggestion makes it manual.
+**Consequences:** deleting a folder/tag cleans up by cascade; dismissals are not learned.
+
+## D21 — Integration tests use the DATABASE_URL server (2026-10-14)
+Owner prefers one variable over a separate test URL.
+**Decision:** vitest reads `DATABASE_URL` (env or root `.env`); each test file creates a `magpie_test_*` database on that server and drops it afterwards. Without it, integration tests are skipped.
+**Consequences:** the role needs `CREATEDB`; the named database itself is never written by tests.

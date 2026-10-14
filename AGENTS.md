@@ -67,7 +67,9 @@ pnpm --filter @magpie/mobile android          # expo run:android (prebuild + ins
 pnpm --filter @magpie/mobile prebuild:clean   # expo prebuild --clean (regenerate native dirs)
 ```
 
-Before finishing a change: `pnpm typecheck && pnpm lint && pnpm test` must pass.
+Before finishing a change: `pnpm typecheck && pnpm lint && pnpm test` must pass. API/worker integration tests need `DATABASE_URL` pointing at a Postgres server whose role has `CREATEDB` (they create and drop `magpie_test_*` databases; see D21); without it they are skipped.
+
+Current progress and next steps: [docs/roadmap.md](docs/roadmap.md#status--handoff-2026-10-14).
 
 ## Where things go
 

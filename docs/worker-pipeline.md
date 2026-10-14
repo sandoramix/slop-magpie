@@ -58,6 +58,9 @@ Above `AUTO_ASSIGN_THRESHOLD` (default 0.8) → inserted as `assigned_by = auto`
 ### source-check (cron, weekly)
 Lightweight metadata probe (first strategy of the item's source, no download) for items whose `availability_checked_at` is oldest. Throttled (e.g. 50/week). Updates `availability`. Never deletes anything.
 
+### sweep (cron, every 15 min)
+Re-enqueues lost work: `pending` items untouched for 10 min (3 h if they are waiting for a retry), `fetching` items untouched for 30 min (worker died), and `ready` items with media lacking a thumbnail.
+
 ### blob-delete
 Deletes all blobs with prefix `items/<itemId>/` after an item is deleted.
 
@@ -66,7 +69,13 @@ Deletes `audit_log` rows older than 180 days.
 
 ## Cookies
 
+The tools write cookies back on exit and the mount is read-only, so each job copies `<source>.txt` into its temp dir and passes the copy.
+
 Some sources (Instagram, Facebook, sometimes TikTok/X) require login. Per-source cookie files in Netscape format live in `COOKIES_DIR` as `<source-id>.txt`, mounted read-only. Use **secondary accounts** (risk of flag/ban). Never commit, never log.
+
+## Downloads
+
+`gallery-dl` only lists files (`-j`); the worker downloads them itself through the SSRF guard, like `opengraph` and `direct`. Every file is capped at `MAX_DOWNLOAD_MB` (default 500). Code: `apps/worker/src/strategies/`.
 
 ## Resource limits
 

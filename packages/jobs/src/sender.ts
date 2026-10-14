@@ -17,11 +17,14 @@ export async function createPgBossSender(connectionString: string, onError: (err
   boss.on("error", onError);
   await boss.start();
   await ensureQueues(boss);
+  return { ...senderFromBoss(boss), stop: () => boss.stop({ graceful: false }) };
+}
+
+export function senderFromBoss(boss: PgBoss): JobSender {
   return {
     async sendItemJob(queue, data) {
       await boss.send(queues[queue].name, data, { singletonKey: data.itemId });
     },
-    stop: () => boss.stop({ graceful: false }),
   };
 }
 
