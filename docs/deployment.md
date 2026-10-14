@@ -63,7 +63,13 @@ See `.env.example`. Validated at startup by t3-env — the container exits with 
 | `STORAGE_LOCAL_ROOT` | api, worker | `/data/media` |
 | `COOKIES_DIR` | worker | `/run/secrets/cookies` |
 
-Optional: `LOG_LEVEL`, `MAX_VIDEO_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`, `WORKER_CONCURRENCY`.
+Optional: `LOG_LEVEL`, `MAX_VIDEO_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`, `WORKER_CONCURRENCY`, `CORS_ORIGINS`, `MEDIA_URL_TTL_SECONDS`.
+
+`TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.
+
+Compose-only: `MEDIA_DIR` (host media dir, default `/mnt/ssd/magpie/media`) and `COOKIES_HOST_DIR` (default `/mnt/ssd/magpie/secrets/cookies`).
+
+Containers run as the `node` user (uid 1000) with a read-only root filesystem; only the media volume and `/tmp` (tmpfs) are writable.
 
 ## 5. Mobile app
 

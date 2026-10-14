@@ -1,15 +1,15 @@
 # Roadmap
 
 ## M0 — Scaffold
-- [ ] pnpm + turborepo monorepo, tsconfig base, eslint, vitest
-- [ ] `packages/shared`: t3-env fragments, source registry (`instagram`, `generic`) + URL normalizer, SSRF-safe URL validation, API schemas
-- [ ] `packages/db`: Drizzle schema (all v1 tables), first migration, client
-- [ ] `packages/storage`: `BlobStore` + local driver + HMAC signer
-- [ ] `apps/api`: Hono skeleton, t3-env, auth middleware, `/health`, error handler, pino
-- [ ] `apps/worker`: pg-boss skeleton, t3-env, graceful shutdown, SSRF guard (`net/`)
+- [x] pnpm + turborepo monorepo, tsconfig base, eslint, vitest
+- [x] `packages/shared`: t3-env fragments, source registry (`instagram`, `generic`) + URL normalizer, SSRF-safe URL validation, API schemas
+- [x] `packages/db`: Drizzle schema (all v1 tables), first migration, client
+- [x] `packages/storage`: `BlobStore` + local driver + HMAC signer
+- [x] `apps/api`: Hono skeleton, t3-env, auth middleware, `/health`, error handler, pino
+- [x] `apps/worker`: pg-boss skeleton, t3-env, graceful shutdown, SSRF guard (`net/`)
 - [ ] `apps/mobile`: Expo (CNG, dev client, `app.config.ts` with app ID `dev.sandoramix.magpie`, `eas.json`), Expo Router, NativeWind + React Native Reusables, TanStack Query, Zustand + MMKV, t3-env
-- [ ] Dockerfiles (ARM64, `APP_VERSION` build arg) + `docker-compose.yml`
-- [ ] Release pipeline: `version` + derived `versionCode` and `extra.changelog` in `app.config.ts`, `plugins/with-release-signing.ts` (signing from `MAGPIE_KEY*` env vars), `scripts/` in `pnpm typecheck`, signing secrets set ([releases.md](releases.md))
+- [x] Dockerfiles (ARM64) + `docker-compose.yml`
+- [ ] Release pipeline: root `package.json` `version` → app `version` + derived `versionCode` and `extra.changelog` in `app.config.ts`, `plugins/with-release-signing.ts` (signing from `MAGPIE_KEY*` env vars), `scripts/` in `pnpm typecheck`, signing secrets set ([releases.md](releases.md))
 
 ## M1 — Save & archive (MVP)
 - [ ] `POST /items` with normalize + dedupe + enqueue

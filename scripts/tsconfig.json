@@ -1,11 +1,4 @@
 {
   "extends": "../tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true,
-    "declaration": false,
-    "sourceMap": false,
-    "erasableSyntaxOnly": true,
-    "types": ["node"]
-  },
   "include": ["*.ts"]
 }

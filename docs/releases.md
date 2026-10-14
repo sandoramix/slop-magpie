@@ -6,13 +6,14 @@
 
 ## Version
 
-The single source of truth is `version` in `apps/mobile/app.config.ts`, edited by hand. Everything else is derived from it:
+The single source of truth is `version` in the root `package.json`, edited by hand. Workspace packages keep `0.0.0` (they are private and never published). Everything else is derived from the root value:
 
 | Consumer | How |
 |---|---|
+| App `version` | `app.config.ts` reads the root `package.json` |
 | Android `versionCode` | `major * 10000 + minor * 100 + patch`, computed in `app.config.ts` |
-| Git tag | `v<version>`. CI fails if the tag and `app.config.ts` disagree |
-| Server images | `APP_VERSION` build arg from the tag, returned by `GET /health` |
+| CI / release | the workflow reads `package.json`; the pushed tag only triggers it and must equal `v<version>` |
+| API / worker | `src/version.ts` imports the root `package.json` (it is part of every image); returned by `GET /health`, logged at start |
 
 Bump rules: **patch** for fixes only, **minor** for new features or behavior changes, **major** for breaking changes (an API change that old app builds can't handle, a manual migration, or removed features).
 
@@ -47,7 +48,7 @@ The changelog is bundled, so it works offline and always matches the installed b
 
 On a pushed `v*.*.*` tag:
 
-1. **verify**: the tag must be on `main`, the tag must equal `app.config.ts` `version`, the changelog entry must exist, and typecheck, lint and test must pass.
+1. **verify**: the tag must be on `main`, the tag must equal the root `package.json` `version`, the changelog entry must exist, and typecheck, lint and test must pass.
 2. **android**: `expo prebuild`, then `gradlew assembleRelease`, signed with the release keystore from repository secrets. Produces `magpie-<version>.apk`.
 3. **images**: `api` and `worker` images built natively on an ARM64 runner and pushed to GHCR as `ghcr.io/<owner>/<repo>-<app>:<version>` and `:latest`.
 4. **publish**: GitHub release `Magpie <version>` with the changelog entry, install instructions, a compare link to the previous tag, the APK and `SHA256SUMS`.
@@ -89,7 +90,7 @@ The owner says "release" (or runs these steps by hand):
 ```sh
 git switch dev && git pull
 
-# 1. Choose the bump (patch / minor / major), then edit `version` in apps/mobile/app.config.ts by hand.
+# 1. Choose the bump (patch / minor / major), then edit `version` in the root package.json by hand.
 
 # 2. Turn [Unreleased] into the new entry and check it.
 node scripts/changelog.ts release 1.2.0
