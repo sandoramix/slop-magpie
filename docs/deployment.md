@@ -47,7 +47,7 @@ Volumes (bind mounts):
 - `/mnt/ssd/magpie/media:/data/media` → api, worker
 - `/mnt/ssd/magpie/secrets/cookies:/run/secrets/cookies:ro` → worker
 
-Images build on the Pi via Coolify (Pi 5 is fast enough). Optional later: GitHub Actions multi-arch build → GHCR, Coolify pulls.
+Images can build on the Pi via Coolify, or be pulled from GHCR: each release publishes `ghcr.io/sandoramix/slop-magpie-{api,worker}:<version>` (ARM64). See [releases.md](releases.md).
 
 ## 4. Environment
 
@@ -70,12 +70,11 @@ Optional: `LOG_LEVEL`, `MAX_VIDEO_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`
 CNG workflow: native projects are generated, never committed.
 
 - **Dev:** `pnpm --filter @magpie/mobile android` → runs `expo prebuild` + installs a dev build (`expo-dev-client`) on the connected device/emulator. Then `start` for Metro.
-- **Release APK:**
-  - EAS Build (free tier, cloud): `eas build -p android --profile preview` → downloadable APK.
-  - Local: `npx expo prebuild --clean && npx expo run:android --variant release` (needs Android SDK + JDK 17).
+- **Release APK:** built by GitHub Actions on a `v*` tag and attached to the GitHub release ([releases.md](releases.md)).
+  - Local test build: `npx expo prebuild --clean && npx expo run:android --variant release` (needs Android SDK + JDK 17).
 - Install by sideloading the APK. In app Settings: server URL + API token.
 - JS-only changes can ship via `eas update` (optional) without reinstalling.
-- Signing keystore: managed by EAS, or kept outside the repo for local builds (never committed).
+- Signing keystore: in GitHub repository secrets for CI, backed up outside the repo (never committed).
 
 ## Updating fetch tools
 

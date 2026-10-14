@@ -8,7 +8,8 @@
 - [ ] `apps/api`: Hono skeleton, t3-env, auth middleware, `/health`, error handler, pino
 - [ ] `apps/worker`: pg-boss skeleton, t3-env, graceful shutdown, SSRF guard (`net/`)
 - [ ] `apps/mobile`: Expo (CNG, dev client, `app.config.ts`, `eas.json`), Expo Router, NativeWind + React Native Reusables, TanStack Query, Zustand + MMKV, t3-env
-- [ ] Dockerfiles (ARM64) + `docker-compose.yml`
+- [ ] Dockerfiles (ARM64, `APP_VERSION` build arg) + `docker-compose.yml`
+- [ ] Release pipeline: `version` + derived `versionCode` and `extra.changelog` in `app.config.ts`, `plugins/with-release-signing.ts` (signing from `MAGPIE_KEY*` env vars), `scripts/` in `pnpm typecheck`, signing secrets set ([releases.md](releases.md))
 
 ## M1 — Save & archive (MVP)
 - [ ] `POST /items` with normalize + dedupe + enqueue
@@ -18,6 +19,7 @@
 - [ ] `GET /items`, `GET /items/:id`, signed media route with Range
 - [ ] Expo app: settings (URL + token), Android share intent, grid of thumbnails, item detail with video player
 - [ ] Deploy on the Pi
+- [ ] App: Settings → What's new, post-update changelog sheet
 
 ## M2 — Organize
 - [ ] Folders (tree CRUD, move, multi-membership), tags (CRUD, merge)
@@ -46,3 +48,4 @@
 - [ ] Transcripts (whisper.cpp), OCR (tesseract), embeddings (transformers.js + pgvector), semantic search
 - [ ] S3 driver + migration to Backblaze B2
 - [ ] Better Auth + passkeys (replace static token)
+- [ ] In-app update check against GitHub Releases (`/releases/latest`), link to the APK

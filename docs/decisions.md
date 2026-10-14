@@ -69,3 +69,8 @@ Owner wants Expo + Expo Router for easy routing, development and deployment, wit
 ## D15 — `dev` / `main` branches, manual SemVer (2026-10-14)
 **Decision:** all work lands on `dev`; `main` is the release branch and only moves on an explicit release (merge `dev` → `main`, tag `vX.Y.Z`). Version is SemVer, edited by hand in `apps/mobile/app.config.ts`; derived values (Android `versionCode`, API version) are computed from it.
 **Consequences:** `main` always matches the latest release; one place to bump the version.
+
+## D16 — Changelog file + tag-triggered GitHub releases (2026-10-14)
+Owner's commit messages are not always conventional, so commit-derived changelogs are unreliable.
+**Decision:** hand-written `CHANGELOG.md` (Keep a Changelog) is the single source for release notes and the in-app "What's new" (embedded at build time via `app.config.ts` `extra`). Pushing `v<version>` on `main` runs a GitHub Actions workflow: verify (tag = `app.config.ts` version, changelog entry, checks) → signed APK built on the runner (no EAS dependency) + ARM64 `api`/`worker` images to GHCR → GitHub release with notes, APK and checksums.
+**Consequences:** release keystore lives in repo secrets and must be backed up; one changelog edit per user-visible change; Coolify can deploy pinned image tags instead of building on the host.
