@@ -36,6 +36,7 @@ Expo + Expo Router. Android first; the same code targets web (react-native-web) 
 
 | Concern | Choice |
 |---|---|
+| App ID | `dev.sandoramix.magpie` (Android `package`, iOS `bundleIdentifier`). Never change after the first release: Android treats a new ID as a different app |
 | Routing | **Expo Router** (file-based, typed routes, deep links `magpie://`) |
 | Native config | `app.config.ts` (typed, reads t3-env) + config plugins; local plugins in `plugins/` |
 | Dev | `expo run:android` → dev build on device/emulator, Metro with fast refresh |

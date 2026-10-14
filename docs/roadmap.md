@@ -7,7 +7,7 @@
 - [ ] `packages/storage`: `BlobStore` + local driver + HMAC signer
 - [ ] `apps/api`: Hono skeleton, t3-env, auth middleware, `/health`, error handler, pino
 - [ ] `apps/worker`: pg-boss skeleton, t3-env, graceful shutdown, SSRF guard (`net/`)
-- [ ] `apps/mobile`: Expo (CNG, dev client, `app.config.ts`, `eas.json`), Expo Router, NativeWind + React Native Reusables, TanStack Query, Zustand + MMKV, t3-env
+- [ ] `apps/mobile`: Expo (CNG, dev client, `app.config.ts` with app ID `dev.sandoramix.magpie`, `eas.json`), Expo Router, NativeWind + React Native Reusables, TanStack Query, Zustand + MMKV, t3-env
 - [ ] Dockerfiles (ARM64, `APP_VERSION` build arg) + `docker-compose.yml`
 - [ ] Release pipeline: `version` + derived `versionCode` and `extra.changelog` in `app.config.ts`, `plugins/with-release-signing.ts` (signing from `MAGPIE_KEY*` env vars), `scripts/` in `pnpm typecheck`, signing secrets set ([releases.md](releases.md))
 
