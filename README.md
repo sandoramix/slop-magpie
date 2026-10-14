@@ -1,68 +1,72 @@
 # slop-magpie
 
-Personal archive and catalog for content found online. Share a link — Instagram reel or post, TikTok, YouTube Short, Pinterest pin, X, Reddit, or any web page — to Magpie, and it downloads the media, picks a thumbnail, guesses where it belongs, and keeps it forever, even if the original is deleted.
+Self-hosted archive for posts and videos found online. Submit a link from Instagram, TikTok, YouTube, Pinterest, X, Reddit or any web page, and Magpie downloads the media and metadata, generates a thumbnail, and suggests where to file it. Saved items stay available after the original post is removed.
 
-Single user. Self-hosted on a Raspberry Pi. Zero running cost.
+> [!WARNING]
+> **AI-generated project.** As the `slop-` prefix says, the design, documentation and code in this repository were produced mostly by an AI coding agent. The project is provided as-is and will probably not be maintained. Issues and pull requests may go unanswered. Review the code before you rely on it.
 
 ## Features
 
-- **Save by link** — Android share sheet or paste a URL.
-- **Any source** — pluggable source registry (Instagram first); unknown sites fall back to a generic fetcher (yt-dlp / gallery-dl / OpenGraph). See [docs/sources.md](docs/sources.md).
-- **Real archive** — video/images, caption, author and metadata are downloaded at save time.
-- **Thumbnails** — video frame or resized image for every item.
-- **Flexible organization** — combine freely:
-  - nested **folders** (an item can live in many),
-  - colored **tags**,
-  - **keywords** (auto-extracted from hashtags/caption/transcript/OCR, or manual),
-  - typed **custom fields** (e.g. recipe → time, difficulty),
-  - **notes**, favorite, rating, status (`to try` / `done`),
-  - **smart folders** (saved searches).
-- **Search** — full-text + fuzzy now, semantic later.
-- **Auto-categorization** — suggestions with confidence; uncertain items land in the Inbox. Corrections improve future guesses.
-- **Source tracking** — periodic check marks items whose original was removed.
+- **Save by link** from the Android share sheet or by pasting a URL.
+- **Pluggable sources.** Each supported site is a separate module. Other URLs go through a generic fetcher (yt-dlp, gallery-dl, OpenGraph). See [docs/sources.md](docs/sources.md).
+- **Full archive.** Media, caption, author and metadata are downloaded when an item is saved.
+- **Thumbnails** for every item, taken from a video frame or a resized image.
+- **Organization**
+  - nested folders (one item can be in several)
+  - tags
+  - keywords, extracted automatically or added by hand
+  - typed custom fields
+  - notes, favorites, ratings and status
+  - smart folders (saved searches)
+- **Search** with full-text and fuzzy matching.
+- **Auto-categorization.** Each suggestion has a confidence score. Low-confidence items wait in an inbox for review, and corrections improve later suggestions.
+- **Source monitoring.** Items whose original has been removed are flagged.
 
-## Stack
+## Architecture
 
-TypeScript end to end.
-
-| Part | Tech |
+| Component | Technology |
 |---|---|
-| App | Expo (React Native), Expo Router — Android first, web/iOS later |
-| UI | React Native Reusables (shadcn/ui for RN), NativeWind, lucide icons |
-| App state | TanStack Query (server state), Zustand + MMKV (UI state), expo-secure-store (token) |
-| API | Node 24, Hono, zod |
-| Env | t3-env (`@t3-oss/env-core`) in every app |
-| Worker | Node 24, pg-boss, `yt-dlp`, `gallery-dl`, `ffmpeg`, `sharp` |
-| DB | PostgreSQL (existing instance, via `DATABASE_URL`), Drizzle ORM |
-| Storage | `BlobStore` interface — local filesystem now, S3/Backblaze B2 later |
-| Deploy | Docker (ARM64) on Coolify |
+| Client | Expo (React Native), Expo Router, NativeWind, React Native Reusables |
+| API | Node.js, Hono, zod |
+| Worker | Node.js, pg-boss, yt-dlp, gallery-dl, ffmpeg, sharp |
+| Database | PostgreSQL, Drizzle ORM |
+| Storage | `BlobStore` abstraction (local filesystem; S3-compatible planned) |
 
-## Repository layout
+All project code is TypeScript. yt-dlp and gallery-dl run as external command-line tools.
 
 ```
-apps/mobile      Expo app (Android → web → iOS)
-apps/api         Hono HTTP API
-apps/worker      background jobs (fetch, thumbnail, extract, categorize) + source fetchers
-packages/shared  zod schemas, shared types (the API contract), source registry
-packages/db      Drizzle schema, migrations, db client
-packages/storage BlobStore interface + drivers
-docs/            design docs
+apps/mobile       Expo client
+apps/api          HTTP API
+apps/worker       background jobs and source fetchers
+packages/shared   API contract (zod schemas) and source registry
+packages/db       Drizzle schema and migrations
+packages/storage  BlobStore interface and drivers
+docs/             design documentation
 ```
 
-> Status: design phase — docs written, code scaffold next. See [docs/roadmap.md](docs/roadmap.md).
+## Status
 
-## Quick start (dev)
+The project is in the design phase. Documentation is written, and the code scaffold is next. See the [roadmap](docs/roadmap.md).
+
+## Getting started
+
+Requirements:
+
+- Node.js 24+
+- pnpm 10+
+- PostgreSQL
+- `yt-dlp`, `gallery-dl` and `ffmpeg` on `PATH` (worker only)
 
 ```sh
-cp .env.example .env        # fill DATABASE_URL, API_TOKEN, MEDIA_SIGNING_SECRET
+cp .env.example .env   # set DATABASE_URL, API_TOKEN, MEDIA_SIGNING_SECRET
 pnpm install
 pnpm db:migrate
-pnpm dev                    # api + worker + mobile (turbo)
+pnpm dev
 ```
 
-Requires Node 24, pnpm 10, and `yt-dlp`, `gallery-dl`, `ffmpeg` on `PATH` for the worker.
+See [docs/deployment.md](docs/deployment.md) for production setup.
 
-## Docs
+## Documentation
 
 - [Architecture](docs/architecture.md)
 - [Data model](docs/data-model.md)
@@ -72,5 +76,5 @@ Requires Node 24, pnpm 10, and `yt-dlp`, `gallery-dl`, `ffmpeg` on `PATH` for th
 - [Storage](docs/storage.md)
 - [Security](docs/security.md)
 - [Deployment](docs/deployment.md)
-- [Decisions](docs/decisions.md)
+- [Design decisions](docs/decisions.md)
 - [Roadmap](docs/roadmap.md)
