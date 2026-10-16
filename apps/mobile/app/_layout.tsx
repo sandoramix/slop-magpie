@@ -121,6 +121,7 @@ function Root() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="item/[id]" options={{ title: "" }} />
           <Stack.Screen name="list" options={{ title: "" }} />
+          <Stack.Screen name="add-link" options={{ title: "Add link", presentation: "modal" }} />
           <Stack.Screen name="accounts" options={{ title: "Accounts", presentation: "modal" }} />
           <Stack.Screen name="account-form" options={{ title: "Account", presentation: "modal" }} />
           <Stack.Screen name="admin" options={{ title: "Users" }} />
@@ -128,6 +129,8 @@ function Root() {
         <Stack.Protected guard={!hasAccount}>
           <Stack.Screen name="welcome" options={{ headerShown: false }} />
         </Stack.Protected>
+        {/* reachable with or without an account: it is how a new account arrives */}
+        <Stack.Screen name="connect" options={{ title: "Add account", presentation: "modal" }} />
         <Stack.Screen name="whats-new" options={{ title: "What's new", presentation: "modal" }} />
       </Stack>
     </ThemeProvider>
