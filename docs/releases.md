@@ -2,8 +2,6 @@
 
 `main` is the release branch and `dev` is where work happens (see [AGENTS.md](../AGENTS.md#branches-and-releases)). Pushing a `v<major>.<minor>.<patch>` tag on `main` triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml). The workflow builds the Android APK and the server images and publishes a GitHub release.
 
-> The workflow needs the M0 scaffold (`apps/mobile`, Dockerfiles, signing plugin). Until that exists, a pushed tag fails at the first step.
-
 ## Version
 
 The single source of truth is `version` in the root `package.json`, edited by hand. Workspace packages keep `0.0.0` (they are private and never published). Everything else is derived from the root value:
@@ -43,6 +41,10 @@ At build time, `app.config.ts` runs `node ../../scripts/changelog.ts json` (`exe
 - **After an update**: if the installed version is newer than `lastSeenVersion` (Zustand, persisted), a sheet shows the entries in between, and then `lastSeenVersion` is updated.
 
 The changelog is bundled, so it works offline and always matches the installed build.
+
+### Update check
+
+`lib/updates.ts` calls `GET https://api.github.com/repos/<owner>/<repo>/releases/latest` (repo slug in `app.config.ts` `extra.githubRepo`), compares the tag with the installed version and, when newer, offers the `.apk` asset in Settings and as a banner on the library screen. Android installs it over the existing app (same signing key). A 404 (no release yet, or a private repo) is treated as "up to date".
 
 ## What CI does
 
