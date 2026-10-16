@@ -6,6 +6,16 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-16
+### Added
+
+- An "Add link" button (+) at the top of every tab. Paste or type one link or many (one per line, or a whole block of text), optionally pick folders and tags and add notes, and see for each link whether it was saved, was already in your library, or why it failed. It starts from the link on your clipboard.
+- When an admin creates an account (or resets one), the app builds an invite with the server address, the username and the access token: share it, copy it, or edit the server address first. Opening the invite link on the new phone adds the account after one confirmation, and "Paste invite" does the same from the welcome screen.
+
+### Changed
+
+- The "+ Paste link" chip on the Library screen is replaced by the Add link button.
+
 ## [0.2.0] - 2026-10-16
 ### Added
 

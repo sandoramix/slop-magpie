@@ -1,11 +1,13 @@
-import { Tabs } from "expo-router";
-import { FolderTree, Inbox, LayoutGrid, Settings } from "lucide-react-native";
+import { Tabs, useRouter } from "expo-router";
+import { FolderTree, Inbox, LayoutGrid, Plus, Settings } from "lucide-react-native";
+import { Pressable } from "react-native";
 import { AccountTitle } from "@/components/account-chrome";
 import { useColors } from "@/lib/theme";
 import { useStats } from "@/lib/queries";
 
 export default function TabsLayout() {
   const colors = useColors();
+  const router = useRouter();
   const stats = useStats();
   const inbox = (stats.data?.byWorkflow.inbox ?? 0) + (stats.data?.withSuggestions ?? 0);
 
@@ -15,6 +17,19 @@ export default function TabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
         headerShadowVisible: false,
+        // saving a link by hand is always one tap away
+        headerRight: () => (
+          <Pressable
+            accessibilityLabel="Add link"
+            hitSlop={8}
+            onPress={() => {
+              router.push("/add-link");
+            }}
+            className="mr-3 h-9 w-9 items-center justify-center rounded-full bg-primary"
+          >
+            <Plus color="#ffffff" size={20} />
+          </Pressable>
+        ),
       }}
     >
       <Tabs.Screen

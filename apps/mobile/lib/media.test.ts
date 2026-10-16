@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aspectClass, extractUrl, formatDuration } from "./media.ts";
+import { aspectClass, extractUrl, extractUrls, formatDuration } from "./media.ts";
 
 describe("aspectClass", () => {
   it("snaps to the nearest known ratio", () => {
@@ -21,6 +21,17 @@ describe("extractUrl", () => {
   it("returns null without a link", () => {
     expect(extractUrl("no link here")).toBeNull();
     expect(extractUrl(null)).toBeNull();
+  });
+});
+
+describe("extractUrls", () => {
+  it("finds every link once, in order", () => {
+    const text = "one https://a.example/x, two (https://b.example/y).\nagain https://a.example/x\nhttp://c.example";
+    expect(extractUrls(text)).toEqual(["https://a.example/x", "https://b.example/y", "http://c.example"]);
+  });
+  it("is empty without links", () => {
+    expect(extractUrls("nothing")).toEqual([]);
+    expect(extractUrls(undefined)).toEqual([]);
   });
 });
 
