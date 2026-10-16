@@ -1,5 +1,6 @@
 import { accountLabel, type MeResponse } from "@magpie/shared/api";
 import { useQueryClient } from "@tanstack/react-query";
+import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import { View } from "react-native";
 import { Chip } from "@/components/chip";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { checkServer, loginWithPassword } from "@/lib/api";
+import { parseInvite } from "@/lib/invite";
 import { env } from "@/src/env";
 import { type Account, useAccounts } from "@/stores/accounts";
 
@@ -68,6 +70,19 @@ export function AccountForm({ account, onDone }: Props) {
     }
   };
 
+  // an invite message (or its app link) fills in the server and token in one go
+  const pasteInvite = async () => {
+    const invite = parseInvite(await Clipboard.getStringAsync());
+    if (!invite) {
+      setError("No invite found on the clipboard. Copy the whole invite message first.");
+      return;
+    }
+    setUrl(invite.url);
+    setToken(invite.token);
+    setMode("token");
+    setError(null);
+  };
+
   const ready = url.trim() !== "" && (mode === "token" ? token.trim() !== "" : username.trim() !== "" && password !== "");
 
   return (
@@ -90,6 +105,16 @@ export function AccountForm({ account, onDone }: Props) {
           }}
         />
       </View>
+      {account ? null : (
+        <Button
+          variant="secondary"
+          onPress={() => {
+            void pasteInvite();
+          }}
+        >
+          <Text>Paste invite</Text>
+        </Button>
+      )}
       <Input value={name} onChangeText={setName} placeholder="Name on this device (optional)" autoCapitalize="words" />
       <Input
         value={url}

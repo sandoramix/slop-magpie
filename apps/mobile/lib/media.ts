@@ -23,6 +23,14 @@ export function extractUrl(text: string | null | undefined): string | null {
   return m ? m[0].replace(/[).,;]+$/, "") : null;
 }
 
+const URL_RE_ALL = /https?:\/\/[^\s<>"']+/gi;
+
+/** Every http(s) link in a block of text, in order, without duplicates and without trailing punctuation. */
+export function extractUrls(text: string | null | undefined): string[] {
+  const found = (text ?? "").match(URL_RE_ALL) ?? [];
+  return [...new Set(found.map((u) => u.replace(/[).,;]+$/, "")))];
+}
+
 export function formatDuration(ms: number | null): string {
   if (ms === null) return "";
   const s = Math.round(ms / 1000);
