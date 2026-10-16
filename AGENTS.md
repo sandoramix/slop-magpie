@@ -27,6 +27,7 @@ Magpie: single-user, self-hosted archive for content from any site (Instagram fi
 
 - Package manager: **pnpm** workspaces + turborepo. Node 24 (`.nvmrc`).
 - ESM everywhere (`"type": "module"`).
+- **No build step for Node code.** Node 24 strips types, so api/worker/packages run their `.ts` sources directly (also in Docker); workspace packages export `src/`. Consequences: relative imports use the `.ts` extension, and only erasable syntax is allowed (no `enum`, `namespace`, parameter properties) — enforced by `erasableSyntaxOnly`. Use `as const` arrays + `z.enum` instead of enums.
 - IDs: UUIDv7 (time-sortable), generated in app code.
 - Timestamps: `timestamptz`, stored UTC.
 - Env vars parsed once at startup with t3-env (`src/env.ts` per app); fail fast on invalid config.
@@ -36,6 +37,18 @@ Magpie: single-user, self-hosted archive for content from any site (Instagram fi
 - Logging: structured JSON (pino). Never log tokens, cookies, or signed URLs.
 - Naming: files `kebab-case.ts`, types `PascalCase`, DB tables/columns `snake_case`, TS fields `camelCase` (Drizzle maps).
 - Keep comments sparse; explain *why*, not *what*.
+
+## Branches and releases
+
+- **`main` is the release branch.** Never commit to it directly; it only moves when the owner says to "release".
+- **All development happens on `dev`.** Branch from and commit to `dev` (short-lived feature branches off `dev` are fine, merge back into `dev`).
+- **Versioning: SemVer `<major>.<minor>.<patch>`**, single source of truth is the `version` field in the **root `package.json`**. It is edited by hand; no bump scripts or CI auto-versioning. Workspace packages keep `0.0.0` (private, never published). Anything else that needs the version derives it from the root value: `app.config.ts` (app `version`, Android `versionCode = major * 10000 + minor * 100 + patch`), API/worker (`src/version.ts`, JSON import → `/health`), CI (`jq -r .version package.json`).
+- **Changelog: `CHANGELOG.md`** (Keep a Changelog) is the only source of release notes and of the in-app "What's new". Every user-visible change on `dev` adds a bullet under `## [Unreleased]` in the same change, written for app users (not commit-style). Commits are not parsed; the owner's commit messages may not be conventional.
+- **Release procedure** (only on the owner's explicit "release"; full steps in [docs/releases.md](docs/releases.md)):
+  1. On `dev`, confirm the bump with the owner (patch / minor / major) and update `version` in the root `package.json`.
+  2. Fill gaps in `[Unreleased]` from `git log <last tag>..dev`, then `node scripts/changelog.ts release X.Y.Z`; show the owner the entry.
+  3. `pnpm typecheck && pnpm lint && pnpm test` pass; commit `chore(release): vX.Y.Z`.
+  4. Merge `dev` into `main` (`--no-ff`), tag `vX.Y.Z` on `main`, push `main`, `dev` and the tag. CI (`.github/workflows/release.yml`) builds the APK and images and publishes the GitHub release.
 
 ## Commands
 
@@ -54,7 +67,9 @@ pnpm --filter @magpie/mobile android          # expo run:android (prebuild + ins
 pnpm --filter @magpie/mobile prebuild:clean   # expo prebuild --clean (regenerate native dirs)
 ```
 
-Before finishing a change: `pnpm typecheck && pnpm lint && pnpm test` must pass.
+Before finishing a change: `pnpm typecheck && pnpm lint && pnpm test` must pass. API/worker integration tests need `DATABASE_URL` pointing at a Postgres server whose role has `CREATEDB` (they create and drop `magpie_test_*` databases; see D21); without it they are skipped.
+
+Current progress and next steps: [docs/roadmap.md](docs/roadmap.md#status--handoff-2026-10-14).
 
 ## Where things go
 
@@ -69,6 +84,8 @@ Before finishing a change: `pnpm typecheck && pnpm lint && pnpm test` must pass.
 | New client-side store | `apps/mobile/stores/<name>.ts` (Zustand) |
 | New env var | the app's `src/env.ts` + `.env.example` + `docs/deployment.md` |
 | New storage backend | `packages/storage/src/drivers/` implementing `BlobStore` |
+| User-visible change | bullet under `## [Unreleased]` in `CHANGELOG.md` |
+| Release / CI build change | `.github/workflows/release.yml` + `docs/releases.md` |
 
 ## Docs
 

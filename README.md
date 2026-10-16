@@ -46,7 +46,7 @@ docs/             design documentation
 
 ## Status
 
-The project is in the design phase. Documentation is written, and the code scaffold is next. See the [roadmap](docs/roadmap.md).
+The server (API, worker pipeline, search, organization, auto-categorization) is implemented; the mobile app is next. See the [roadmap](docs/roadmap.md).
 
 ## Getting started
 
@@ -64,7 +64,7 @@ pnpm db:migrate
 pnpm dev
 ```
 
-See [docs/deployment.md](docs/deployment.md) for production setup.
+See [docs/deployment.md](docs/deployment.md) for production setup. Each [GitHub release](../../releases) includes a prebuilt Android APK, and server images are published to GHCR. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation
 
@@ -76,5 +76,6 @@ See [docs/deployment.md](docs/deployment.md) for production setup.
 - [Storage](docs/storage.md)
 - [Security](docs/security.md)
 - [Deployment](docs/deployment.md)
+- [Releases](docs/releases.md)
 - [Design decisions](docs/decisions.md)
 - [Roadmap](docs/roadmap.md)

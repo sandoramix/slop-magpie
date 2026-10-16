@@ -9,10 +9,15 @@
       "cache": false,
       "persistent": true
     },
-    "typecheck": {
-      "dependsOn": ["^build"]
-    },
+    "typecheck": {},
     "lint": {},
-    "test": {}
+    "test": {
+      "env": ["DATABASE_URL"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/.env",
+        "$TURBO_ROOT$/vitest.shared.config.ts"
+      ]
+    }
   }
 }

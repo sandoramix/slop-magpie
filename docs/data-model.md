@@ -90,7 +90,7 @@ Nested tree. An item can be in **many** folders (folders behave like hierarchica
 | position | int | manual ordering among siblings |
 | created_at | timestamptz | |
 
-Unique `(parent_id, lower(name))` (with `NULLS NOT DISTINCT` for roots). Cycles prevented in the API (move checks ancestry with a recursive CTE).
+Unique `(coalesce(parent_id, <nil uuid>), lower(name))` — the coalesce makes root names unique too, on any Postgres version. Cycles prevented in the API (move checks ancestry with a recursive CTE).
 
 ### item_folders
 
@@ -105,6 +105,9 @@ Unique `(parent_id, lower(name))` (with `NULLS NOT DISTINCT` for roots). Cycles 
 PK `(item_id, folder_id)`. Auto suggestions below the confidence threshold are **not** inserted; they are returned as suggestions only.
 
 > Naming: `assigned_by` (who linked it) is distinct from `items.source` (which site the item came from).
+
+### item_folder_suggestions / item_tag_suggestions
+Categorizer output below `AUTO_ASSIGN_THRESHOLD`, waiting for accept/dismiss: `item_id`, `folder_id` / `tag_id` (FK, cascade), `confidence`, `created_at`. PK `(item_id, folder_id|tag_id)`. Two tables rather than one polymorphic table so deleting a folder or tag cascades. Rebuilt for an item each time `categorize` runs.
 
 ### tags / item_tags
 Flat labels.

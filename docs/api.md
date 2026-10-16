@@ -43,15 +43,23 @@ Codes: `bad_request`, `unauthorized`, `not_found`, `conflict`, `unsupported_url`
 | POST | `/items/:id/keywords` | `{ keyword }` manual |
 | DELETE | `/items/:id/keywords/:keyword` | `?source=` |
 | POST | `/items/:id/suggestions/accept` | `{ folderIds?, tagIds? }` turns suggestions into manual assignments |
+| POST | `/items/:id/suggestions/dismiss` | `{ folderIds?, tagIds? }` drops suggestions |
 | POST | `/items/bulk` | `{ ids, op }` — op: `addFolder`, `removeFolder`, `addTag`, `removeTag`, `setWorkflow`, `delete` |
 
-List items return a compact shape (`id`, `title`, `thumbUrl`, `source`, `kind`, `fetchStatus`, `favorite`, `savedAt`, `tagIds`).
+List items return a compact shape (`ItemSummary`: `id`, `title`, `thumbUrl`, `source`, `kind`, `fetchStatus`, `favorite`, `savedAt`, `tagIds`, `workflow`, `availability`, `authorHandle`, `aspectRatio`, `mediaCount`, `suggestionCount`).
+
+Notes on the item routes:
+- `POST /items` answers `{ item, duplicate }`. On a duplicate, the given `folderIds`/`tagIds` are still linked to the existing item.
+- `GET /items` also takes `hasSuggestions` and `smartFolderId` (the smart folder's saved filter is ANDed with the other params). `q` uses the query language in `packages/shared/src/query/parse.ts` (also `-` negation, `field:key=value`, `field:key>3`, `saved:2026-01..2026-03`, `saved:7d`). `sort=relevance` without free text falls back to `saved_desc`.
+- `PUT /items/:id/folders` / `tags` replace **all** assignments (manual and auto); ids already assigned keep their `assignedBy`, new ones are `manual`.
+- `POST /items/:id/suggestions/accept` and `/dismiss` take `{ folderIds?, tagIds? }`: both omitted = all suggestions, one list given = only those. Accepted suggestions become manual assignments.
+- `POST /items/bulk` ops: `addFolder`, `removeFolder`, `addTag`, `removeTag`, `setWorkflow`, `setFavorite`, `acceptSuggestions`, `refetch`, `delete` → `{ affected }`.
 
 ## Folders
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/folders` | full tree with item counts |
+| GET | `/folders` | flat list (`parentId`, `position`, direct `itemCount`); build the tree with `buildFolderTree` from `@magpie/shared/api` |
 | POST | `/folders` | `{ name, parentId?, icon?, color? }` |
 | PATCH | `/folders/:id` | rename, recolor, move (`parentId`), reorder (`position`) — cycle-checked |
 | DELETE | `/folders/:id` | deletes subtree links, never items |
@@ -83,6 +91,12 @@ List items return a compact shape (`id`, `title`, `thumbUrl`, `source`, `kind`, 
 | POST | `/smart-folders` | `{ name, query }` |
 | PATCH | `/smart-folders/:id` | |
 | DELETE | `/smart-folders/:id` | |
+
+## Stats
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/stats` | totals, favorites, gone, items with suggestions, counts by workflow and fetch status |
 
 ## Media
 
