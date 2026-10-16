@@ -21,12 +21,12 @@ Zero cost, lots of storage needed, residential IP is friendlier to Instagram tha
 **Decision:** local driver first (no object-storage server; MinIO community is unmaintained), S3 driver for Backblaze B2 later.
 **Consequences:** media served by the API with HMAC-signed URLs; migration is a copy script + config switch.
 
-## D5 — Static bearer token auth (2026-10-14)
+## D5 — Static bearer token auth (2026-10-14) — extended by D23
 Single user, project may be archived before a more complex setup is justified.
 **Decision:** one long random `API_TOKEN`, constant-time compare, HTTPS only, rate-limited, audited. Separate secret for media URL signing.
 **Consequences:** no per-device revocation (rotate the single token). Auth is isolated in one middleware for a future swap.
 
-## D6 — Single-tenant schema (2026-10-14)
+## D6 — Single-tenant schema (2026-10-14) — superseded by D23
 **Decision:** no `user_id` columns.
 **Consequences:** simpler queries; adding multi-user later requires a migration.
 
@@ -103,3 +103,9 @@ Owner prefers one variable over a separate test URL.
 ## D22 — Mobile conventions (2026-10-16)
 **Decision:** Expo/Babel/Metro/Tailwind configs in `apps/mobile` are CommonJS (`*.cjs`; the package has no `"type": "module"`) because those tools load them with `require`. NativeWind forbids inline styles, so media aspect ratios snap to a fixed set of Tailwind `aspect-*` classes (`lib/media.ts`). `expo-share-intent` 8.0.1 declares `expo ^57` but is used on SDK 58 (prebuild verified). The update check reads GitHub's public `releases/latest` endpoint.
 **Consequences:** card heights are approximate; no per-folder/tag colors in the UI (they would need inline styles).
+
+## D23 — Accounts with isolated libraries (2026-10-16)
+The owner wants to give other people their own archive on the same server.
+**Decision:** `users` table; `user_id` on items, folders, tags, field_defs and smart_folders (migration 0003 backfills the existing data onto a fixed admin account). `API_TOKEN` is the admin credential and the admin is also a normal account with a library. The admin creates accounts (a fixed username and a generated token) and may act inside any account's library with the `X-Magpie-Act-As` header; writes done that way are audited (`admin.act_as`). People can change a display name but not their username.
+**Credentials:** the generated token is temporary. Choosing a password (`PUT /me/password`) retires it and returns a session token for that device; other devices sign in with `POST /auth/login` (username + password, scrypt, 180-day sliding sessions, revocable, rate limited per IP and per username). "Forgot password" is an admin reset: new token, no password, all sessions revoked. The admin keeps `API_TOKEN` from the environment as its recovery credential. Account tokens and session tokens are stored only as sha256 hashes.
+**Consequences:** every query must be scoped by the owner; the worker's categorizer learns only from the same owner's items and duplicate detection is per account. Media URLs stay HMAC-signed and unauthenticated (unguessable keys, short TTL), so isolation relies on the item routes. The mobile app keeps several saved logins (server + token) on the device and offers account management to admins.

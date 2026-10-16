@@ -1,12 +1,10 @@
 import type { ItemFilter } from "@magpie/shared/api";
+import { ActAsBanner } from "@/components/account-chrome";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { ItemBrowser } from "@/components/item-browser";
-import { SetupNotice } from "@/components/setup-notice";
 import { useStats } from "@/lib/queries";
-import { useAuth } from "@/stores/auth";
-import { useSettings } from "@/stores/settings";
 
 type View_ = "inbox" | "suggestions" | "failed" | "gone";
 
@@ -22,12 +20,9 @@ const VIEWS: Record<View_, { label: string; filter: ItemFilter; empty: string }>
 };
 
 export default function InboxScreen() {
-  const hasToken = useAuth((s) => s.token !== null);
-  const hasUrl = useSettings((s) => s.apiUrl !== "");
   const [view, setView] = useState<View_>("inbox");
   const stats = useStats();
 
-  if (!hasToken || !hasUrl) return <SetupNotice />;
 
   const count: Record<View_, number | undefined> = {
     inbox: stats.data?.byWorkflow.inbox,
@@ -38,6 +33,7 @@ export default function InboxScreen() {
 
   return (
     <View className="flex-1 bg-background">
+      <ActAsBanner />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2 px-3 py-2" className="grow-0">
         {(Object.keys(VIEWS) as View_[]).map((key) => (
           <Chip

@@ -11,6 +11,13 @@ import {
   StatsResponse,
   Tag,
   TagsResponse,
+  CreateUserResponse,
+  LoginResponse,
+  MeResponse,
+  type UpdateMeBody,
+  RotateTokenResponse,
+  User,
+  UsersResponse,
   listParamsFromFilter,
   type BulkOp,
   type CreateFolderBody,
@@ -33,18 +40,18 @@ import {
 } from "@tanstack/react-query";
 import { z } from "zod";
 import { request } from "./api";
-import { useAuth } from "@/stores/auth";
-import { useSettings } from "@/stores/settings";
+import { useAccounts } from "@/stores/accounts";
 
 const NoContent = z.null();
 const PAGE_SIZE = 40;
 const POLL_MS = 4000;
 
-/** Queries are keyed by server + token presence so switching servers never shows stale data. */
+/** Keyed by account and by the library an admin is acting in, so switching never shows stale data. */
 function useScope(): readonly [string, boolean] {
-  const apiUrl = useSettings((s) => s.apiUrl);
-  const token = useAuth((s) => s.token);
-  return [apiUrl, Boolean(apiUrl && token)] as const;
+  const activeId = useAccounts((s) => s.activeId);
+  const actAs = useAccounts((s) => s.actAs?.id ?? "");
+  const hasToken = useAccounts((s) => s.token !== null);
+  return [`${activeId ?? ""}:${actAs}`, activeId !== null && hasToken] as const;
 }
 
 export type ItemsQuery = {
@@ -144,7 +151,8 @@ function invalidateLists(qc: QueryClient): Promise<void> {
 }
 
 function setItem(qc: QueryClient, item: ItemDetail): void {
-  qc.setQueryData(["item", useSettings.getState().apiUrl, item.id], item);
+  const { activeId, actAs } = useAccounts.getState();
+  qc.setQueryData(["item", `${activeId ?? ""}:${actAs?.id ?? ""}`, item.id], item);
   void invalidateLists(qc);
 }
 
@@ -291,5 +299,71 @@ export function useDeleteSmartFolder() {
   return useMutation({
     mutationFn: (id: string) => request("DELETE", `/smart-folders/${id}`, { schema: NoContent }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["smart-folders"] }),
+  });
+}
+
+export function useMe() {
+  const [scope, enabled] = useScope();
+  return useQuery({
+    queryKey: ["me", scope],
+    enabled,
+    queryFn: () => request("GET", "/me", { schema: MeResponse }),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Accounts on the server; admin token only. */
+export function useUsers(enabled: boolean) {
+  const [scope, ready] = useScope();
+  return useQuery({
+    queryKey: ["users", scope],
+    enabled: enabled && ready,
+    queryFn: async () => (await request("GET", "/users", { schema: UsersResponse })).users,
+  });
+}
+
+export function useCreateUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => request("POST", "/users", { body: { name }, schema: CreateUserResponse }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+export function useRenameUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) => request("PATCH", `/users/${id}`, { body: { name }, schema: User }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+export function useRotateUserToken() {
+  return useMutation({
+    mutationFn: (id: string) => request("POST", `/users/${id}/token`, { schema: RotateTokenResponse }),
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => request("DELETE", `/users/${id}`, { schema: NoContent }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+/** The username is fixed; this changes only how the account is shown. */
+export function useUpdateDisplayName() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateMeBody) => request("PATCH", "/me", { body, schema: MeResponse }),
+    onSuccess: () => Promise.all([qc.invalidateQueries({ queryKey: ["me"] }), qc.invalidateQueries({ queryKey: ["users"] })]),
+  });
+}
+
+/** Choosing a password retires the temporary token; the reply has this device's new session token. */
+export function useSetPassword() {
+  return useMutation({
+    mutationFn: (password: string) => request("PUT", "/me/password", { body: { password }, schema: LoginResponse }),
   });
 }

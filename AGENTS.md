@@ -4,7 +4,7 @@ Instructions for AI coding agents working in this repository. `CLAUDE.md` import
 
 ## Project
 
-Magpie: single-user, self-hosted archive for content from any site (Instagram first; TikTok, YouTube, Pinterest, X, Reddit, generic web). Clients share a URL → API stores an item → worker downloads media, makes thumbnails, extracts keywords, suggests folders/tags. Read [docs/architecture.md](docs/architecture.md) before non-trivial changes.
+Magpie: self-hosted archive (one private library per account) for content from any site (Instagram first; TikTok, YouTube, Pinterest, X, Reddit, generic web). Clients share a URL → API stores an item → worker downloads media, makes thumbnails, extracts keywords, suggests folders/tags. Read [docs/architecture.md](docs/architecture.md) before non-trivial changes.
 
 ## Hard rules
 
@@ -20,7 +20,7 @@ Magpie: single-user, self-hosted archive for content from any site (Instagram fi
 - **NativeWind is mandatory for styling** in `apps/mobile`. Use Tailwind classes via `className`; no `StyleSheet.create`, inline style objects, or other styling libraries (styled-components, Tamagui, etc.). Exceptions only where a third-party component cannot take `className` — wrap it with `cssInterop`/`remapProps` instead.
 - **Env via t3-env only.** Each app has `src/env.ts` using `createEnv` from `@t3-oss/env-core`; read config only through the exported `env` object, never `process.env` directly. Expo client vars use the `EXPO_PUBLIC_` prefix and never hold secrets.
 - **Never commit secrets.** Tokens, cookies, DB URLs live in env vars / mounted files. `.env` is gitignored; update `.env.example` when adding a variable.
-- **Single-tenant by design.** No `user_id` columns; auth is one static bearer token (see [docs/security.md](docs/security.md)). Do not add multi-user plumbing unless asked.
+- **Accounts own their libraries (D23).** Every top-level table (`items`, `folders`, `tags`, `field_defs`, `smart_folders`) has `user_id`; every service query is scoped by `deps.userId` and every new table or query must be too. `API_TOKEN` is the admin; an admin may act inside any account with `X-Magpie-Act-As`. Auth lives in one middleware (see [docs/security.md](docs/security.md)). No roles, sharing or teams beyond that unless asked.
 - **ARM64 target.** Docker images must build for `linux/arm64` (Raspberry Pi 5). Avoid native deps without ARM64 prebuilds.
 
 ## Conventions
