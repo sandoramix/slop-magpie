@@ -8,6 +8,7 @@ x-common-env: &common-env
   STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
   STORAGE_LOCAL_ROOT: /data/media
   LOG_LEVEL: ${LOG_LEVEL:-info}
+  LOG_FORMAT: ${LOG_FORMAT:-pretty}
 
 x-hardening: &hardening
   read_only: true

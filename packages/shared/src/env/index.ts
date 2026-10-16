@@ -8,6 +8,8 @@ export const databaseEnv = {
 
 export const loggingEnv = {
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  // pretty: one readable line per event; json: raw pino output for log shippers
+  LOG_FORMAT: z.enum(["pretty", "json"]).default("pretty"),
 };
 
 export const storageEnv = {

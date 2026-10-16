@@ -35,7 +35,7 @@ Magpie: self-hosted archive (one private library per account) for content from a
 - Mobile UI: React Native Reusables components (shadcn/ui for RN) in `apps/mobile/components/ui/`, styled with NativeWind classes. Add components with the RNR CLI; don't hand-roll primitives that RNR provides. Theme tokens are CSS variables in `global.css`.
 - Mobile state: **server data → TanStack Query** (never copied into a store); **local UI state/preferences → Zustand** stores in `apps/mobile/stores/`, persisted with `persist` + MMKV; **API token → `expo-secure-store`** only.
 - Errors: API returns `{ error: { code, message } }` with proper HTTP status. Worker jobs throw; pg-boss handles retry.
-- Logging: structured JSON (pino). Never log tokens, cookies, or signed URLs.
+- Logging: pino, structured; `LOG_FORMAT` picks readable lines (default) or raw JSON. Never log tokens, cookies, or signed URLs.
 - Naming: files `kebab-case.ts`, types `PascalCase`, DB tables/columns `snake_case`, TS fields `camelCase` (Drizzle maps).
 - Keep comments sparse; explain *why*, not *what*.
 

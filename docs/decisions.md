@@ -121,3 +121,8 @@ Phones keep old app builds for months and the server is redeployed on every rele
 **Dialogs.** Android's native `Alert` shows at most three buttons and ignores the back button unless `cancelable`. The admin menu had five, so "Delete account" never appeared. `lib/alert.ts` wraps `Alert.alert` (always cancelable) and opens menus with more than three buttons in an in-app sheet with a close button. Deleting an account takes a warning prompt, then typing the username (two steps; an earlier version had a third "really?" prompt).
 **Share targets.** Android lists each exported activity with a SEND filter, so a local config plugin (`plugins/with-quick-save-share.ts`) adds "Magpie: save for later": a small trampoline activity that forwards the share to `MainActivity` with a marker in `EXTRA_TITLE` (which `expo-share-intent` exposes as `meta.title`). That entry always saves to the Inbox and returns to the previous app; plain "Magpie" follows Settings > Sharing (organize now by default, or ask).
 **License.** MIT.
+
+## D26 — Server-only releases skip the APK (2026-10-17)
+Most fixes touch only the API or worker, and an APK build takes about 30 minutes.
+**Decision:** the release workflow diffs the tag against the last release that shipped an APK over the paths the app is built from; with no changes it skips the Android job and leaves the release a pre-release. Details in [releases.md](releases.md#server-only-releases).
+**Consequences:** the root version can run ahead of the installed app version; the in-app "What's new" shows server-only entries with the next app build.
