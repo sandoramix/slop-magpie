@@ -21,15 +21,16 @@ export function inviteWebLink({ url, username, token }: Invite): string {
 /** A message that works in chat apps: a tappable https link, with the details spelled out too. */
 export function inviteMessage(invite: Invite): string {
   return [
-    "You are invited to Magpie.",
+    "You are invited to Magpie, a private archive for links and media.",
     "",
-    `Open this on your phone: ${inviteWebLink(invite)}`,
+    `Open this link on your Android phone (it also tells you how to get the app): ${inviteWebLink(invite)}`,
     "",
+    "If the link does not work, type these into the app:",
     `Server: ${invite.url}`,
     `Username: ${invite.username}`,
     `Access token: ${invite.token}`,
     "",
-    "Sign in with the token first, then choose a password in Settings. The token stops working once you have.",
+    "Once you are in, choose a password in Settings. The access token stops working after that.",
   ].join("\n");
 }
 
