@@ -47,13 +47,13 @@ if (valid) {
 const BODY = `<main>
 <h1>You are invited to Magpie</h1>
 <div id="ok" hidden>
-<p>Magpie is a private archive for links and media. Open this on the phone that has the app.</p>
+<p>Magpie is a private archive for links and media. Tap the button on the phone where Magpie is installed to add this account.</p>
 <a id="open" class="button" href="#">Open in Magpie</a>
 <div class="card"><span class="label">Server</span><span id="server"></span><span class="label">Username</span><span id="user"></span></div>
-<p>Nothing happens in the app? Install it first, then come back and tap the button again.</p>
+<p>Don't have Magpie yet? Install the app first, then come back to this page and tap Open in Magpie.</p>
 <a class="button secondary" href="https://github.com/sandoramix/slop-magpie/releases/latest">Get the Android app</a>
 <details><summary>Enter the details by hand</summary><div class="card"><span class="label">Access token</span><span id="tok"></span><button id="copy" class="secondary" type="button">Copy token</button></div></details>
-<p>Sign in with the token first, then choose a password in Settings. The token stops working once you have.</p>
+<p>Once you are in, choose a password in Settings. The access token stops working after that.</p>
 </div>
 <p id="bad" hidden>This invite link is incomplete. Ask for a new one.</p>
 </main>`;
