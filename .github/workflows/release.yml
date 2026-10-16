@@ -49,10 +49,13 @@ jobs:
       - run: pnpm test
 
   android:
-    needs: verify
+    needs: [verify, release]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     env:
       VERSION: ${{ needs.verify.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -95,11 +98,10 @@ jobs:
           mkdir -p dist
           cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "dist/magpie-$VERSION.apk"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: android
-          path: dist/
-          if-no-files-found: error
+      - name: Attach APK to the release
+        run: |
+          (cd dist && sha256sum -- *.apk > SHA256SUMS)
+          gh release upload "$GITHUB_REF_NAME" dist/*.apk dist/SHA256SUMS --clobber
 
   images:
     needs: verify
@@ -132,8 +134,9 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
-  publish:
-    needs: [verify, android, images]
+  # Created right after verify so the release page exists immediately; the APK is attached by the android job.
+  release:
+    needs: verify
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -147,22 +150,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-      - uses: actions/download-artifact@v4
-        with:
-          name: android
-          path: dist/
 
       - name: Write release notes
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY}"
           previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
-          (cd dist && sha256sum -- *.apk > SHA256SUMS)
           {
             node scripts/changelog.ts notes "$VERSION"
             echo
             echo "## Install"
             echo
-            echo "**Android:** download \`magpie-$VERSION.apk\` below and open it on the device (allow installs from unknown sources). It updates an existing install in place."
+            echo "**Android:** \`magpie-$VERSION.apk\` is attached below once the build finishes (a few minutes after the release appears). Open it on the device (allow installs from unknown sources); it updates an existing install in place."
             echo
             echo "**Server:**"
             echo
@@ -180,13 +178,14 @@ jobs:
 
       - name: Create GitHub release
         run: |
-          gh release create "$GITHUB_REF_NAME" dist/*.apk dist/SHA256SUMS \
+          gh release create "$GITHUB_REF_NAME" \
             --title "Magpie $VERSION" \
             --notes-file notes.md \
             --verify-tag
 
+  # The server does not wait for the APK: deploy as soon as the images are pushed.
   deploy:
-    needs: publish
+    needs: [verify, images]
     uses: ./.github/workflows/deploy.yml
     secrets:
       COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
