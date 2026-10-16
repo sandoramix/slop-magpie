@@ -1,11 +1,12 @@
 import type { ItemFilter, ItemKind } from "@magpie/shared/api";
 import * as Clipboard from "expo-clipboard";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { ItemBrowser } from "@/components/item-browser";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { installLabel, useInstallUpdate } from "@/lib/install-update";
 import { useUpdateCheck } from "@/lib/updates";
 import { extractUrl } from "@/lib/media";
 import { useSaveLink } from "@/lib/queries";
@@ -42,6 +43,7 @@ export default function Library() {
   const save = useSaveLink();
   const update = useUpdateCheck();
   const available = update.data;
+  const install = useInstallUpdate(available);
   const q = useDebounced(text.trim(), 300);
 
   const filter = useMemo<ItemFilter>(
@@ -69,11 +71,11 @@ export default function Library() {
       {available ? (
         <Pressable
           onPress={() => {
-            void Linking.openURL(available.url);
+            void install.start();
           }}
           className="mx-3 mt-2 rounded-lg bg-primary px-3 py-2"
         >
-          <Text className="text-sm text-primary-foreground">Update available: Magpie {available.version}. Tap to download.</Text>
+          <Text className="text-sm text-primary-foreground">{install.state.status === "idle" ? `Update available: Magpie ${available.version}. Tap to install.` : installLabel(install.state, available.version)}</Text>
         </Pressable>
       ) : null}
       <View className="gap-2 px-3 pb-1 pt-2">

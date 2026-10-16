@@ -8,6 +8,7 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ### Changed
 
+- Updates download inside the app (with progress) and open Android's installer, instead of sending you to the GitHub page. The first time, Android asks you to allow Magpie to install apps.
 - A tag created from an item's tag picker is added to that item immediately.
 
 ### Fixed

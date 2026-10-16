@@ -1,13 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { Alert, Linking, ScrollView, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { checkServer } from "@/lib/api";
 import { appVersion } from "@/lib/changelog";
+import { installLabel, useInstallUpdate } from "@/lib/install-update";
 import { useUpdateCheck } from "@/lib/updates";
 import { useAuth } from "@/stores/auth";
 import { useSettings, type ThemePreference } from "@/stores/settings";
@@ -21,6 +22,7 @@ export default function SettingsScreen() {
   const settings = useSettings();
   const update = useUpdateCheck();
   const available = update.data;
+  const install = useInstallUpdate(available);
   const token = useAuth((s) => s.token);
   const setToken = useAuth((s) => s.setToken);
   const [url, setUrl] = useState(settings.apiUrl);
@@ -140,10 +142,10 @@ export default function SettingsScreen() {
       {available ? (
         <Button
           onPress={() => {
-            void Linking.openURL(available.url);
+            void install.start();
           }}
         >
-          <Text>Download {available.version}</Text>
+          <Text>{installLabel(install.state, available.version)}</Text>
         </Button>
       ) : (
         <Button
