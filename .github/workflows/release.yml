@@ -71,6 +71,15 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: false
+      # Native modules (reanimated, nitro, screens, ...) are compiled for every ABI; ccache makes
+      # unchanged C++ a cache hit. The unique key makes each run save its result, restore-keys loads the latest.
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ccache
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
 
       - name: Prebuild native project
@@ -90,8 +99,14 @@ jobs:
           MAGPIE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           MAGPIE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           MAGPIE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        # arm64 only (every current phone): native code compiles once instead of four times
-        run: ./gradlew assembleRelease --no-daemon --build-cache -PreactNativeArchitectures=arm64-v8a
+          # CMake reads these as the default compiler launcher
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          CCACHE_MAXSIZE: 1G
+        run: |
+          export CCACHE_DIR="$HOME/.cache/ccache"
+          ./gradlew assembleRelease --no-daemon --build-cache
+          ccache --show-stats
 
       - name: Collect APK
         run: |
