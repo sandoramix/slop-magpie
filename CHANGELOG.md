@@ -6,6 +6,10 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+### Changed
+
+- The Android APK works on all devices again (64-bit and 32-bit ARM, x86); the arm64-only build from 0.1.1 is reverted.
+
 ## [0.1.2] - 2026-10-16
 ### Fixed
 

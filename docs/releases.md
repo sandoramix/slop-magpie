@@ -52,7 +52,7 @@ On a pushed `v*.*.*` tag:
 
 1. **verify**: the tag must be on `main`, the tag must equal the root `package.json` `version`, the changelog entry must exist, and typecheck, lint and test must pass.
 2. **release**: right after verify, creates the GitHub release `Magpie <version>` with the changelog entry, install instructions and a compare link, so the page exists immediately.
-3. **android** (after release): `expo prebuild`, then `gradlew assembleRelease`, signed with the release keystore from repository secrets, then attaches `magpie-<version>.apk` and `SHA256SUMS` to the release. It builds `arm64-v8a` only and uses the Gradle build cache (stored by `setup-gradle`, writable from tag runs), so only the first release is slow; the APK does not run on x86 emulators.
+3. **android** (after release): `expo prebuild`, then `gradlew assembleRelease`, signed with the release keystore from repository secrets, then attaches `magpie-<version>.apk` and `SHA256SUMS` to the release. It builds every ABI. Two caches keep it fast after the first release: the Gradle build cache (`setup-gradle`, writable from tag runs) and ccache for the native C++ compile (`actions/cache`, restored from the latest run).
 4. **images** (parallel to android): `api` and `worker` images built natively on an ARM64 runner and pushed to GHCR as `ghcr.io/<owner>/<repo>-<app>:<version>` and `:latest`.
 5. **deploy** (after images, does not wait for the APK): calls the Coolify deploy webhook ([`deploy.yml`](../.github/workflows/deploy.yml)), so the server redeploys. Coolify rebuilds the branch configured in the resource, so point the resource at `main`.
 
