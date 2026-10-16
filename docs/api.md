@@ -8,6 +8,17 @@ Authorization: Bearer <token>
 
 where the token is the admin `API_TOKEN`, an account's generated token, or a session token (see [security.md](security.md)). Every route works inside the caller's own library. The admin may send `X-Magpie-Act-As: <account id>` to work inside another account's library.
 
+## Versioning
+
+Every route lives under `/api/v<N>`; this page documents `v1`. The mobile app is installed by hand and updates late, so **a released API version must keep working for old clients** ([D24](decisions.md)).
+
+- **Allowed inside a version:** new routes, new optional response fields, new optional request fields or query params, new enum values the old client can ignore, new error codes on new routes.
+- **Breaking, needs a new version:** removing or renaming a route or field, making an input required, changing a type or meaning, changing status codes or the `{ error }` shape, or changing what an existing call returns for the same input.
+- **How:** mount `/api/v2` next to `/api/v1` (routes in `apps/api/src/routes/v2/`, shared schemas in `packages/shared/src/api/v2/`) and keep v1 untouched. Share services where behavior is identical; adapt at the route layer, not by editing v1 schemas. Both versions stay covered by integration tests.
+- **Retiring a version:** only in a release whose changelog says so (with an upgrade note), after the app no longer calls it; answer `410 Gone` with the code `bad_request` and a message pointing to the new version for one release before removing it.
+- **Database:** migrations must keep the previous version working. Add columns and tables in one release; rename or drop in a later one, after the old version is gone.
+- **Clients:** the app calls a single base path constant per version; `GET /health` is unversioned (`/api/v1/health` today) so an app can still tell how old a server is.
+
 Schemas are defined in `packages/shared/src/api/` — this page is the overview, the zod schemas are the source of truth.
 
 Errors:
