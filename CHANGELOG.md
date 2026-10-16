@@ -6,6 +6,7 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-16
 ### Added
 
 - Accounts: the admin can create accounts from the app (Settings, Manage users), each with its own private library of items, folders, tags, fields and smart folders. The admin can also open any account's library to help out; those changes are logged.
