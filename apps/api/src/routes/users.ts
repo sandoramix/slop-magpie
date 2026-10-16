@@ -1,10 +1,11 @@
 import {
   CreateUserBody,
   IdParam,
-  type LoginResponse,
   type MeResponse,
+  type PasswordResponse,
   SetPasswordBody,
   UpdateMeBody,
+  UpdateUserBody,
   type UsersResponse,
 } from "@magpie/shared/api";
 import { Hono } from "hono";
@@ -30,7 +31,7 @@ export const meRoutes = (deps: AppDeps) =>
       const principal = c.get("principal");
       const token = await svc.setPassword(deps.db, principal.id, c.req.valid("json").password, c.req.header("user-agent")?.slice(0, 200) ?? null);
       await deps.audit({ action: "auth.password_set", ...requestMeta(c, deps.trustProxy), details: { id: principal.id } });
-      const body: LoginResponse = { token, me: svc.whoAmI({ ...principal, hasPassword: true, actingAs: null }) };
+      const body: PasswordResponse = { token, me: svc.whoAmI({ ...principal, hasPassword: true, actingAs: null }) };
       return c.json(body, 200);
     })
     // signs this device out (a session token is revoked; the temporary token has nothing to revoke)
@@ -52,9 +53,17 @@ export const usersRoutes = (deps: AppDeps) =>
     .use("*", adminOnly)
     .get("/", async (c) => c.json({ users: await svc.listUsers(deps.db) } satisfies UsersResponse, 200))
     .post("/", validate("json", CreateUserBody), async (c) => {
-      const created = await svc.createUser(deps.db, c.req.valid("json").name);
-      await deps.audit({ action: "user.create", ...requestMeta(c, deps.trustProxy), details: { id: created.user.id, name: created.user.name } });
+      const { name, role } = c.req.valid("json");
+      const created = await svc.createUser(deps.db, name, role);
+      await deps.audit({ action: "user.create", ...requestMeta(c, deps.trustProxy), details: { id: created.user.id, name: created.user.name, role } });
       return c.json(created, 201);
+    })
+    .patch("/:id", validate("param", IdParam), validate("json", UpdateUserBody), async (c) => {
+      const { id } = c.req.valid("param");
+      const { role } = c.req.valid("json");
+      const user = await svc.setRole(deps.db, id, role, c.get("principal").id);
+      await deps.audit({ action: "user.set_role", ...requestMeta(c, deps.trustProxy), details: { id, role } });
+      return c.json(user, 200);
     })
     .post("/:id/token", validate("param", IdParam), async (c) => {
       const { id } = c.req.valid("param");
@@ -63,6 +72,6 @@ export const usersRoutes = (deps: AppDeps) =>
       return c.json(rotated, 200);
     })
     .delete("/:id", validate("param", IdParam), async (c) => {
-      await svc.deleteUser(deps, c.req.valid("param").id, requestMeta(c, deps.trustProxy));
+      await svc.deleteUser(deps, c.req.valid("param").id, c.get("principal").id, requestMeta(c, deps.trustProxy));
       return c.body(null, 204);
     });

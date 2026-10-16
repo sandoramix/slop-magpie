@@ -6,6 +6,9 @@ import type {
   ItemListResponse,
   LoginResponse,
   MeResponse,
+  PasswordResponse,
+  Role,
+  User,
   StatsResponse,
   Tag,
   UsersResponse,
@@ -34,7 +37,8 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
   };
 
   const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
-  const createUser = (name: string) => json<CreateUserResponse>(env.request("/users", { method: "POST", json: { name } }), 201);
+  const createUser = (name: string, role?: Role) =>
+    json<CreateUserResponse>(env.request("/users", { method: "POST", json: { name, ...(role ? { role } : {}) } }), 201);
   const asUser = (token: string, path: string, init: RequestInit & { json?: unknown } = {}) =>
     env.request(path, { ...init, headers: { ...bearer(token), ...(init.headers as Record<string, string> | undefined) } });
   const save = (token: string, url: string, extra: Record<string, unknown> = {}) =>
@@ -70,7 +74,10 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
     // the username is not part of the contract: extra keys are ignored, and there is no rename route
     await json<MeResponse>(asUser(created.token, "/me", { method: "PATCH", json: { displayName: null, name: "Hacked" } }), 200);
     expect(await json<MeResponse>(asUser(created.token, "/me"), 200)).toMatchObject({ name: "Fixed Name", displayName: null });
-    expect((await env.request(`/users/${created.user.id}`, { method: "PATCH", json: { name: "Other" } })).status).toBe(404);
+    // the admin can change a role but there is no way to rename an account
+    expect((await env.request(`/users/${created.user.id}`, { method: "PATCH", json: { name: "Other" } })).status).toBe(400);
+    const after = await json<UsersResponse>(env.request("/users"), 200);
+    expect(after.users.find((u) => u.id === created.user.id)?.name).toBe("Fixed Name");
   });
 
   it("keeps libraries isolated", async () => {
@@ -157,7 +164,7 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
       expect((await login("Pw User", "whatever-long")).status).toBe(401);
       expect((await setPassword(created.token, "short")).status).toBe(400);
 
-      const set = await json<LoginResponse>(setPassword(created.token, "correct horse battery"), 200);
+      const set = await json<PasswordResponse & { token: string }>(setPassword(created.token, "correct horse battery"), 200);
       expect(set.me).toMatchObject({ name: "Pw User", hasPassword: true });
       expect(set.token).toMatch(/^mgs_/);
       // the generated token was temporary
@@ -179,9 +186,9 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
 
     it("changing the password signs out the other devices", async () => {
       const created = await createUser("Pw Change");
-      const first = await json<LoginResponse>(setPassword(created.token, "first password here"), 200);
+      const first = await json<PasswordResponse & { token: string }>(setPassword(created.token, "first password here"), 200);
       const other = await json<LoginResponse>(login("Pw Change", "first password here"), 200);
-      const changed = await json<LoginResponse>(setPassword(first.token, "second password here"), 200);
+      const changed = await json<PasswordResponse & { token: string }>(setPassword(first.token, "second password here"), 200);
       expect((await asUser(first.token, "/me")).status).toBe(401);
       expect((await asUser(other.token, "/me")).status).toBe(401);
       expect((await asUser(changed.token, "/me")).status).toBe(200);
@@ -190,7 +197,7 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
 
     it("lets the admin reset an account: new temporary token, no password, no sessions", async () => {
       const created = await createUser("Forgetful");
-      const set = await json<LoginResponse>(setPassword(created.token, "i will forget this"), 200);
+      const set = await json<PasswordResponse & { token: string }>(setPassword(created.token, "i will forget this"), 200);
       const reset = await json<{ token: string }>(env.request(`/users/${created.user.id}/token`, { method: "POST" }), 200);
       expect((await asUser(set.token, "/me")).status).toBe(401);
       expect((await login("Forgetful", "i will forget this")).status).toBe(401);
@@ -198,8 +205,10 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
       expect(me.hasPassword).toBe(false);
     });
 
-    it("keeps API_TOKEN working for the admin even after a password is set", async () => {
-      const set = await json<LoginResponse>(env.request("/me/password", { method: "PUT", json: { password: "admin long password" } }), 200);
+    it("lets the root admin add a password while API_TOKEN keeps working", async () => {
+      const set = await json<PasswordResponse>(env.request("/me/password", { method: "PUT", json: { password: "admin long password" } }), 200);
+      // no session is issued: the admin keeps using its token
+      expect(set.token).toBeNull();
       expect(set.me).toMatchObject({ isAdmin: true, hasPassword: true });
       expect((await env.request("/me")).status).toBe(200);
       const viaPassword = await json<LoginResponse>(login("Admin", "admin long password"), 200);
@@ -210,6 +219,53 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
       await createUser("Guarded");
       for (let i = 0; i < 10; i++) expect((await login("Guarded", `wrong password ${i}`)).status).toBe(401);
       expect((await login("Guarded", "one more try")).status).toBe(429);
+    });
+  });
+
+  describe("roles", () => {
+    it("assigns a role at creation, defaulting to user", async () => {
+      expect((await createUser("Role Default")).user.isAdmin).toBe(false);
+      expect((await createUser("Role Admin", "admin")).user.isAdmin).toBe(true);
+      expect((await env.request("/users", { method: "POST", json: { name: "Role Bad", role: "root" } })).status).toBe(400);
+    });
+
+    it("gives an admin account the admin powers, and a user none", async () => {
+      const admin = await createUser("Second Admin", "admin");
+      const user = await createUser("Regular", "user");
+      expect(await json<MeResponse>(asUser(admin.token, "/me"), 200)).toMatchObject({ isAdmin: true });
+      expect((await asUser(admin.token, "/users")).status).toBe(200);
+      const made = await json<CreateUserResponse>(asUser(admin.token, "/users", { method: "POST", json: { name: "By Second" } }), 201);
+      expect(made.user.isAdmin).toBe(false);
+      // an admin account can act inside a user's library
+      const act = await asUser(admin.token, "/me", { headers: { "X-Magpie-Act-As": user.user.id } });
+      expect(await json<MeResponse>(act, 200)).toMatchObject({ isAdmin: true, actingAs: { id: user.user.id } });
+      expect((await asUser(user.token, "/users")).status).toBe(403);
+    });
+
+    it("keeps the admin role after the account swaps its token for a password session", async () => {
+      const admin = await createUser("Admin With Password", "admin");
+      const set = await json<PasswordResponse & { token: string }>(asUser(admin.token, "/me/password", { method: "PUT", json: { password: "second admin password" } }), 200);
+      expect((await asUser(admin.token, "/me")).status).toBe(401);
+      expect((await asUser(set.token, "/users")).status).toBe(200);
+    });
+
+    it("promotes and demotes, never the root admin or yourself", async () => {
+      const user = await createUser("Promotable");
+      expect((await asUser(user.token, "/users")).status).toBe(403);
+      const promoted = await json<User>(env.request(`/users/${user.user.id}`, { method: "PATCH", json: { role: "admin" } }), 200);
+      expect(promoted.isAdmin).toBe(true);
+      expect((await asUser(user.token, "/users")).status).toBe(200);
+      // takes effect at once: the role is read on every request
+      await json<User>(env.request(`/users/${user.user.id}`, { method: "PATCH", json: { role: "user" } }), 200);
+      expect((await asUser(user.token, "/users")).status).toBe(403);
+
+      const { users } = await json<UsersResponse>(env.request("/users"), 200);
+      const root = users.find((u) => u.name === "Admin");
+      expect((await env.request(`/users/${root?.id ?? ""}`, { method: "PATCH", json: { role: "user" } })).status).toBe(400);
+      const other = await createUser("Self Admin", "admin");
+      expect((await asUser(other.token, `/users/${other.user.id}`, { method: "PATCH", json: { role: "user" } })).status).toBe(400);
+      expect((await asUser(other.token, `/users/${other.user.id}`, { method: "DELETE" })).status).toBe(400);
+      expect((await asUser(user.token, `/users/${user.user.id}`, { method: "PATCH", json: { role: "admin" } })).status).toBe(403);
     });
   });
 

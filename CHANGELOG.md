@@ -10,6 +10,7 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 - Accounts: the admin can create accounts from the app (Settings, Manage users), each with its own private library of items, folders, tags, fields and smart folders. The admin can also open any account's library to help out; those changes are logged.
 - Sign in with your generated access token the first time, then choose a password; after that the token stops working and you sign in with your username and password on any device. If you forget it, the admin resets your account and gives you a new token.
+- Accounts get a role, user or admin, when they are created; admins can manage accounts and open other libraries, and can promote or demote others later. The built-in admin keeps using the server's admin token, alone or together with a password.
 - You can change the name that is shown for you (your username stays the same).
 - Several servers or accounts can be saved on the phone, with a switcher in the Library header and a first-launch screen to connect.
 - Existing items stay with the admin account, so nothing is lost when upgrading.

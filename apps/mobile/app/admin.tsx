@@ -1,15 +1,16 @@
-import { accountLabel } from "@magpie/shared/api";
+import { accountLabel, type Role } from "@magpie/shared/api";
 import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { Plus, Shield } from "lucide-react-native";
 import { useState } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Chip } from "@/components/chip";
 import { SafeAreaView } from "@/components/styled";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { useCreateUser, useDeleteUser, useRotateUserToken, useUsers } from "@/lib/queries";
+import { useCreateUser, useDeleteUser, useMe, useRotateUserToken, useSetUserRole, useUsers } from "@/lib/queries";
 import { useAccounts } from "@/stores/accounts";
 
 /** Shown once after creating an account or rotating its token. */
@@ -22,6 +23,9 @@ export default function AdminScreen() {
   const create = useCreateUser();
   const rotate = useRotateUserToken();
   const remove = useDeleteUser();
+  const setRole = useSetUserRole();
+  const me = useMe();
+  const [role, setNewRole] = useState<Role>("user");
   const setActAs = useAccounts((s) => s.setActAs);
   const [name, setName] = useState("");
   const [issued, setIssued] = useState<Issued | null>(null);
@@ -33,7 +37,7 @@ export default function AdminScreen() {
   const add = () => {
     const n = name.trim();
     if (!n) return;
-    create.mutate(n, {
+    create.mutate({ name: n, role }, {
       onSuccess: ({ user, token }) => {
         setName("");
         setIssued({ name: user.name, token });
@@ -42,7 +46,9 @@ export default function AdminScreen() {
     });
   };
 
-  const options = (id: string, userName: string, isAdmin: boolean) => {
+  const options = (id: string, userName: string, isAdmin: boolean, isRoot: boolean) => {
+    // the root admin (API_TOKEN) and your own account keep their role and cannot be removed here
+    const self = id === me.data?.id;
     const buttons = [
       {
         text: "View library",
@@ -51,9 +57,15 @@ export default function AdminScreen() {
           router.dismissTo("/");
         },
       },
-      ...(isAdmin
+      ...(isRoot || self
         ? []
         : [
+            {
+              text: isAdmin ? "Make regular user" : "Make admin",
+              onPress: () => {
+                setRole.mutate({ id, role: isAdmin ? "user" : "admin" }, { onError: fail });
+              },
+            },
             {
               text: "Reset password / new token",
               onPress: () => {
@@ -137,6 +149,22 @@ export default function AdminScreen() {
         ) : null}
 
         <View className="flex-row gap-2">
+          <Chip
+            label="User"
+            active={role === "user"}
+            onPress={() => {
+              setNewRole("user");
+            }}
+          />
+          <Chip
+            label="Admin"
+            active={role === "admin"}
+            onPress={() => {
+              setNewRole("admin");
+            }}
+          />
+        </View>
+        <View className="flex-row gap-2">
           <Input className="flex-1" value={name} onChangeText={setName} placeholder="Username (fixed once created)" autoCapitalize="words" />
           <Button disabled={create.isPending || !name.trim()} onPress={add}>
             <Icon as={Plus} className="text-primary-foreground" />
@@ -149,7 +177,7 @@ export default function AdminScreen() {
           <Pressable
             key={u.id}
             onPress={() => {
-              options(u.id, accountLabel(u), u.isAdmin);
+              options(u.id, accountLabel(u), u.isAdmin, u.isRoot);
             }}
             className="flex-row items-center gap-3 rounded-lg border border-border p-3 active:bg-accent"
           >
@@ -159,7 +187,7 @@ export default function AdminScreen() {
                 {u.isAdmin ? <Icon as={Shield} size={14} className="text-muted-foreground" /> : null}
               </View>
               <Text className="text-xs text-muted-foreground">
-                @{u.name} · {u.itemCount} items
+                @{u.name} · {u.isAdmin ? "admin" : "user"} · {u.itemCount} items
               </Text>
             </View>
           </Pressable>

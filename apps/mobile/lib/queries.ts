@@ -12,8 +12,9 @@ import {
   Tag,
   TagsResponse,
   CreateUserResponse,
-  LoginResponse,
   MeResponse,
+  PasswordResponse,
+  type Role,
   type UpdateMeBody,
   RotateTokenResponse,
   User,
@@ -325,7 +326,7 @@ export function useUsers(enabled: boolean) {
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (name: string) => request("POST", "/users", { body: { name }, schema: CreateUserResponse }),
+    mutationFn: (body: { name: string; role: Role }) => request("POST", "/users", { body, schema: CreateUserResponse }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 }
@@ -334,6 +335,14 @@ export function useRenameUser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => request("PATCH", `/users/${id}`, { body: { name }, schema: User }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
+export function useSetUserRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, role }: { id: string; role: Role }) => request("PATCH", `/users/${id}`, { body: { role }, schema: User }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
   });
 }
@@ -364,6 +373,6 @@ export function useUpdateDisplayName() {
 /** Choosing a password retires the temporary token; the reply has this device's new session token. */
 export function useSetPassword() {
   return useMutation({
-    mutationFn: (password: string) => request("PUT", "/me/password", { body: { password }, schema: LoginResponse }),
+    mutationFn: (password: string) => request("PUT", "/me/password", { body: { password }, schema: PasswordResponse }),
   });
 }

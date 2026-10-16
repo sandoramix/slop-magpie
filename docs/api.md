@@ -31,12 +31,13 @@ Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `uns
 | POST | `/auth/login` | **no bearer.** `{ username, password }` → `{ token, me }` (a session token for this device). Rate limited |
 | GET | `/me` | `{ id, name, displayName, isAdmin, hasPassword, actingAs }` |
 | PATCH | `/me` | `{ displayName }` (`null` clears it). The username cannot change |
-| PUT | `/me/password` | `{ password }` (10+ chars) → `{ token, me }`. Retires the temporary token, signs out other devices |
+| PUT | `/me/password` | `{ password }` (10+ chars) → `{ token, me }`. Retires the temporary token, signs out other devices. The root admin gets `token: null` and keeps `API_TOKEN` |
 | POST | `/me/logout` | revokes the session token that made the call |
 | GET | `/users` | **admin only.** All accounts with item counts |
-| POST | `/users` | **admin only.** `{ name }` (the fixed username) → `201 { user, token }`; the token is shown once |
+| POST | `/users` | **admin only.** `{ name, role? }` (the fixed username; `role` is `user` (default) or `admin`) → `201 { user, token }`; the token is shown once |
+| PATCH | `/users/:id` | **admin only.** `{ role }` promotes or demotes. Not the root admin, not yourself |
 | POST | `/users/:id/token` | **admin only.** Reset: new temporary token, password removed, sessions revoked → `{ token }` |
-| DELETE | `/users/:id` | **admin only.** Deletes the account, its library and its files. The admin account cannot be deleted |
+| DELETE | `/users/:id` | **admin only.** Deletes the account, its library and its files. Not the root admin, not yourself |
 
 ## Sources
 
