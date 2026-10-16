@@ -64,7 +64,10 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      # tag builds are not on the default branch, so the Gradle cache must be explicitly writable
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
       - run: pnpm install --frozen-lockfile
 
       - name: Prebuild native project
@@ -84,7 +87,8 @@ jobs:
           MAGPIE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           MAGPIE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           MAGPIE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --no-daemon
+        # arm64 only (every current phone): native code compiles once instead of four times
+        run: ./gradlew assembleRelease --no-daemon --build-cache -PreactNativeArchitectures=arm64-v8a
 
       - name: Collect APK
         run: |
