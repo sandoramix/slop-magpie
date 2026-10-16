@@ -15,7 +15,7 @@ const repo = z.string().safeParse(Constants.expoConfig?.extra?.githubRepo);
 export type UpdateInfo = {
   version: string;
   notes: string;
-  /** Direct APK link when the release has one, otherwise the release page. */
+  /** Direct link to the release APK. */
   url: string;
 };
 
@@ -31,8 +31,11 @@ async function fetchUpdate(): Promise<UpdateInfo | null> {
   const release = Release.parse(await res.json());
   const version = release.tag_name.replace(/^v/, "");
   if (compareVersions(version, appVersion) <= 0) return null;
+  // the release is created before CI attaches the APK; until it is there there is nothing to install
+  // in place, and sending people to the release page is exactly what the in-app update avoids
   const apk = release.assets.find((a) => a.name.endsWith(".apk"));
-  return { version, notes: release.body ?? "", url: apk?.browser_download_url ?? release.html_url };
+  if (!apk) return null;
+  return { version, notes: release.body ?? "", url: apk.browser_download_url };
 }
 
 export function useUpdateCheck() {

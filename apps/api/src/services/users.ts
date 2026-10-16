@@ -5,9 +5,9 @@
 // password (a session token). "Forgot password" = the admin resets the account: new token, no
 // password, no sessions.
 import { randomBytes } from "node:crypto";
-import { ADMIN_USER_ID, auditLog, type Database, items, sessions, users } from "@magpie/db";
+import { ADMIN_USER_ID, auditLog, type Database, deletedTokens, items, sessions, users } from "@magpie/db";
 import type { CreateUserResponse, MeResponse, Role, UpdateMeBody, User } from "@magpie/shared/api";
-import { and, count, eq, gt, isNotNull } from "drizzle-orm";
+import { and, count, eq, gt, isNotNull, lt } from "drizzle-orm";
 import type { AccountLookup, AuditEvent, Authenticated, Principal, ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
 import { hashToken } from "../middleware/auth.ts";
@@ -43,8 +43,15 @@ export function createAccountLookup(db: Database): AccountLookup {
       const [row] = await db.select(accountColumns).from(users).where(eq(users.id, id));
       return row ?? null;
     },
+    async isDeletedToken(tokenHash): Promise<boolean> {
+      const [row] = await db.select({ h: deletedTokens.tokenHash }).from(deletedTokens).where(eq(deletedTokens.tokenHash, tokenHash));
+      return row !== undefined;
+    },
   };
 }
+
+// long enough for a phone that was off for months to hear about it, short enough not to pile up
+const TOMBSTONE_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 
 /** `mgp_` + 256 random bits. Only the hash is stored. */
 export const newToken = (): string => `mgp_${randomBytes(32).toString("base64url")}`;
@@ -54,11 +61,20 @@ const conflict = (error: unknown): never => {
   throw error;
 };
 
-const toUser = (row: { id: string; name: string; displayName: string | null; isAdmin: boolean; createdAt: Date; itemCount: number }): User => ({
+const toUser = (row: {
+  id: string;
+  name: string;
+  displayName: string | null;
+  isAdmin: boolean;
+  hasPassword: boolean;
+  createdAt: Date;
+  itemCount: number;
+}): User => ({
   id: row.id,
   name: row.name,
   displayName: row.displayName,
   isAdmin: row.isAdmin,
+  hasPassword: row.hasPassword,
   isRoot: row.id === ADMIN_USER_ID,
   createdAt: row.createdAt.toISOString(),
   itemCount: row.itemCount,
@@ -69,6 +85,7 @@ const userColumns = {
   name: users.name,
   displayName: users.displayName,
   isAdmin: users.isAdmin,
+  hasPassword: isNotNull(users.passwordHash).mapWith(Boolean),
   createdAt: users.createdAt,
   itemCount: count(items.id),
 };
@@ -187,6 +204,14 @@ export async function deleteUser(
       "user.delete_items",
     );
   }
+  // remember the account's token hashes so its devices learn what happened (see deletedTokens)
+  const sessionRows = await deps.db.select({ h: sessions.tokenHash }).from(sessions).where(eq(sessions.userId, id));
+  const [own] = await deps.db.select({ h: users.tokenHash }).from(users).where(eq(users.id, id));
+  const hashes = [...sessionRows.map((r) => r.h), ...(own?.h ? [own.h] : [])];
+  if (hashes.length) {
+    await deps.db.insert(deletedTokens).values(hashes.map((tokenHash) => ({ tokenHash, userName: target.name }))).onConflictDoNothing();
+  }
+  await deps.db.delete(deletedTokens).where(lt(deletedTokens.deletedAt, new Date(Date.now() - TOMBSTONE_TTL_MS)));
   await deps.db.delete(users).where(eq(users.id, id));
   await deps.db.insert(auditLog).values({ ...audit, action: "user.delete", details: { id, name: target.name, items: owned.length } });
 }

@@ -43,6 +43,7 @@ export function bearerAuth(options: BearerAuthOptions) {
     const presented = match?.[1];
 
     let principal: Principal | null = null;
+    let deletedAccount = false;
     // hashing first makes the comparison constant-time regardless of length
     if (presented && timingSafeEqual(digest(presented), expected)) {
       // the admin row is looked up so its display name shows; unit tests without a database fall back to the constant
@@ -63,6 +64,8 @@ export function bearerAuth(options: BearerAuthOptions) {
       if (account) {
         const { sessionId, ...rest } = account;
         principal = { ...rest, sessionTokenHash: sessionId ? tokenHash : null, actingAs: null, libraryId: account.id };
+      } else {
+        deletedAccount = await options.accounts.isDeletedToken(tokenHash);
       }
     }
 
@@ -72,8 +75,9 @@ export function bearerAuth(options: BearerAuthOptions) {
         action: crossed ? "auth.rate_limited" : "auth.fail",
         ip,
         userAgent: c.req.header("user-agent") ?? null,
-        details: { path: c.req.path, reason: match ? "bad_token" : "missing_token" },
+        details: { path: c.req.path, reason: deletedAccount ? "account_deleted" : match ? "bad_token" : "missing_token" },
       });
+      if (deletedAccount) return errorResponse(c, 401, "unauthorized", "This account was deleted by an administrator", "account_deleted");
       return errorResponse(c, 401, "unauthorized", "Missing or invalid token");
     }
 

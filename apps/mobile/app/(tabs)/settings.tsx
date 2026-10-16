@@ -3,21 +3,27 @@ import { Shield } from "lucide-react-native";
 import { accountLabel } from "@magpie/shared/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { ScrollView, View } from "react-native";
+import { alert } from "@/lib/alert";
 import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { UpdateCard } from "@/components/update-card";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { appVersion } from "@/lib/changelog";
-import { installLabel, useInstallUpdate } from "@/lib/install-update";
 import { useMe, useSetPassword, useUpdateDisplayName } from "@/lib/queries";
 import { useUpdateCheck } from "@/lib/updates";
 import { useAccounts, useActiveAccount } from "@/stores/accounts";
-import { useSettings, type ThemePreference } from "@/stores/settings";
+import { useSettings, type ShareMode, type ThemePreference } from "@/stores/settings";
 
 const THEMES: ThemePreference[] = ["system", "light", "dark"];
 const COLUMNS = [1, 2, 3] as const;
+const SHARE_MODES: { mode: ShareMode; label: string }[] = [
+  { mode: "ask", label: "Ask each time" },
+  { mode: "organize", label: "Organize now" },
+  { mode: "later", label: "Save for later" },
+];
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -34,7 +40,6 @@ export default function SettingsScreen() {
   const [confirm, setConfirm] = useState("");
   const [displayName, setDisplayName] = useState("");
   const available = update.data;
-  const install = useInstallUpdate(available);
 
   // the server is the source of truth for the role (it may have changed since the account was added)
   const role = me.data?.isAdmin;
@@ -51,13 +56,13 @@ export default function SettingsScreen() {
   const saveName = () => {
     const next = displayName.trim();
     if (next === serverName) return;
-    updateName.mutate({ displayName: next === "" ? null : next }, { onError: (e) => { Alert.alert("Failed", e.message); } });
+    updateName.mutate({ displayName: next === "" ? null : next }, { onError: (e) => { alert("Failed", e.message); } });
   };
 
   const changePassword = () => {
     if (!account) return;
     if (password !== confirm) {
-      Alert.alert("Passwords differ", "Type the same password twice.");
+      alert("Passwords differ", "Type the same password twice.");
       return;
     }
     setPasswordMutation.mutate(password, {
@@ -71,11 +76,11 @@ export default function SettingsScreen() {
           setPassword("");
           setConfirm("");
           await qc.invalidateQueries({ queryKey: ["me"] });
-          Alert.alert("Password set", "Use your username and password to sign in on other devices.");
+          alert("Password set", "Use your username and password to sign in on other devices.");
         })();
       },
       onError: (e) => {
-        Alert.alert("Failed", e.message);
+        alert("Failed", e.message);
       },
     });
   };
@@ -143,6 +148,25 @@ export default function SettingsScreen() {
       ) : null}
 
       <Text variant="large" className="mt-4">
+        Sharing
+      </Text>
+      <Text className="text-sm text-muted-foreground">
+        Android's share sheet has two Magpie entries. "Magpie: save for later" always parks the link in your Inbox and takes you straight back; plain "Magpie" does what you pick here. Parked links wait in the Inbox until you sort them.
+      </Text>
+      <View className="flex-row flex-wrap gap-2">
+        {SHARE_MODES.map((m) => (
+          <Chip
+            key={m.mode}
+            label={m.label}
+            active={settings.shareMode === m.mode}
+            onPress={() => {
+              settings.setShareMode(m.mode);
+            }}
+          />
+        ))}
+      </View>
+
+      <Text variant="large" className="mt-4">
         Appearance
       </Text>
       <View className="flex-row flex-wrap gap-2">
@@ -185,13 +209,7 @@ export default function SettingsScreen() {
               : "You're up to date"}
       </Text>
       {available ? (
-        <Button
-          onPress={() => {
-            void install.start();
-          }}
-        >
-          <Text>{installLabel(install.state, available.version)}</Text>
-        </Button>
+        <UpdateCard update={available} />
       ) : (
         <Button
           variant="outline"
@@ -215,7 +233,7 @@ export default function SettingsScreen() {
         <Button
           variant="ghost"
           onPress={() => {
-            Alert.alert("Can't reach your account", me.error.message);
+            alert("Can't reach your account", me.error.message);
           }}
         >
           <Text className="text-destructive">Account problem: tap for details</Text>

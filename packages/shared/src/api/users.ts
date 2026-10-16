@@ -11,6 +11,8 @@ export const User = z.object({
   /** Chosen by the account owner for visibility; null means "show the username". */
   displayName: z.string().nullable(),
   isAdmin: z.boolean(),
+  /** False while the generated token has not been exchanged for a password yet (an invite still pending). Absent on older servers. */
+  hasPassword: z.boolean().optional(),
   /** The built-in admin (API_TOKEN): its role cannot change and it cannot be deleted. */
   isRoot: z.boolean(),
   createdAt: z.iso.datetime(),

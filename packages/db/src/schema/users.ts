@@ -33,6 +33,17 @@ export const ownerId = () =>
     .references(() => users.id, { onDelete: "cascade" });
 
 /**
+ * Hashes of the tokens a deleted account had (its generated token and its sessions), kept so a
+ * phone that still holds one can be told "this account was deleted" instead of "bad token".
+ * Holds no library data; old rows are purged.
+ */
+export const deletedTokens = pgTable("deleted_tokens", {
+  tokenHash: text().primaryKey(),
+  userName: text().notNull(),
+  deletedAt: timestamptz().notNull().defaultNow(),
+});
+
+/**
  * A persistent login for one device, created by signing in with username + password. Only the
  * hash of its token is stored; it can be revoked on its own or all at once.
  */
