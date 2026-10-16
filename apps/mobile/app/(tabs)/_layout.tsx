@@ -1,5 +1,6 @@
 import { Tabs } from "expo-router";
 import { FolderTree, Inbox, LayoutGrid, Settings } from "lucide-react-native";
+import { AccountTitle } from "@/components/account-chrome";
 import { useColors } from "@/lib/theme";
 import { useStats } from "@/lib/queries";
 
@@ -18,7 +19,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: "Library", tabBarIcon: ({ color, size }) => <LayoutGrid color={color} size={size} /> }}
+        options={{ title: "Library", headerTitle: () => <AccountTitle fallback="Library" />, tabBarIcon: ({ color, size }) => <LayoutGrid color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="inbox"

@@ -1,10 +1,12 @@
 # API
 
-Base: `https://<host>/api/v1`. JSON in/out. All routes except `/health` and signed media require:
+Base: `https://<host>/api/v1`. JSON in/out. All routes except `/health`, `POST /auth/login` and signed media require:
 
 ```
-Authorization: Bearer <API_TOKEN>
+Authorization: Bearer <token>
 ```
+
+where the token is the admin `API_TOKEN`, an account's generated token, or a session token (see [security.md](security.md)). Every route works inside the caller's own library. The admin may send `X-Magpie-Act-As: <account id>` to work inside another account's library.
 
 Schemas are defined in `packages/shared/src/api/` — this page is the overview, the zod schemas are the source of truth.
 
@@ -14,13 +16,27 @@ Errors:
 { "error": { "code": "not_found", "message": "Item not found" } }
 ```
 
-Codes: `bad_request`, `unauthorized`, `not_found`, `conflict`, `unsupported_url`, `rate_limited`, `internal`.
+Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `unsupported_url`, `rate_limited`, `internal`.
 
 ## Health
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/health` | no auth; DB ping. `{ ok: true, version }` |
+
+## Accounts
+
+| Method | Path | Notes |
+|---|---|---|
+| POST | `/auth/login` | **no bearer.** `{ username, password }` → `{ token, me }` (a session token for this device). Rate limited |
+| GET | `/me` | `{ id, name, displayName, isAdmin, hasPassword, actingAs }` |
+| PATCH | `/me` | `{ displayName }` (`null` clears it). The username cannot change |
+| PUT | `/me/password` | `{ password }` (10+ chars) → `{ token, me }`. Retires the temporary token, signs out other devices |
+| POST | `/me/logout` | revokes the session token that made the call |
+| GET | `/users` | **admin only.** All accounts with item counts |
+| POST | `/users` | **admin only.** `{ name }` (the fixed username) → `201 { user, token }`; the token is shown once |
+| POST | `/users/:id/token` | **admin only.** Reset: new temporary token, password removed, sessions revoked → `{ token }` |
+| DELETE | `/users/:id` | **admin only.** Deletes the account, its library and its files. The admin account cannot be deleted |
 
 ## Sources
 

@@ -62,7 +62,7 @@ See `.env.example`. Validated at startup by t3-env — the container exits with 
 | Var | Used by | Example |
 |---|---|---|
 | `DATABASE_URL` | api, worker | `postgres://magpie:...@host:5432/magpie` |
-| `API_TOKEN` | api | `openssl rand -base64 48` |
+| `API_TOKEN` | api | `openssl rand -base64 48` (the **admin** credential; accounts get their own tokens from the app) |
 | `MEDIA_SIGNING_SECRET` | api, worker | `openssl rand -base64 48` |
 | `PUBLIC_BASE_URL` | api, worker | `https://magpie.example.com` |
 | `STORAGE_DRIVER` | api, worker | `local` |

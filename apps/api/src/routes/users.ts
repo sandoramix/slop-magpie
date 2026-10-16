@@ -1,0 +1,68 @@
+import {
+  CreateUserBody,
+  IdParam,
+  type LoginResponse,
+  type MeResponse,
+  SetPasswordBody,
+  UpdateMeBody,
+  type UsersResponse,
+} from "@magpie/shared/api";
+import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
+import type { AppDeps, AppEnv } from "../deps.ts";
+import { errorResponse } from "../http/errors.ts";
+import { requestMeta } from "../http/request-meta.ts";
+import { validate } from "../http/validate.ts";
+import * as credentials from "../services/credentials.ts";
+import * as svc from "../services/users.ts";
+
+export const meRoutes = (deps: AppDeps) =>
+  new Hono<AppEnv>()
+    .get("/", (c) => c.json(svc.whoAmI(c.get("principal")) satisfies MeResponse, 200))
+    // the token owner edits their own display name, even while an admin is acting as someone else
+    .patch("/", validate("json", UpdateMeBody), async (c) => {
+      const principal = c.get("principal");
+      await svc.updateDisplayName(deps.db, principal.id, c.req.valid("json"));
+      return c.json(svc.whoAmI({ ...principal, displayName: c.req.valid("json").displayName }) satisfies MeResponse, 200);
+    })
+    // choosing a password retires the temporary token; the answer carries this device's new session token
+    .put("/password", validate("json", SetPasswordBody), async (c) => {
+      const principal = c.get("principal");
+      const token = await svc.setPassword(deps.db, principal.id, c.req.valid("json").password, c.req.header("user-agent")?.slice(0, 200) ?? null);
+      await deps.audit({ action: "auth.password_set", ...requestMeta(c, deps.trustProxy), details: { id: principal.id } });
+      const body: LoginResponse = { token, me: svc.whoAmI({ ...principal, hasPassword: true, actingAs: null }) };
+      return c.json(body, 200);
+    })
+    // signs this device out (a session token is revoked; the temporary token has nothing to revoke)
+    .post("/logout", async (c) => {
+      const { sessionTokenHash } = c.get("principal");
+      if (sessionTokenHash) await credentials.revokeSession(deps.db, sessionTokenHash);
+      return c.body(null, 204);
+    });
+
+const adminOnly = createMiddleware<AppEnv>(async (c, next) => {
+  // the token owner decides, even while acting as someone else
+  if (!c.get("principal").isAdmin) return errorResponse(c, 403, "forbidden", "Admin only");
+  await next();
+});
+
+/** Account management, admin token only. */
+export const usersRoutes = (deps: AppDeps) =>
+  new Hono<AppEnv>()
+    .use("*", adminOnly)
+    .get("/", async (c) => c.json({ users: await svc.listUsers(deps.db) } satisfies UsersResponse, 200))
+    .post("/", validate("json", CreateUserBody), async (c) => {
+      const created = await svc.createUser(deps.db, c.req.valid("json").name);
+      await deps.audit({ action: "user.create", ...requestMeta(c, deps.trustProxy), details: { id: created.user.id, name: created.user.name } });
+      return c.json(created, 201);
+    })
+    .post("/:id/token", validate("param", IdParam), async (c) => {
+      const { id } = c.req.valid("param");
+      const rotated = await svc.resetCredentials(deps.db, id);
+      await deps.audit({ action: "user.reset_credentials", ...requestMeta(c, deps.trustProxy), details: { id } });
+      return c.json(rotated, 200);
+    })
+    .delete("/:id", validate("param", IdParam), async (c) => {
+      await svc.deleteUser(deps, c.req.valid("param").id, requestMeta(c, deps.trustProxy));
+      return c.body(null, 204);
+    });

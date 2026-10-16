@@ -3,6 +3,7 @@ import { z } from "zod";
 export const ErrorCode = z.enum([
   "bad_request",
   "unauthorized",
+  "forbidden",
   "not_found",
   "conflict",
   "unsupported_url",

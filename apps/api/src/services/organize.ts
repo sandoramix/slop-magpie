@@ -16,12 +16,12 @@ import {
   type UpdateSmartFolderBody,
   type UpdateTagBody,
 } from "@magpie/shared/api";
-import { asc, count, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
 import type { ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
 import { isUniqueViolation } from "./pg-errors.ts";
 
-type Deps = Pick<ServiceDeps, "db">;
+type Deps = Pick<ServiceDeps, "db" | "userId">;
 
 const conflictOnDuplicate =
   (message: string) =>
@@ -32,7 +32,7 @@ const conflictOnDuplicate =
 
 // ── folders ─────────────────────────────────────────────────────────────
 
-export async function listFolders({ db }: Deps): Promise<Folder[]> {
+export async function listFolders({ db, userId }: Deps): Promise<Folder[]> {
   const counts = db
     .select({ folderId: itemFolders.folderId, n: count().as("n") })
     .from(itemFolders)
@@ -50,19 +50,23 @@ export async function listFolders({ db }: Deps): Promise<Folder[]> {
     })
     .from(folders)
     .leftJoin(counts, eq(counts.folderId, folders.id))
+    .where(eq(folders.userId, userId))
     .orderBy(asc(folders.parentId), asc(folders.position), asc(folders.name));
   return rows;
 }
 
-async function getFolder({ db }: Deps, id: string): Promise<Folder> {
-  const folder = (await listFolders({ db })).find((f) => f.id === id);
+async function getFolder(deps: Deps, id: string): Promise<Folder> {
+  const folder = (await listFolders(deps)).find((f) => f.id === id);
   if (!folder) throw new ApiError(404, "not_found", "Folder not found");
   return folder;
 }
 
-async function assertParent({ db }: Deps, parentId: string | null | undefined) {
+async function assertParent({ db, userId }: Deps, parentId: string | null | undefined) {
   if (!parentId) return;
-  const [row] = await db.select({ id: folders.id }).from(folders).where(eq(folders.id, parentId));
+  const [row] = await db
+    .select({ id: folders.id })
+    .from(folders)
+    .where(and(eq(folders.id, parentId), eq(folders.userId, userId)));
   if (!row) throw new ApiError(400, "bad_request", "Unknown parent folder");
 }
 
@@ -72,10 +76,10 @@ export async function createFolder(deps: Deps, body: CreateFolderBody): Promise<
   const [max] = await deps.db
     .select({ p: sql<number | null>`max(${folders.position})` })
     .from(folders)
-    .where(parentId ? eq(folders.parentId, parentId) : isNull(folders.parentId));
+    .where(and(eq(folders.userId, deps.userId), parentId ? eq(folders.parentId, parentId) : isNull(folders.parentId)));
   const [row] = await deps.db
     .insert(folders)
-    .values({ name: body.name, parentId, icon: body.icon ?? null, color: body.color ?? null, position: (max?.p ?? -1) + 1 })
+    .values({ userId: deps.userId, name: body.name, parentId, icon: body.icon ?? null, color: body.color ?? null, position: (max?.p ?? -1) + 1 })
     .returning({ id: folders.id })
     .catch(conflictOnDuplicate("A folder with this name already exists here"));
   if (!row) throw new Error("insert returned no row");
@@ -112,27 +116,30 @@ export async function updateFolder(deps: Deps, id: string, body: UpdateFolderBod
     await deps.db
       .update(folders)
       .set(patch)
-      .where(eq(folders.id, id))
+      .where(and(eq(folders.id, id), eq(folders.userId, deps.userId)))
       .catch(conflictOnDuplicate("A folder with this name already exists here"));
   }
   return getFolder(deps, id);
 }
 
 /** Deletes the subtree (FK cascade) and its item links, never items. */
-export async function deleteFolder({ db }: Deps, id: string): Promise<{ name: string }> {
-  const [row] = await db.delete(folders).where(eq(folders.id, id)).returning({ name: folders.name });
+export async function deleteFolder({ db, userId }: Deps, id: string): Promise<{ name: string }> {
+  const [row] = await db
+    .delete(folders)
+    .where(and(eq(folders.id, id), eq(folders.userId, userId))).returning({ name: folders.name });
   if (!row) throw new ApiError(404, "not_found", "Folder not found");
   return row;
 }
 
 // ── tags ────────────────────────────────────────────────────────────────
 
-export async function listTags({ db }: Deps): Promise<Tag[]> {
+export async function listTags({ db, userId }: Deps): Promise<Tag[]> {
   const counts = db.select({ tagId: itemTags.tagId, n: count().as("n") }).from(itemTags).groupBy(itemTags.tagId).as("counts");
   return db
     .select({ id: tags.id, name: tags.name, color: tags.color, itemCount: sql<number>`coalesce(${counts.n}, 0)::int` })
     .from(tags)
     .leftJoin(counts, eq(counts.tagId, tags.id))
+    .where(eq(tags.userId, userId))
     .orderBy(sql`lower(${tags.name})`);
 }
 
@@ -145,7 +152,7 @@ async function getTag(deps: Deps, id: string): Promise<Tag> {
 export async function createTag(deps: Deps, body: CreateTagBody): Promise<Tag> {
   const [row] = await deps.db
     .insert(tags)
-    .values({ name: body.name, color: body.color ?? null })
+    .values({ userId: deps.userId, name: body.name, color: body.color ?? null })
     .returning({ id: tags.id })
     .catch(conflictOnDuplicate("A tag with this name already exists"));
   if (!row) throw new Error("insert returned no row");
@@ -158,13 +165,18 @@ export async function updateTag(deps: Deps, id: string, body: UpdateTagBody): Pr
   if (body.name !== undefined) patch.name = body.name;
   if (body.color !== undefined) patch.color = body.color;
   if (Object.keys(patch).length) {
-    await deps.db.update(tags).set(patch).where(eq(tags.id, id)).catch(conflictOnDuplicate("A tag with this name already exists"));
+    await deps.db
+      .update(tags)
+      .set(patch)
+      .where(and(eq(tags.id, id), eq(tags.userId, deps.userId))).catch(conflictOnDuplicate("A tag with this name already exists"));
   }
   return getTag(deps, id);
 }
 
-export async function deleteTag({ db }: Deps, id: string): Promise<{ name: string }> {
-  const [row] = await db.delete(tags).where(eq(tags.id, id)).returning({ name: tags.name });
+export async function deleteTag({ db, userId }: Deps, id: string): Promise<{ name: string }> {
+  const [row] = await db
+    .delete(tags)
+    .where(and(eq(tags.id, id), eq(tags.userId, userId))).returning({ name: tags.name });
   if (!row) throw new ApiError(404, "not_found", "Tag not found");
   return row;
 }
@@ -192,21 +204,28 @@ export async function mergeTag(deps: Deps, id: string, intoId: string): Promise<
 
 // ── custom fields ───────────────────────────────────────────────────────
 
-export async function listFields({ db }: Deps): Promise<FieldDef[]> {
-  return db.select().from(fieldDefs).orderBy(asc(fieldDefs.position), asc(fieldDefs.label));
+export async function listFields({ db, userId }: Deps): Promise<FieldDef[]> {
+  return db.select().from(fieldDefs).where(eq(fieldDefs.userId, userId)).orderBy(asc(fieldDefs.position), asc(fieldDefs.label));
 }
 
-async function getField({ db }: Deps, id: string): Promise<FieldDef> {
-  const [row] = await db.select().from(fieldDefs).where(eq(fieldDefs.id, id));
+async function getField({ db, userId }: Deps, id: string): Promise<FieldDef> {
+  const [row] = await db
+    .select()
+    .from(fieldDefs)
+    .where(and(eq(fieldDefs.id, id), eq(fieldDefs.userId, userId)));
   if (!row) throw new ApiError(404, "not_found", "Field not found");
   return row;
 }
 
 export async function createField(deps: Deps, body: CreateFieldBody): Promise<FieldDef> {
-  const [max] = await deps.db.select({ p: sql<number | null>`max(${fieldDefs.position})` }).from(fieldDefs);
+  const [max] = await deps.db
+    .select({ p: sql<number | null>`max(${fieldDefs.position})` })
+    .from(fieldDefs)
+    .where(eq(fieldDefs.userId, deps.userId));
   const [row] = await deps.db
     .insert(fieldDefs)
     .values({
+      userId: deps.userId,
       key: body.key,
       label: body.label,
       type: body.type,
@@ -234,14 +253,16 @@ export async function updateField(deps: Deps, id: string, body: UpdateFieldBody)
 }
 
 /** Removes the definition and the key from every item's `custom`. */
-export async function deleteField({ db }: Deps, id: string): Promise<{ key: string }> {
+export async function deleteField({ db, userId }: Deps, id: string): Promise<{ key: string }> {
   return db.transaction(async (tx) => {
-    const [row] = await tx.delete(fieldDefs).where(eq(fieldDefs.id, id)).returning({ key: fieldDefs.key });
+    const [row] = await tx
+      .delete(fieldDefs)
+      .where(and(eq(fieldDefs.id, id), eq(fieldDefs.userId, userId))).returning({ key: fieldDefs.key });
     if (!row) throw new ApiError(404, "not_found", "Field not found");
     await tx
       .update(items)
       .set({ custom: sql`${items.custom} - ${row.key}::text` })
-      .where(sql`${items.custom} -> ${row.key} is not null`);
+      .where(and(eq(items.userId, userId), sql`${items.custom} -> ${row.key} is not null`));
     return row;
   });
 }
@@ -254,22 +275,28 @@ const toSmartFolder = (row: typeof smartFolders.$inferSelect): SmartFolder => ({
   query: SmartFolderQuery.catch({}).parse(row.query),
 });
 
-export async function listSmartFolders({ db }: Deps): Promise<SmartFolder[]> {
-  const rows = await db.select().from(smartFolders).orderBy(asc(smartFolders.position), asc(smartFolders.name));
+export async function listSmartFolders({ db, userId }: Deps): Promise<SmartFolder[]> {
+  const rows = await db.select().from(smartFolders).where(eq(smartFolders.userId, userId)).orderBy(asc(smartFolders.position), asc(smartFolders.name));
   return rows.map(toSmartFolder);
 }
 
-async function getSmartFolder({ db }: Deps, id: string): Promise<SmartFolder> {
-  const [row] = await db.select().from(smartFolders).where(eq(smartFolders.id, id));
+async function getSmartFolder({ db, userId }: Deps, id: string): Promise<SmartFolder> {
+  const [row] = await db
+    .select()
+    .from(smartFolders)
+    .where(and(eq(smartFolders.id, id), eq(smartFolders.userId, userId)));
   if (!row) throw new ApiError(404, "not_found", "Smart folder not found");
   return toSmartFolder(row);
 }
 
-export async function createSmartFolder({ db }: Deps, body: CreateSmartFolderBody): Promise<SmartFolder> {
-  const [max] = await db.select({ p: sql<number | null>`max(${smartFolders.position})` }).from(smartFolders);
+export async function createSmartFolder({ db, userId }: Deps, body: CreateSmartFolderBody): Promise<SmartFolder> {
+  const [max] = await db
+    .select({ p: sql<number | null>`max(${smartFolders.position})` })
+    .from(smartFolders)
+    .where(eq(smartFolders.userId, userId));
   const [row] = await db
     .insert(smartFolders)
-    .values({ name: body.name, query: body.query, icon: body.icon ?? null, color: body.color ?? null, position: (max?.p ?? -1) + 1 })
+    .values({ userId, name: body.name, query: body.query, icon: body.icon ?? null, color: body.color ?? null, position: (max?.p ?? -1) + 1 })
     .returning();
   if (!row) throw new Error("insert returned no row");
   return toSmartFolder(row);
@@ -283,12 +310,17 @@ export async function updateSmartFolder(deps: Deps, id: string, body: UpdateSmar
   if (body.icon !== undefined) patch.icon = body.icon;
   if (body.color !== undefined) patch.color = body.color;
   if (body.position !== undefined) patch.position = body.position;
-  if (Object.keys(patch).length) await deps.db.update(smartFolders).set(patch).where(eq(smartFolders.id, id));
+  if (Object.keys(patch).length) await deps.db
+      .update(smartFolders)
+      .set(patch)
+      .where(and(eq(smartFolders.id, id), eq(smartFolders.userId, deps.userId)));
   return getSmartFolder(deps, id);
 }
 
-export async function deleteSmartFolder({ db }: Deps, id: string): Promise<void> {
-  const rows = await db.delete(smartFolders).where(eq(smartFolders.id, id)).returning({ id: smartFolders.id });
+export async function deleteSmartFolder({ db, userId }: Deps, id: string): Promise<void> {
+  const rows = await db
+    .delete(smartFolders)
+    .where(and(eq(smartFolders.id, id), eq(smartFolders.userId, userId))).returning({ id: smartFolders.id });
   if (rows.length === 0) throw new ApiError(404, "not_found", "Smart folder not found");
 }
 
