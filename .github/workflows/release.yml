@@ -67,18 +67,19 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      # tag builds are not on the default branch, so the Gradle cache must be explicitly writable
+      # Caches are scoped by ref: a tag run only reads its own (always empty) ref and `main`. So this
+      # job only restores; android-cache.yml saves them from `main`. Saving here would be wasted.
       - uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: false
+          cache-read-only: true
       # Native modules (reanimated, nitro, screens, ...) are compiled for every ABI; ccache makes
-      # unchanged C++ a cache hit. The unique key makes each run save its result, restore-keys loads the latest.
+      # unchanged C++ a cache hit.
       - name: Install ccache
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ccache
-      - uses: actions/cache@v4
+      - uses: actions/cache/restore@v4
         with:
           path: ~/.cache/ccache
-          key: ccache-${{ runner.os }}-${{ github.sha }}
+          key: ccache-${{ runner.os }}-unused
           restore-keys: ccache-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
 

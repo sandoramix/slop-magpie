@@ -1,0 +1,66 @@
+# Warms the Android build caches for release.yml.
+#
+# GitHub scopes caches by ref: a run for tag vX.Y.Z can only read caches saved on its own ref or on
+# the default branch, and a tag ref is new every release, so caches saved by tag runs are never
+# found again (ccache and the Gradle home both started empty every release). Building on `main`
+# saves them where tag runs can read them. Runs when `main` moves (a release merge), weekly so
+# GitHub's 7-day eviction of unused caches never leaves a release cold, and by hand.
+name: Android build cache
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-cache
+  cancel-in-progress: true
+
+jobs:
+  warm:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+      - name: Install ccache
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ccache
+      # the unique key makes every run save; restore-keys loads the latest one first
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ github.sha }}
+          restore-keys: ccache-${{ runner.os }}-
+      - run: pnpm install --frozen-lockfile
+
+      - name: Prebuild native project
+        working-directory: apps/mobile
+        run: npx expo prebuild --platform android --clean --no-install
+
+      # Same task graph and flags as the release build. Without MAGPIE_KEYSTORE_PATH the APK is
+      # debug-signed and thrown away; only the caches matter.
+      - name: Build release APK (caches only)
+        working-directory: apps/mobile/android
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          CCACHE_MAXSIZE: 1G
+        run: |
+          export CCACHE_DIR="$HOME/.cache/ccache"
+          ./gradlew assembleRelease --no-daemon --build-cache
+          ccache --show-stats
