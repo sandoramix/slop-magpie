@@ -6,7 +6,7 @@
 // password, no sessions.
 import { randomBytes } from "node:crypto";
 import { ADMIN_USER_ID, auditLog, type Database, items, sessions, users } from "@magpie/db";
-import type { CreateUserResponse, MeResponse, UpdateMeBody, User } from "@magpie/shared/api";
+import type { CreateUserResponse, MeResponse, Role, UpdateMeBody, User } from "@magpie/shared/api";
 import { and, count, eq, gt, isNotNull } from "drizzle-orm";
 import type { AccountLookup, AuditEvent, Authenticated, Principal, ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
@@ -28,7 +28,7 @@ export function createAccountLookup(db: Database): AccountLookup {
     async findByTokenHash(tokenHash): Promise<Authenticated | null> {
       // the generated token (temporary: gone once a password is set)
       const [direct] = await db.select(accountColumns).from(users).where(eq(users.tokenHash, tokenHash));
-      if (direct) return { ...direct, isAdmin: false };
+      if (direct) return direct;
 
       const [session] = await db
         .select({ ...accountColumns, sessionId: sessions.id })
@@ -59,6 +59,7 @@ const toUser = (row: { id: string; name: string; displayName: string | null; isA
   name: row.name,
   displayName: row.displayName,
   isAdmin: row.isAdmin,
+  isRoot: row.id === ADMIN_USER_ID,
   createdAt: row.createdAt.toISOString(),
   itemCount: row.itemCount,
 });
@@ -88,11 +89,11 @@ export async function listUsers(db: Database): Promise<User[]> {
   return rows.map(toUser);
 }
 
-export async function createUser(db: Database, name: string): Promise<CreateUserResponse> {
+export async function createUser(db: Database, name: string, role: Role): Promise<CreateUserResponse> {
   const token = newToken();
   const [row] = await db
     .insert(users)
-    .values({ name, tokenHash: hashToken(token) })
+    .values({ name, isAdmin: role === "admin", tokenHash: hashToken(token) })
     .returning({ id: users.id })
     .catch(conflict);
   if (!row) throw new Error("insert returned no row");
@@ -103,6 +104,16 @@ export async function createUser(db: Database, name: string): Promise<CreateUser
 export async function updateDisplayName(db: Database, id: string, body: UpdateMeBody): Promise<User> {
   const rows = await db.update(users).set({ displayName: body.displayName }).where(eq(users.id, id)).returning({ id: users.id });
   if (rows.length === 0) throw new ApiError(404, "not_found", "Account not found");
+  return getUser(db, id);
+}
+
+/** Promote or demote. The root admin (API_TOKEN) is always an admin, and nobody changes their own role. */
+export async function setRole(db: Database, id: string, role: Role, actorId: string): Promise<User> {
+  if (id === ADMIN_USER_ID) throw new ApiError(400, "bad_request", "The root admin is always an admin");
+  if (id === actorId) throw new ApiError(400, "bad_request", "You cannot change your own role");
+  const rows = await db.update(users).set({ isAdmin: role === "admin" }).where(eq(users.id, id)).returning({ id: users.id });
+  if (rows.length === 0) throw new ApiError(404, "not_found", "Account not found");
+  // a demoted account must not keep acting as an admin through a session opened earlier: roles are read per request, so nothing to revoke
   return getUser(db, id);
 }
 
@@ -132,17 +143,20 @@ export async function resetCredentials(db: Database, id: string): Promise<{ toke
  * and this device gets a session token to use from now on. The admin keeps API_TOKEN (set in the
  * environment) as its recovery credential, so it is never locked out.
  */
-export async function setPassword(db: Database, id: string, password: string, label: string | null): Promise<string> {
+export async function setPassword(db: Database, id: string, password: string, label: string | null): Promise<string | null> {
   const passwordHash = await hashPassword(password);
+  // the root admin keeps API_TOKEN as well: no session is needed and nothing is retired
+  const root = id === ADMIN_USER_ID;
   const token = newSessionToken();
   await db.transaction(async (tx) => {
     const rows = await tx
       .update(users)
-      .set({ passwordHash, tokenHash: null })
+      .set(root ? { passwordHash } : { passwordHash, tokenHash: null })
       .where(eq(users.id, id))
       .returning({ id: users.id });
     if (rows.length === 0) throw new ApiError(404, "not_found", "Account not found");
     await revokeSessions(tx, id);
+    if (root) return;
     await tx.insert(sessions).values({
       userId: id,
       tokenHash: hashToken(token),
@@ -150,16 +164,18 @@ export async function setPassword(db: Database, id: string, password: string, la
       expiresAt: new Date(Date.now() + SESSION_TTL_DAYS * 24 * 60 * 60 * 1000),
     });
   });
-  return token;
+  return root ? null : token;
 }
 
 /** Removes the account, its library and its files. */
 export async function deleteUser(
   deps: Omit<ServiceDeps, "userId">,
   id: string,
+  actorId: string,
   audit: Omit<AuditEvent, "action" | "details">,
 ): Promise<void> {
-  if (id === ADMIN_USER_ID) throw new ApiError(400, "bad_request", "The admin account cannot be deleted");
+  if (id === ADMIN_USER_ID) throw new ApiError(400, "bad_request", "The root admin account cannot be deleted");
+  if (id === actorId) throw new ApiError(400, "bad_request", "You cannot delete your own account");
   const target = await getUser(deps.db, id);
   // items go through the normal path so their blobs are queued for deletion
   const owned = await deps.db.select({ id: items.id }).from(items).where(eq(items.userId, id));

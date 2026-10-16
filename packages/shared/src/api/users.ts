@@ -11,6 +11,8 @@ export const User = z.object({
   /** Chosen by the account owner for visibility; null means "show the username". */
   displayName: z.string().nullable(),
   isAdmin: z.boolean(),
+  /** The built-in admin (API_TOKEN): its role cannot change and it cannot be deleted. */
+  isRoot: z.boolean(),
   createdAt: z.iso.datetime(),
   itemCount: z.number().int().nonnegative(),
 });
@@ -19,14 +21,26 @@ export type User = z.infer<typeof User>;
 export const UsersResponse = z.object({ users: z.array(User) });
 export type UsersResponse = z.infer<typeof UsersResponse>;
 
-export const CreateUserBody = z.object({ name: Name.max(100) });
+export const roles = ["user", "admin"] as const;
+export const Role = z.enum(roles);
+export type Role = z.infer<typeof Role>;
+
+/** The username is fixed; the role is chosen at creation and can be changed by an admin later. */
+export const CreateUserBody = z.object({ name: Name.max(100), role: Role.default("user") });
 export type CreateUserBody = z.infer<typeof CreateUserBody>;
+
+export const UpdateUserBody = z.object({ role: Role });
+export type UpdateUserBody = z.infer<typeof UpdateUserBody>;
 
 /** `PATCH /me`: only the display name can change; the username is fixed. */
 export const UpdateMeBody = z.object({ displayName: Name.max(100).nullable() });
 export type UpdateMeBody = z.infer<typeof UpdateMeBody>;
 
 /** The token is shown once; only its hash is stored. */
+/** `PUT /me/password`: `token` is null when the caller's current token stays valid (the root admin's API_TOKEN). */
+export const PasswordResponse = z.object({ token: z.string().nullable(), me: z.lazy(() => MeResponse) });
+export type PasswordResponse = z.infer<typeof PasswordResponse>;
+
 export const CreateUserResponse = z.object({ user: User, token: z.string() });
 export type CreateUserResponse = z.infer<typeof CreateUserResponse>;
 

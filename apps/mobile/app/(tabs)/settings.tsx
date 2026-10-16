@@ -63,8 +63,11 @@ export default function SettingsScreen() {
     setPasswordMutation.mutate(password, {
       onSuccess: (login) => {
         void (async () => {
-          // the temporary token no longer works: from now on this device uses its session token
-          await saveAccount({ id: account.id, name: account.name, url: account.url, isAdmin: login.me.isAdmin }, login.token);
+          // the temporary token no longer works: from now on this device uses its session token.
+          // The root admin gets none (token is null): its API_TOKEN stays valid and in use.
+          if (login.token) {
+            await saveAccount({ id: account.id, name: account.name, url: account.url, isAdmin: login.me.isAdmin }, login.token);
+          }
           setPassword("");
           setConfirm("");
           await qc.invalidateQueries({ queryKey: ["me"] });
@@ -128,7 +131,7 @@ export default function SettingsScreen() {
             {me.data.hasPassword
               ? "Other devices are signed out when you change it."
               : me.data.isAdmin
-                ? "Optional. The admin token from the server settings keeps working."
+                ? "Optional. You can sign in with the admin token, with a username and password, or both."
                 : "Your access token is temporary. Once you choose a password it stops working and you sign in with your username and password."}
           </Text>
           <Input value={password} onChangeText={setPassword} placeholder="New password (10+ characters)" autoCapitalize="none" autoCorrect={false} secureTextEntry />

@@ -8,13 +8,14 @@ Accounts own their libraries ([D23](decisions.md)). Three kinds of bearer token,
 
 | Token | Who | Notes |
 |---|---|---|
-| `API_TOKEN` (environment) | the **admin** | Generate with `openssl rand -base64 48`, store in Coolify env, never in the repo or the APK. Compared with `crypto.timingSafeEqual` on SHA-256 digests. Never locked out: it is the recovery credential. |
+| `API_TOKEN` (environment) | the **admin** | Generate with `openssl rand -base64 48`, store in Coolify env, never in the repo or the APK. Compared with `crypto.timingSafeEqual` on SHA-256 digests. It stays valid even if the root admin also adds a password (token alone, or token plus password), so it is never locked out and is the recovery credential. |
 | generated account token `mgp_…` | a new account | **Temporary.** Shown once when the admin creates (or resets) the account; stored as a SHA-256 hash. Stops working when the person sets a password. |
 | session token `mgs_…` | one device of an account with a password | Created by `POST /auth/login` (username + password) or by `PUT /me/password`; stored as a SHA-256 hash; 180 days, sliding; revocable (`POST /me/logout`). |
 
 Rules:
 - Passwords are optional, at least 10 characters, hashed with scrypt (parameters stored with the hash). Login failures are rate limited per IP and per username (10 / 15 min), logged to `audit_log` (username only, never the password), and a missing username costs the same time as a wrong password.
 - Changing the password signs out the other devices. **Forgot password:** the admin resets the account (`POST /users/:id/token`): new temporary token, password removed, every session revoked.
+- **Roles:** `user` or `admin`, chosen when the account is created and changeable by an admin (never the root admin's, never your own). The root admin is the built-in account behind `API_TOKEN`; other admins are normal accounts with a generated token that becomes a password session, and lose every admin power the moment they are demoted (the role is read on each request).
 - **Admin powers:** manage accounts (`/users`) and work inside any account's library by sending `X-Magpie-Act-As: <account id>`. Anything that changes another account's data this way is audited as `admin.act_as`. A non-admin sending the header gets 403. The username is fixed; people can change only a display name.
 - **Isolation:** every query is scoped by the owner (`deps.userId`); ids from another account answer 404 (or 400 when used as a folder/tag reference). Tested in `apps/api/src/accounts.int.test.ts`.
 - Mobile app: the server URL and one token per saved account (the generated token, or the session token after a password login), kept in `expo-secure-store`; never in the APK or MMKV.
