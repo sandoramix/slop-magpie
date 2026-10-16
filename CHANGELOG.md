@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-16
+### Fixed
+
+- The server now redeploys automatically after each release (the deploy trigger was rejected by Coolify).
+
 ## [0.1.1] - 2026-10-16
 ### Changed
 
