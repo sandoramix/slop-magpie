@@ -77,7 +77,7 @@ This means most sites work out of the box; a dedicated source is only needed for
 
 | id | Strategies | Notes |
 |---|---|---|
-| `instagram` | yt-dlp (reels) → gallery-dl (posts/carousels) | needs cookies; id = shortcode |
+| `instagram` | yt-dlp (reels) → gallery-dl (posts/carousels) → opengraph (preview + caption) | needs cookies; id = shortcode |
 | `tiktok` | yt-dlp → gallery-dl | photo-mode posts via gallery-dl |
 | `youtube` | yt-dlp | Shorts + videos; cap resolution |
 | `pinterest` | gallery-dl → yt-dlp | resolve `pin.it` short links |

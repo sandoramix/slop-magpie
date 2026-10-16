@@ -24,13 +24,14 @@ const metadataScore = (r: FetchResult) =>
 export async function runChain(order: readonly Strategy[], ctx: StrategyContext): Promise<ChainOutcome> {
   const attempts: Attempt[] = [];
   let best: { result: FetchResult; strategy: StrategyId } | null = null;
-  const errors: { class: ErrorClass; message: string }[] = [];
+  const errors: { strategy: StrategyId; class: ErrorClass; message: string }[] = [];
 
   for (const strategy of order) {
     try {
       const result = await strategy.fetch(ctx);
       attempts.push({ strategy: strategy.id, ok: true, files: result.files.length });
       if (result.files.length > 0) return { ok: true, result, strategy: strategy.id, attempts };
+      errors.push({ strategy: strategy.id, class: "fatal", message: "no media found" });
       if (!best || metadataScore(result) > metadataScore(best.result)) best = { result, strategy: strategy.id };
     } catch (error) {
       // a blocked target is final: no other strategy may touch it either
@@ -40,7 +41,7 @@ export async function runChain(order: readonly Strategy[], ctx: StrategyContext)
       }
       const cls = classifyError(error);
       attempts.push({ strategy: strategy.id, ok: false, error: errorMessage(error), class: cls });
-      errors.push({ class: cls, message: errorMessage(error) });
+      errors.push({ strategy: strategy.id, class: cls, message: errorMessage(error) });
       ctx.log.debug({ strategy: strategy.id, err: error }, "strategy failed");
     }
   }
@@ -48,6 +49,7 @@ export async function runChain(order: readonly Strategy[], ctx: StrategyContext)
   if (best && metadataScore(best.result) > 0) return { ok: true, ...best, attempts };
   // transient beats gone (Instagram reports rate limits as "not available"), gone beats fatal
   const errorClass: ErrorClass = errors.some((e) => e.class === "retry") ? "retry" : errors.some((e) => e.class === "gone") ? "gone" : "fatal";
-  const error = errors.find((e) => e.class === errorClass)?.message ?? "no strategy returned anything";
+  // every strategy's error: the first alone (e.g. yt-dlp's "no video in this post") hides why the fallback failed
+  const error = errors.length ? errors.map((e) => `${e.strategy}: ${e.message}`).join(" | ").slice(0, 1000) : "no strategy returned anything";
   return { ok: false, errorClass, error, attempts };
 }
