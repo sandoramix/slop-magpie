@@ -51,7 +51,7 @@ The changelog is bundled, so it works offline and always matches the installed b
 On a pushed `v*.*.*` tag:
 
 1. **verify**: the tag must be on `main`, the tag must equal the root `package.json` `version`, the changelog entry must exist, and typecheck, lint and test must pass.
-2. **android**: `expo prebuild`, then `gradlew assembleRelease`, signed with the release keystore from repository secrets. Produces `magpie-<version>.apk`.
+2. **android**: `expo prebuild`, then `gradlew assembleRelease`, signed with the release keystore from repository secrets. Produces `magpie-<version>.apk`. It builds `arm64-v8a` only and uses the Gradle build cache (stored by `setup-gradle`, writable from tag runs), so only the first release is slow; the APK does not run on x86 emulators.
 3. **images**: `api` and `worker` images built natively on an ARM64 runner and pushed to GHCR as `ghcr.io/<owner>/<repo>-<app>:<version>` and `:latest`.
 4. **publish**: GitHub release `Magpie <version>` with the changelog entry, install instructions, a compare link to the previous tag, the APK and `SHA256SUMS`.
 5. **deploy**: calls the Coolify deploy webhook ([`deploy.yml`](../.github/workflows/deploy.yml)), so the server redeploys. Coolify rebuilds the branch configured in the resource, so point the resource at `main`.
