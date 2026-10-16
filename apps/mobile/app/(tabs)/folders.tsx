@@ -1,9 +1,10 @@
+import { alert } from "@/lib/alert";
 import { ActAsBanner } from "@/components/account-chrome";
 import { buildFolderTree, flattenFolderTree } from "@magpie/shared/api";
 import { useRouter } from "expo-router";
 import { Folder, Hash, Plus, Wand2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -67,7 +68,7 @@ export default function FoldersScreen() {
 
 
   const fail = (e: Error) => {
-    Alert.alert("Failed", e.message);
+    alert("Failed", e.message);
   };
 
   const add = (kind: "folder" | "tag") => {
@@ -164,7 +165,7 @@ export default function FoldersScreen() {
             router.push({ pathname: "/list", params: { folderId: f.id, title: f.path } });
           }}
           onLongPress={() => {
-            Alert.alert(f.name, undefined, [
+            alert(f.name, undefined, [
               {
                 text: "New subfolder",
                 onPress: () => {
@@ -196,7 +197,7 @@ export default function FoldersScreen() {
             router.push({ pathname: "/list", params: { tagId: t.id, title: `#${t.name}` } });
           }}
           onLongPress={() => {
-            Alert.alert(t.name, undefined, [
+            alert(t.name, undefined, [
               {
                 text: "Delete tag",
                 style: "destructive",

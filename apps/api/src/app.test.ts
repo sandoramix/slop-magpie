@@ -29,6 +29,56 @@ describe("health", () => {
   });
 });
 
+describe("tokens of deleted accounts", () => {
+  it("get a reason, other bad tokens do not", async () => {
+    const { app } = setup({
+      accounts: {
+        findByTokenHash: () => Promise.resolve(null),
+        findById: () => Promise.resolve(null),
+        isDeletedToken: () => Promise.resolve(true),
+      },
+    });
+    const gone = await app.request("/api/v1/sources", { headers: { Authorization: "Bearer mgp_gone" } });
+    expect(gone.status).toBe(401);
+    expect(await gone.json()).toEqual({
+      error: { code: "unauthorized", message: "This account was deleted by an administrator", reason: "account_deleted" },
+    });
+
+    const { app: plain } = setup();
+    const unknown = await plain.request("/api/v1/sources", { headers: { Authorization: "Bearer mgp_unknown" } });
+    expect(await unknown.json()).toEqual({ error: { code: "unauthorized", message: "Missing or invalid token" } });
+  });
+});
+
+describe("invite page", () => {
+  it("is public, static, and locked down with a hash-based CSP", async () => {
+    const { app } = setup();
+    const res = await app.request("/invite");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const csp = res.headers.get("content-security-policy") ?? "";
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toMatch(/script-src 'sha256-[A-Za-z0-9+/=]+'/);
+    expect(csp).not.toContain("unsafe-inline");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const html = await res.text();
+    expect(html).toContain("Open in Magpie");
+    // the token only ever travels in the URL fragment, which the server never sees
+    expect(html).toContain("location.hash");
+    expect(html).not.toContain("innerHTML");
+  });
+
+  it("serves a script whose hash matches the policy", async () => {
+    const { createHash } = await import("node:crypto");
+    const { app } = setup();
+    const res = await app.request("/invite");
+    const html = await res.text();
+    const csp = res.headers.get("content-security-policy") ?? "";
+    const script = /<script>([\s\S]*)<\/script>/.exec(html)?.[1] ?? "";
+    expect(csp).toContain(`'sha256-${createHash("sha256").update(script).digest("base64")}'`);
+  });
+});
+
 describe("auth", () => {
   it("rejects missing and wrong tokens and audits them", async () => {
     const { app, audits } = setup();

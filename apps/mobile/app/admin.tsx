@@ -1,21 +1,25 @@
-import { accountLabel, type Role } from "@magpie/shared/api";
+import { accountLabel, type Role, type User } from "@magpie/shared/api";
 import * as Clipboard from "expo-clipboard";
-import { inviteMessage } from "@/lib/invite";
 import { useRouter } from "expo-router";
-import { Plus, Shield } from "lucide-react-native";
+import { Plus, Send, Shield } from "lucide-react-native";
 import { useState } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { SafeAreaView } from "@/components/styled";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { alert } from "@/lib/alert";
+import { inviteMessage } from "@/lib/invite";
 import { useCreateUser, useDeleteUser, useMe, useRotateUserToken, useSetUserRole, useUsers } from "@/lib/queries";
 import { useAccounts, useActiveAccount } from "@/stores/accounts";
 
 /** Shown once after creating an account or rotating its token. */
 type Issued = { name: string; username: string; token: string };
+
+/** The last step of deleting an account: the admin has to type its username. */
+type PendingDelete = { id: string; name: string; username: string; items: number };
 
 /** Accounts on the server. Admin token only; the server enforces it. */
 export default function AdminScreen() {
@@ -30,12 +34,14 @@ export default function AdminScreen() {
   const setActAs = useAccounts((s) => s.setActAs);
   const [name, setName] = useState("");
   const [issued, setIssued] = useState<Issued | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const [typed, setTyped] = useState("");
   const account = useActiveAccount();
   // where the new account should connect; defaults to the server this admin is using, editable for other addresses
   const [serverUrl, setServerUrl] = useState(account?.url ?? "");
 
   const fail = (e: Error) => {
-    Alert.alert("Failed", e.message);
+    alert("Failed", e.message);
   };
 
   const add = () => {
@@ -50,62 +56,101 @@ export default function AdminScreen() {
     });
   };
 
-  const options = (id: string, userName: string, username: string, isAdmin: boolean, isRoot: boolean) => {
+  /** Tokens are only stored as hashes, so "share again" issues a fresh one; that is harmless until the person has signed in. */
+  const reinvite = (u: User) => {
+    alert("Share the invite again?", `${accountLabel(u)} has not signed in yet. A new token replaces the old one, so an invite you already sent stops working.`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "New invite",
+        onPress: () => {
+          rotate.mutate(u.id, { onSuccess: ({ token }) => { setIssued({ name: accountLabel(u), username: u.name, token }); }, onError: fail });
+        },
+      },
+    ]);
+  };
+
+  /** Three confirmations: a warning, a "really?", then typing the username. */
+  const startDelete = (u: User) => {
+    const label = accountLabel(u);
+    const target: PendingDelete = { id: u.id, name: label, username: u.name, items: u.itemCount };
+    alert(
+      `Delete ${label}?`,
+      `This permanently deletes @${u.name} and everything in the account: ${String(u.itemCount)} item(s) with their downloaded files, folders, tags, fields and smart folders. Their devices are signed out and told the account was deleted.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Continue",
+          style: "destructive",
+          onPress: () => {
+            alert("This cannot be undone", `There is no trash and no backup. ${String(u.itemCount)} item(s) will be gone for good. Are you absolutely sure?`, [
+              { text: "No, keep it", style: "cancel" },
+              {
+                text: "Yes, delete everything",
+                style: "destructive",
+                onPress: () => {
+                  setTyped("");
+                  setPendingDelete(target);
+                },
+              },
+            ]);
+          },
+        },
+      ],
+    );
+  };
+
+  const options = (u: User) => {
+    const userName = accountLabel(u);
     // the root admin (API_TOKEN) and your own account keep their role and cannot be removed here
-    const self = id === me.data?.id;
+    const self = u.id === me.data?.id;
     const buttons = [
       {
         text: "View library",
         onPress: () => {
-          setActAs({ id, name: userName });
+          setActAs({ id: u.id, name: userName });
           router.dismissTo("/");
         },
       },
-      ...(isRoot || self
+      ...(u.isRoot || self
         ? []
         : [
+            ...(u.hasPassword === false ? [{ text: "Share invite again", onPress: () => { reinvite(u); } }] : []),
             {
-              text: isAdmin ? "Make regular user" : "Make admin",
+              text: u.isAdmin ? "Make regular user" : "Make admin",
               onPress: () => {
-                setRole.mutate({ id, role: isAdmin ? "user" : "admin" }, { onError: fail });
+                setRole.mutate({ id: u.id, role: u.isAdmin ? "user" : "admin" }, { onError: fail });
               },
             },
             {
               text: "Reset password / new token",
               onPress: () => {
-                Alert.alert("Reset this account?", `${userName}'s password is removed and every device is signed out. They sign in with the new token and choose a new password.`, [
+                alert("Reset this account?", `${userName}'s password is removed and every device is signed out. They sign in with the new token and choose a new password.`, [
                   { text: "Cancel", style: "cancel" as const },
                   {
                     text: "Reset",
                     style: "destructive" as const,
                     onPress: () => {
-                      rotate.mutate(id, { onSuccess: ({ token }) => { setIssued({ name: userName, username, token }); }, onError: fail });
+                      rotate.mutate(u.id, { onSuccess: ({ token }) => { setIssued({ name: userName, username: u.name, token }); }, onError: fail });
                     },
                   },
                 ]);
               },
             },
             {
-              text: "Delete account",
+              text: "Delete account…",
               style: "destructive" as const,
               onPress: () => {
-                Alert.alert("Delete account?", `${userName}'s library and downloaded files are removed for good.`, [
-                  { text: "Cancel", style: "cancel" as const },
-                  {
-                    text: "Delete",
-                    style: "destructive" as const,
-                    onPress: () => {
-                      remove.mutate(id, { onError: fail });
-                    },
-                  },
-                ]);
+                startDelete(u);
               },
             },
           ]),
       { text: "Cancel", style: "cancel" as const },
     ];
-    Alert.alert(userName, undefined, buttons);
+    alert(userName, `@${u.name}`, buttons);
   };
+
+  const invite = (token: string, username: string) => inviteMessage({ url: serverUrl.trim().replace(/\/+$/, ""), username, token });
+  const serverOk = /^https?:\/\//i.test(serverUrl.trim());
 
   return (
     <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
@@ -121,11 +166,50 @@ export default function AdminScreen() {
           />
         }
       >
+        {pendingDelete ? (
+          <View className="gap-2 rounded-lg border border-destructive p-3">
+            <Text className="font-medium text-destructive">Last step: delete {pendingDelete.name}</Text>
+            <Text className="text-xs text-muted-foreground">
+              {String(pendingDelete.items)} item(s) and all downloaded files will be removed for good. Type the username{" "}
+              <Text className="text-xs font-semibold">{pendingDelete.username}</Text> to confirm.
+            </Text>
+            <Input value={typed} onChangeText={setTyped} placeholder={pendingDelete.username} autoCapitalize="none" autoCorrect={false} />
+            <View className="flex-row gap-2">
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={remove.isPending || typed.trim() !== pendingDelete.username}
+                onPress={() => {
+                  remove.mutate(pendingDelete.id, {
+                    onSuccess: () => {
+                      setPendingDelete(null);
+                      setTyped("");
+                    },
+                    onError: fail,
+                  });
+                }}
+              >
+                <Text>{remove.isPending ? "Deleting…" : "Delete forever"}</Text>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onPress={() => {
+                  setPendingDelete(null);
+                  setTyped("");
+                }}
+              >
+                <Text>Cancel</Text>
+              </Button>
+            </View>
+          </View>
+        ) : null}
+
         {issued ? (
           <View className="gap-2 rounded-lg border border-primary p-3">
             <Text className="font-medium">Token for {issued.name}</Text>
             <Text className="text-xs text-muted-foreground">
-              It is shown only now. The invite has the server address, their username and the token; they open it on their phone (or type the details in). They can change how their name is shown, but not the username.
+              It is shown only now. The invite has a link that opens the app, plus the server address, their username and the token; they can also type the details in. They can change how their name is shown, but not the username.
             </Text>
             <Text selectable className="font-mono text-xs">
               {issued.token}
@@ -135,9 +219,9 @@ export default function AdminScreen() {
             <View className="flex-row flex-wrap gap-2">
               <Button
                 size="sm"
-                disabled={!/^https?:\/\//i.test(serverUrl.trim())}
+                disabled={!serverOk}
                 onPress={() => {
-                  void Share.share({ message: inviteMessage({ url: serverUrl.trim().replace(/\/+$/, ""), username: issued.username, token: issued.token }) });
+                  void Share.share({ message: invite(issued.token, issued.username) });
                 }}
               >
                 <Text>Share invite</Text>
@@ -145,9 +229,9 @@ export default function AdminScreen() {
               <Button
                 size="sm"
                 variant="outline"
-                disabled={!/^https?:\/\//i.test(serverUrl.trim())}
+                disabled={!serverOk}
                 onPress={() => {
-                  void Clipboard.setStringAsync(inviteMessage({ url: serverUrl.trim().replace(/\/+$/, ""), username: issued.username, token: issued.token }));
+                  void Clipboard.setStringAsync(invite(issued.token, issued.username));
                 }}
               >
                 <Text>Copy invite</Text>
@@ -199,26 +283,41 @@ export default function AdminScreen() {
         </View>
 
         {users.isError ? <Text className="text-destructive">{users.error.message}</Text> : null}
-        {users.data?.map((u) => (
-          <Pressable
-            key={u.id}
-            onPress={() => {
-              options(u.id, accountLabel(u), u.name, u.isAdmin, u.isRoot);
-            }}
-            className="flex-row items-center gap-3 rounded-lg border border-border p-3 active:bg-accent"
-          >
-            <View className="flex-1">
-              <View className="flex-row items-center gap-1.5">
-                <Text className="font-medium">{accountLabel(u)}</Text>
-                {u.isAdmin ? <Icon as={Shield} size={14} className="text-muted-foreground" /> : null}
+        {users.data?.map((u) => {
+          const pending = u.hasPassword === false && !u.isRoot && u.id !== me.data?.id;
+          return (
+            <Pressable
+              key={u.id}
+              onPress={() => {
+                options(u);
+              }}
+              className="flex-row items-center gap-3 rounded-lg border border-border p-3 active:bg-accent"
+            >
+              <View className="flex-1">
+                <View className="flex-row items-center gap-1.5">
+                  <Text className="font-medium">{accountLabel(u)}</Text>
+                  {u.isAdmin ? <Icon as={Shield} size={14} className="text-muted-foreground" /> : null}
+                </View>
+                <Text className="text-xs text-muted-foreground">
+                  @{u.name} · {u.isAdmin ? "admin" : "user"} · {u.itemCount} items{pending ? " · invite pending" : ""}
+                </Text>
               </View>
-              <Text className="text-xs text-muted-foreground">
-                @{u.name} · {u.isAdmin ? "admin" : "user"} · {u.itemCount} items
-              </Text>
-            </View>
-          </Pressable>
-        ))}
-        <Text className="text-center text-xs text-muted-foreground">Tap an account to view its library, replace its token or delete it.</Text>
+              {pending ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onPress={() => {
+                    reinvite(u);
+                  }}
+                >
+                  <Icon as={Send} size={14} />
+                  <Text>Invite</Text>
+                </Button>
+              ) : null}
+            </Pressable>
+          );
+        })}
+        <Text className="text-center text-xs text-muted-foreground">Tap an account to view its library, share its invite again, replace its token or delete it.</Text>
       </ScrollView>
     </SafeAreaView>
   );

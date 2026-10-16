@@ -29,6 +29,8 @@ export interface AccountLookup {
   /** Matches the generated account token or a live session token. */
   findByTokenHash: (tokenHash: string) => Promise<Authenticated | null>;
   findById: (id: string) => Promise<Authenticated | null>;
+  /** True when the hash belonged to an account that has since been deleted. */
+  isDeletedToken: (tokenHash: string) => Promise<boolean>;
 }
 
 /** Who a request is for, resolved by the auth middleware (docs/security.md). */

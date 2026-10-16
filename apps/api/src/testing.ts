@@ -46,7 +46,7 @@ export function unitDeps(overrides: Partial<AppDeps> = {}): { deps: AppDeps; aud
     },
     countItemsBySource: () => Promise.resolve(new Map([["instagram", 3]])),
     // no accounts exist unless a test brings a database
-    accounts: { findByTokenHash: () => Promise.resolve(null), findById: () => Promise.resolve(null) },
+    accounts: { findByTokenHash: () => Promise.resolve(null), findById: () => Promise.resolve(null), isDeletedToken: () => Promise.resolve(false) },
     db: createDb("postgres://unused@127.0.0.1:1/unused").db,
     store: createLocalBlobStore({ root: tmpdir(), signingSecret: SIGNING_SECRET, publicBaseUrl: "https://m.test" }),
     jobs: fakeJobs(),

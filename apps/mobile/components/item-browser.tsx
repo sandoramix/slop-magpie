@@ -1,7 +1,8 @@
 import { buildFolderTree, flattenFolderTree } from "@magpie/shared/api";
 import { Folder, Heart, RefreshCw, Sparkles, Tag, Trash2, X } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { Alert, View } from "react-native";
+import { View } from "react-native";
+import { alert } from "@/lib/alert";
 import { ItemGrid } from "@/components/item-grid";
 import { OptionPicker } from "@/components/option-picker";
 import { Button } from "@/components/ui/button";
@@ -45,14 +46,14 @@ export function ItemBrowser({ query, empty, header }: Props) {
           setSelection(new Set());
         },
         onError: (e) => {
-          Alert.alert("Failed", e.message);
+          alert("Failed", e.message);
         },
       },
     );
   };
 
   const confirmDelete = () => {
-    Alert.alert("Delete items?", `${selection.size} item(s) and their files will be removed.`, [
+    alert("Delete items?", `${selection.size} item(s) and their files will be removed.`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",

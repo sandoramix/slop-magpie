@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Check, Plus, Shield } from "lucide-react-native";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
+import { alert } from "@/lib/alert";
 import { SafeAreaView } from "@/components/styled";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -27,7 +28,7 @@ export default function AccountsScreen() {
   };
 
   const options = (id: string, name: string) => {
-    Alert.alert(name, undefined, [
+    alert(name, undefined, [
       {
         text: "Edit",
         onPress: () => {

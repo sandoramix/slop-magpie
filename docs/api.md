@@ -29,11 +29,17 @@ Errors:
 
 Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `unsupported_url`, `rate_limited`, `internal`.
 
+A `401` may also carry `"reason": "account_deleted"` inside `error` when the token belonged to an account an admin has since deleted. The code stays `unauthorized`, so builds that predate `reason` behave as before; the app uses it to tell the person why they were signed out.
+
 ## Health
 
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/health` | no auth; DB ping. `{ ok: true, version }` |
+
+## Invite page
+
+Not part of the versioned API. `GET /invite` (no auth, static HTML) is the page an invite link points at: `https://<server>/invite#url=…&username=…&token=…`. Chat apps only make `http(s)` text tappable, so the page turns the fragment into the `magpie://connect?…` link behind an "Open in Magpie" button and links to the latest APK. The details live in the URL fragment, which browsers never send, so the token stays out of server and proxy logs. Served with `Cache-Control: no-store` and a hash-based `Content-Security-Policy` (no `unsafe-inline`).
 
 ## Accounts
 
@@ -44,11 +50,11 @@ Codes: `bad_request`, `unauthorized`, `forbidden`, `not_found`, `conflict`, `uns
 | PATCH | `/me` | `{ displayName }` (`null` clears it). The username cannot change |
 | PUT | `/me/password` | `{ password }` (10+ chars) → `{ token, me }`. Retires the temporary token, signs out other devices. The root admin gets `token: null` and keeps `API_TOKEN` |
 | POST | `/me/logout` | revokes the session token that made the call |
-| GET | `/users` | **admin only.** All accounts with item counts |
+| GET | `/users` | **admin only.** All accounts with item counts and `hasPassword` (false while an invite is still pending) |
 | POST | `/users` | **admin only.** `{ name, role? }` (the fixed username; `role` is `user` (default) or `admin`) → `201 { user, token }`; the token is shown once |
 | PATCH | `/users/:id` | **admin only.** `{ role }` promotes or demotes. Not the root admin, not yourself |
 | POST | `/users/:id/token` | **admin only.** Reset: new temporary token, password removed, sessions revoked → `{ token }` |
-| DELETE | `/users/:id` | **admin only.** Deletes the account, its library and its files. Not the root admin, not yourself |
+| DELETE | `/users/:id` | **admin only.** Deletes the account, its library and its files. Not the root admin, not yourself. The hashes of its tokens and sessions are kept (`deleted_tokens`, one year) so its devices get `reason: "account_deleted"` |
 
 ## Sources
 

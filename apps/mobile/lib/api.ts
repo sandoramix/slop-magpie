@@ -1,16 +1,18 @@
-import { ACT_AS_HEADER, ApiErrorBody, HealthResponse, LoginResponse, MeResponse, type ErrorCode } from "@magpie/shared/api";
+import { ACT_AS_HEADER, ApiErrorBody, HealthResponse, LoginResponse, MeResponse, type ErrorCode, type ErrorReason } from "@magpie/shared/api";
 import type { z } from "zod";
 import { useAccounts } from "@/stores/accounts";
 
 export class ApiError extends Error {
   readonly status: number;
   readonly code: ErrorCode | "network" | "invalid_response" | "not_configured";
+  readonly reason: ErrorReason | undefined;
 
-  constructor(status: number, code: ApiError["code"], message: string) {
+  constructor(status: number, code: ApiError["code"], message: string, reason?: ErrorReason) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
+    this.reason = reason;
   }
 }
 
@@ -59,7 +61,12 @@ export async function request<S extends z.ZodType>(
   const json: unknown = await res.json().catch(() => null);
   if (!res.ok) {
     const parsed = ApiErrorBody.safeParse(json);
-    if (parsed.success) throw new ApiError(res.status, parsed.data.error.code, parsed.data.error.message);
+    if (parsed.success) {
+      const { code, message, reason } = parsed.data.error;
+      // an admin deleted this account: drop it from the phone and tell the person (see DeletedNotice)
+      if (reason === "account_deleted") void useAccounts.getState().reportDeleted(account.id);
+      throw new ApiError(res.status, code, message, reason);
+    }
     throw new ApiError(res.status, "internal", `Server error (${res.status})`);
   }
   const parsed = schema.safeParse(json);
