@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-16
+### Changed
+
+- Releases build faster behind the scenes: the Android build caches now carry over from one release to the next.
+
 ## [1.0.0] - 2026-10-16
 ### Added
 
