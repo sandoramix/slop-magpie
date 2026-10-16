@@ -6,7 +6,7 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, View } from "
 import { Chip } from "@/components/chip";
 import { FieldEditor } from "@/components/field-editor";
 import { OptionPicker } from "@/components/option-picker";
-import { Image } from "@/components/styled";
+import { Image, SafeAreaView } from "@/components/styled";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -149,7 +149,8 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
   const hasSuggestions = item.suggestions.folders.length + item.suggestions.tags.length > 0;
 
   return (
-    <ScrollView className="flex-1 bg-background" keyboardShouldPersistTaps="handled">
+    <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
+    <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: item.authorHandle ? `@${item.authorHandle}` : item.source }} />
       <Media item={item} />
 
@@ -396,5 +397,6 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
         />
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }

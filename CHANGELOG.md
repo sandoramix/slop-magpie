@@ -6,6 +6,10 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+### Fixed
+
+- Screens and pickers no longer extend under the Android system navigation buttons.
+
 ## [0.1.3] - 2026-10-16
 ### Changed
 
