@@ -6,6 +6,10 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+### Changed
+
+- A tag created from an item's tag picker is added to that item immediately.
+
 ### Fixed
 
 - Screens and pickers no longer extend under the Android system navigation buttons.

@@ -386,7 +386,12 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
           title="Tags"
           options={tagOptions}
           selected={item.tags.map((t) => t.id)}
-          onCreate={async (name) => (await createTag.mutateAsync({ name })).id}
+          onCreate={async (name) => {
+            const { id } = await createTag.mutateAsync({ name });
+            // a tag made from an item belongs on it right away, without waiting for "Done"
+            await setTags.mutateAsync([...item.tags.map((t) => t.id), id]);
+            return id;
+          }}
           onClose={() => {
             setPicking(null);
           }}
