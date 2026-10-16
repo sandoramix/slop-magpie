@@ -284,10 +284,27 @@ describe.skipIf(!serverUrl)("accounts (integration)", () => {
     env.jobs.sent.length = 0;
 
     await json(env.request(`/users/${user.user.id}`, { method: "DELETE" }), 204);
-    expect((await asUser(user.token, "/me")).status).toBe(401);
+    const after = await asUser(user.token, "/me");
+    expect(after.status).toBe(401);
+    // the phone can tell "deleted" from "bad token"; the code stays `unauthorized` for older apps
+    expect(await after.json()).toMatchObject({ error: { code: "unauthorized", reason: "account_deleted" } });
     expect(await env.deps.db.select().from(items).where(eq(items.id, saved.item.id))).toEqual([]);
     expect(env.jobs.sent).toEqual([{ queue: "blobDelete", data: { itemId: saved.item.id } }]);
     expect((await json<UsersResponse>(env.request("/users"), 200)).users.map((u) => u.name)).not.toContain("Leaving");
+  });
+
+  it("tells devices signed in with a password that their account was deleted", async () => {
+    const created = await createUser("Pw Leaver");
+    expect(created.user.hasPassword).toBe(false);
+    const set = await json<PasswordResponse>(asUser(created.token, "/me/password", { method: "PUT", json: { password: "correct horse battery" } }), 200);
+    expect(set.token).toMatch(/^mgs_/);
+    const listed = await json<UsersResponse>(env.request("/users"), 200);
+    expect(listed.users.find((u) => u.id === created.user.id)?.hasPassword).toBe(true);
+
+    await json(env.request(`/users/${created.user.id}`, { method: "DELETE" }), 204);
+    const res = await asUser(set.token ?? "", "/me");
+    expect(res.status).toBe(401);
+    expect(await res.json()).toMatchObject({ error: { reason: "account_deleted" } });
   });
 
   it("protects the admin account", async () => {

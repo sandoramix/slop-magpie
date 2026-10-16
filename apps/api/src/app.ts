@@ -8,6 +8,7 @@ import { ApiError, errorBody, errorResponse } from "./http/errors.ts";
 import { bearerAuth } from "./middleware/auth.ts";
 import { createFailureLimiter } from "./middleware/rate-limit.ts";
 import { healthRoutes } from "./routes/health.ts";
+import { inviteRoutes } from "./routes/invite.ts";
 import { itemsRoutes } from "./routes/items.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { fieldsRoutes, foldersRoutes, smartFoldersRoutes, statsRoutes, tagsRoutes } from "./routes/organize.ts";
@@ -72,6 +73,8 @@ export function createApp(deps: AppDeps) {
     }),
   );
 
+  // public landing page for invite links (not part of the versioned API)
+  app.route("/invite", inviteRoutes());
   app.route(API_PREFIX, api);
 
   app.notFound((c) => errorResponse(c, 404, "not_found", "Not found"));
