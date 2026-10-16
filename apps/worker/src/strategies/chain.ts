@@ -1,5 +1,5 @@
 import { BlockedTargetError } from "../net/ssrf.ts";
-import { classifyError, type ErrorClass, errorMessage } from "./errors.ts";
+import { classifyError, type ErrorClass, errorMessage, logUrl } from "./errors.ts";
 import type { FetchResult, Strategy, StrategyContext, StrategyId } from "./types.ts";
 
 export interface Attempt {
@@ -31,6 +31,7 @@ export async function runChain(order: readonly Strategy[], ctx: StrategyContext)
       const result = await strategy.fetch(ctx);
       attempts.push({ strategy: strategy.id, ok: true, files: result.files.length });
       if (result.files.length > 0) return { ok: true, result, strategy: strategy.id, attempts };
+      ctx.log.warn({ url: logUrl(ctx.url), metadata: metadataScore(result) }, `${strategy.id} found no media`);
       errors.push({ strategy: strategy.id, class: "fatal", message: "no media found" });
       if (!best || metadataScore(result) > metadataScore(best.result)) best = { result, strategy: strategy.id };
     } catch (error) {
@@ -42,7 +43,7 @@ export async function runChain(order: readonly Strategy[], ctx: StrategyContext)
       const cls = classifyError(error);
       attempts.push({ strategy: strategy.id, ok: false, error: errorMessage(error), class: cls });
       errors.push({ strategy: strategy.id, class: cls, message: errorMessage(error) });
-      ctx.log.debug({ strategy: strategy.id, err: error }, "strategy failed");
+      ctx.log.warn({ url: logUrl(ctx.url), class: cls, reason: errorMessage(error) }, `${strategy.id} failed`);
     }
   }
 

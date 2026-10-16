@@ -24,6 +24,16 @@ export function classifyError(error: unknown): ErrorClass {
   return "fatal";
 }
 
+/** For logs: query strings may carry signatures or tracking ids. */
+export function logUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return u.origin + u.pathname;
+  } catch {
+    return "(invalid url)";
+  }
+}
+
 export function errorMessage(error: unknown): string {
   const msg = error instanceof Error ? error.message : String(error);
   return msg.slice(0, 500);

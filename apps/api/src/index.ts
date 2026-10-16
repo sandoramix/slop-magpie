@@ -10,7 +10,7 @@ import { createLogger } from "./logger.ts";
 import { createAccountLookup } from "./services/users.ts";
 import { APP_VERSION } from "./version.ts";
 
-const log = createLogger(env.LOG_LEVEL);
+const log = createLogger(env.LOG_LEVEL, env.LOG_FORMAT);
 
 await runMigrations(env.DATABASE_URL);
 log.info("migrations applied");
