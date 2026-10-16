@@ -1,9 +1,10 @@
 import { accountLabel, type Role } from "@magpie/shared/api";
 import * as Clipboard from "expo-clipboard";
+import { inviteMessage } from "@/lib/invite";
 import { useRouter } from "expo-router";
 import { Plus, Shield } from "lucide-react-native";
 import { useState } from "react";
-import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { SafeAreaView } from "@/components/styled";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,10 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useCreateUser, useDeleteUser, useMe, useRotateUserToken, useSetUserRole, useUsers } from "@/lib/queries";
-import { useAccounts } from "@/stores/accounts";
+import { useAccounts, useActiveAccount } from "@/stores/accounts";
 
 /** Shown once after creating an account or rotating its token. */
-type Issued = { name: string; token: string };
+type Issued = { name: string; username: string; token: string };
 
 /** Accounts on the server. Admin token only; the server enforces it. */
 export default function AdminScreen() {
@@ -29,6 +30,9 @@ export default function AdminScreen() {
   const setActAs = useAccounts((s) => s.setActAs);
   const [name, setName] = useState("");
   const [issued, setIssued] = useState<Issued | null>(null);
+  const account = useActiveAccount();
+  // where the new account should connect; defaults to the server this admin is using, editable for other addresses
+  const [serverUrl, setServerUrl] = useState(account?.url ?? "");
 
   const fail = (e: Error) => {
     Alert.alert("Failed", e.message);
@@ -40,13 +44,13 @@ export default function AdminScreen() {
     create.mutate({ name: n, role }, {
       onSuccess: ({ user, token }) => {
         setName("");
-        setIssued({ name: user.name, token });
+        setIssued({ name: accountLabel(user), username: user.name, token });
       },
       onError: fail,
     });
   };
 
-  const options = (id: string, userName: string, isAdmin: boolean, isRoot: boolean) => {
+  const options = (id: string, userName: string, username: string, isAdmin: boolean, isRoot: boolean) => {
     // the root admin (API_TOKEN) and your own account keep their role and cannot be removed here
     const self = id === me.data?.id;
     const buttons = [
@@ -75,7 +79,7 @@ export default function AdminScreen() {
                     text: "Reset",
                     style: "destructive" as const,
                     onPress: () => {
-                      rotate.mutate(id, { onSuccess: ({ token }) => { setIssued({ name: userName, token }); }, onError: fail });
+                      rotate.mutate(id, { onSuccess: ({ token }) => { setIssued({ name: userName, username, token }); }, onError: fail });
                     },
                   },
                 ]);
@@ -121,19 +125,41 @@ export default function AdminScreen() {
           <View className="gap-2 rounded-lg border border-primary p-3">
             <Text className="font-medium">Token for {issued.name}</Text>
             <Text className="text-xs text-muted-foreground">
-              It is shown only now. Send it to them; they enter it with the server URL. They can change how their name is shown, but not the username.
+              It is shown only now. The invite has the server address, their username and the token; they open it on their phone (or type the details in). They can change how their name is shown, but not the username.
             </Text>
             <Text selectable className="font-mono text-xs">
               {issued.token}
             </Text>
-            <View className="flex-row gap-2">
+            <Text className="text-xs text-muted-foreground">Server address in the invite</Text>
+            <Input value={serverUrl} onChangeText={setServerUrl} placeholder="https://magpie.example.com" autoCapitalize="none" autoCorrect={false} keyboardType="url" />
+            <View className="flex-row flex-wrap gap-2">
               <Button
                 size="sm"
+                disabled={!/^https?:\/\//i.test(serverUrl.trim())}
+                onPress={() => {
+                  void Share.share({ message: inviteMessage({ url: serverUrl.trim().replace(/\/+$/, ""), username: issued.username, token: issued.token }) });
+                }}
+              >
+                <Text>Share invite</Text>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={!/^https?:\/\//i.test(serverUrl.trim())}
+                onPress={() => {
+                  void Clipboard.setStringAsync(inviteMessage({ url: serverUrl.trim().replace(/\/+$/, ""), username: issued.username, token: issued.token }));
+                }}
+              >
+                <Text>Copy invite</Text>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
                 onPress={() => {
                   void Clipboard.setStringAsync(issued.token);
                 }}
               >
-                <Text>Copy</Text>
+                <Text>Copy token</Text>
               </Button>
               <Button
                 size="sm"
@@ -177,7 +203,7 @@ export default function AdminScreen() {
           <Pressable
             key={u.id}
             onPress={() => {
-              options(u.id, accountLabel(u), u.isAdmin, u.isRoot);
+              options(u.id, accountLabel(u), u.name, u.isAdmin, u.isRoot);
             }}
             className="flex-row items-center gap-3 rounded-lg border border-border p-3 active:bg-accent"
           >

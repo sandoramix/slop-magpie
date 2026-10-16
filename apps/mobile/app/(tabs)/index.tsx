@@ -1,9 +1,8 @@
 import type { ItemFilter, ItemKind } from "@magpie/shared/api";
-import * as Clipboard from "expo-clipboard";
 import { useRouter } from "expo-router";
 import { ActAsBanner } from "@/components/account-chrome";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { ItemBrowser } from "@/components/item-browser";
 import { Input } from "@/components/ui/input";
@@ -11,8 +10,6 @@ import { Text } from "@/components/ui/text";
 import { installLabel, useInstallUpdate } from "@/lib/install-update";
 import { useMe } from "@/lib/queries";
 import { useUpdateCheck } from "@/lib/updates";
-import { extractUrl } from "@/lib/media";
-import { useSaveLink } from "@/lib/queries";
 
 const KINDS: { kind: ItemKind; label: string }[] = [
   { kind: "video", label: "Videos" },
@@ -38,7 +35,6 @@ export default function Library() {
   const [text, setText] = useState("");
   const [favorite, setFavorite] = useState(false);
   const [kind, setKind] = useState<ItemKind | null>(null);
-  const save = useSaveLink();
   const update = useUpdateCheck();
   const available = update.data;
   const me = useMe();
@@ -54,15 +50,6 @@ export default function Library() {
     }),
     [q, favorite, kind],
   );
-
-  const pasteLink = async () => {
-    const url = extractUrl(await Clipboard.getStringAsync());
-    if (!url) {
-      Alert.alert("No link", "Copy a link first, then tap again.");
-      return;
-    }
-    save.mutate({ url }, { onSuccess: ({ duplicate }) => { if (duplicate) Alert.alert("Already saved", "That link is already in your library."); }, onError: (e) => { Alert.alert("Couldn't save", e.message); } });
-  };
 
 
   return (
@@ -98,7 +85,6 @@ export default function Library() {
           returnKeyType="search"
         />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
-          <Chip label="+ Paste link" onPress={() => { void pasteLink(); }} />
           <Chip
             label="Favorites"
             active={favorite}
