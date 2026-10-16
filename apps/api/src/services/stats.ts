@@ -3,7 +3,7 @@ import { fetchStatuses, type StatsResponse, workflows } from "@magpie/shared/api
 import { count, eq, sql } from "drizzle-orm";
 import type { ServiceDeps } from "../deps.ts";
 
-export async function getStats({ db }: Pick<ServiceDeps, "db">): Promise<StatsResponse> {
+export async function getStats({ db, userId }: Pick<ServiceDeps, "db" | "userId">): Promise<StatsResponse> {
   const [totals, byWorkflow, byStatus] = await Promise.all([
     db
       .select({
@@ -12,9 +12,10 @@ export async function getStats({ db }: Pick<ServiceDeps, "db">): Promise<StatsRe
         gone: sql<number>`count(*) filter (where ${eq(items.availability, "gone")})::int`,
         withSuggestions: sql<number>`count(*) filter (where exists (select 1 from ${itemFolderSuggestions} s where s.item_id = ${items.id}) or exists (select 1 from ${itemTagSuggestions} s where s.item_id = ${items.id}))::int`,
       })
-      .from(items),
-    db.select({ key: items.workflow, n: count() }).from(items).groupBy(items.workflow),
-    db.select({ key: items.fetchStatus, n: count() }).from(items).groupBy(items.fetchStatus),
+      .from(items)
+      .where(eq(items.userId, userId)),
+    db.select({ key: items.workflow, n: count() }).from(items).where(eq(items.userId, userId)).groupBy(items.workflow),
+    db.select({ key: items.fetchStatus, n: count() }).from(items).where(eq(items.userId, userId)).groupBy(items.fetchStatus),
   ]);
   const t = totals[0];
   return {

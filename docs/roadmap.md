@@ -5,6 +5,7 @@
 Server and Android app are implemented on `dev`; **v0.1.0 is the first release**. Typecheck, lint and tests are green; the app bundles with Metro and the release APK builds locally. Not yet exercised on a device against a live server.
 
 Done:
+- Accounts (D23): per-account libraries, admin account management and act-as, temporary token then password login with revocable sessions; mobile account switcher, welcome screen, admin screen, password and display-name settings.
 - Server (M1–M5): API routes, search, signed media, worker strategies/sources/jobs, suggestions, sweeps. See [api.md](api.md) and [worker-pipeline.md](worker-pipeline.md).
 - `apps/mobile` (Expo SDK 58, Expo Router, NativeWind, RN Reusables, TanStack Query, Zustand + MMKV): settings (URL + token), share intent and clipboard paste, library grid with search/filters/multi-select/bulk actions, item detail (video/images, edit, folders/tags, suggestions, custom fields, refetch, delete), inbox (new / suggestions / failed / gone), folders + smart folders + tags, What's new.
 - Release pipeline: root `package.json` version → `app.config.ts`, `plugins/with-release-signing.ts`, `.github/workflows/release.yml`.

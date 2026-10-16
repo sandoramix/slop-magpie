@@ -14,7 +14,7 @@ import { appVersion, entriesSince } from "@/lib/changelog";
 import { extractUrl } from "@/lib/media";
 import { useSaveLink } from "@/lib/queries";
 import { useColors } from "@/lib/theme";
-import { useAuth } from "@/stores/auth";
+import { useAccounts, useHasAccount } from "@/stores/accounts";
 import { useSettings } from "@/stores/settings";
 
 void SplashScreen.preventAutoHideAsync();
@@ -28,10 +28,8 @@ function ShareHandler() {
   const router = useRouter();
   const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntentContext();
   const save = useSaveLink();
-  const ready = useAuth((s) => s.ready);
-  const hasToken = useAuth((s) => s.token !== null);
-  const hasUrl = useSettings((s) => s.apiUrl !== "");
-  const configured = hasToken && hasUrl;
+  const ready = useAccounts((s) => s.ready);
+  const configured = useHasAccount();
   const handled = useRef(false);
 
   useEffect(() => {
@@ -49,9 +47,8 @@ function ShareHandler() {
       return;
     }
     if (!configured) {
-      Alert.alert("Set up Magpie first", "Enter your server URL and token in Settings, then share again.");
+      Alert.alert("Set up Magpie first", "Add your server and token, then share again.");
       resetShareIntent();
-      router.navigate("/settings");
       return;
     }
     save.mutate(
@@ -92,18 +89,19 @@ function Root() {
   const colors = useColors();
   const { colorScheme: scheme } = useColorScheme();
   const theme = useSettings((s) => s.theme);
-  const loadToken = useAuth((s) => s.load);
-  const ready = useAuth((s) => s.ready);
+  const loadAccounts = useAccounts((s) => s.load);
+  const ready = useAccounts((s) => s.ready);
+  const hasAccount = useHasAccount();
 
   useEffect(() => {
     colorScheme.set(theme);
   }, [theme]);
 
   useEffect(() => {
-    void loadToken().finally(() => {
+    void loadAccounts().finally(() => {
       void SplashScreen.hideAsync();
     });
-  }, [loadToken]);
+  }, [loadAccounts]);
 
   if (!ready) return null;
 
@@ -119,9 +117,17 @@ function Root() {
       <ShareHandler />
       <UpdateNotice />
       <Stack screenOptions={{ headerShadowVisible: false }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="item/[id]" options={{ title: "" }} />
-        <Stack.Screen name="list" options={{ title: "" }} />
+        <Stack.Protected guard={hasAccount}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="item/[id]" options={{ title: "" }} />
+          <Stack.Screen name="list" options={{ title: "" }} />
+          <Stack.Screen name="accounts" options={{ title: "Accounts", presentation: "modal" }} />
+          <Stack.Screen name="account-form" options={{ title: "Account", presentation: "modal" }} />
+          <Stack.Screen name="admin" options={{ title: "Users" }} />
+        </Stack.Protected>
+        <Stack.Protected guard={!hasAccount}>
+          <Stack.Screen name="welcome" options={{ headerShown: false }} />
+        </Stack.Protected>
         <Stack.Screen name="whats-new" options={{ title: "What's new", presentation: "modal" }} />
       </Stack>
     </ThemeProvider>

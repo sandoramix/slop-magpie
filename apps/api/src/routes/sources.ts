@@ -1,11 +1,11 @@
 import type { SourcesResponse } from "@magpie/shared/api";
 import { allSources } from "@magpie/shared/sources";
 import { Hono } from "hono";
-import type { AppDeps } from "../deps.ts";
+import type { AppDeps, AppEnv } from "../deps.ts";
 
 export const sourcesRoutes = (deps: AppDeps) =>
-  new Hono().get("/", async (c) => {
-    const counts = await deps.countItemsBySource();
+  new Hono<AppEnv>().get("/", async (c) => {
+    const counts = await deps.countItemsBySource(c.get("principal").libraryId);
     const body: SourcesResponse = {
       sources: allSources.map((s) => ({
         id: s.id,

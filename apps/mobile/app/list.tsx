@@ -1,7 +1,8 @@
 import type { ItemFilter } from "@magpie/shared/api";
 import { Stack, useLocalSearchParams } from "expo-router";
-import { View } from "react-native";
+import { ActAsBanner } from "@/components/account-chrome";
 import { ItemBrowser } from "@/components/item-browser";
+import { SafeAreaView } from "@/components/styled";
 
 /** Items of one folder, tag or smart folder. */
 export default function ListScreen() {
@@ -18,12 +19,11 @@ export default function ListScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background">
+    // the stack header covers the top; keep content clear of the system navigation bar
+    <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
       <Stack.Screen options={{ title: title ?? "Items" }} />
-      <ItemBrowser
-        query={{ filter, ...(smartFolderId ? { smartFolderId } : {}) }}
-        empty="Nothing here yet."
-      />
-    </View>
+      <ActAsBanner />
+      <ItemBrowser query={{ filter, ...(smartFolderId ? { smartFolderId } : {}) }} empty="Nothing here yet." />
+    </SafeAreaView>
   );
 }

@@ -2,11 +2,12 @@ import { serve } from "@hono/node-server";
 import { auditLog, createDb, items, runMigrations } from "@magpie/db";
 import { createPgBossSender } from "@magpie/jobs";
 import { createBlobStore } from "@magpie/storage";
-import { count } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { createApp } from "./app.ts";
 import type { AppDeps } from "./deps.ts";
 import { env } from "./env.ts";
 import { createLogger } from "./logger.ts";
+import { createAccountLookup } from "./services/users.ts";
 import { APP_VERSION } from "./version.ts";
 
 const log = createLogger(env.LOG_LEVEL);
@@ -34,8 +35,9 @@ const deps: AppDeps = {
       log.error({ err: error, action: event.action }, "audit write failed");
     }
   },
-  async countItemsBySource() {
-    const rows = await db.select({ source: items.source, n: count() }).from(items).groupBy(items.source);
+  accounts: createAccountLookup(db),
+  async countItemsBySource(userId) {
+    const rows = await db.select({ source: items.source, n: count() }).from(items).where(eq(items.userId, userId)).groupBy(items.source);
     return new Map(rows.map((r) => [r.source, r.n]));
   },
   db,

@@ -11,21 +11,29 @@ import { healthRoutes } from "./routes/health.ts";
 import { itemsRoutes } from "./routes/items.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { fieldsRoutes, foldersRoutes, smartFoldersRoutes, statsRoutes, tagsRoutes } from "./routes/organize.ts";
+import { authRoutes } from "./routes/auth.ts";
 import { sourcesRoutes } from "./routes/sources.ts";
+import { meRoutes, usersRoutes } from "./routes/users.ts";
 
 export const API_PREFIX = "/api/v1";
 const MAX_BODY_BYTES = 64 * 1024;
 
 export function createApp(deps: AppDeps) {
   const limiter = createFailureLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
+  // password logins count separately so a locked-out login does not lock out valid bearer tokens
+  const loginLimiter = createFailureLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
 
   const api = new Hono()
     // public: no bearer token
     .route("/health", healthRoutes(deps))
     // authorized by the URL signature instead
     .route("/media", mediaRoutes(deps))
+    // public too: it is how a password turns into a token
+    .route("/auth", authRoutes(deps, loginLimiter))
     // everything below needs the token, including unknown paths (401 before 404)
-    .use("*", bearerAuth({ token: deps.apiToken, limiter, trustProxy: deps.trustProxy, audit: deps.audit }))
+    .use("*", bearerAuth({ token: deps.apiToken, accounts: deps.accounts, limiter, trustProxy: deps.trustProxy, audit: deps.audit }))
+    .route("/me", meRoutes(deps))
+    .route("/users", usersRoutes(deps))
     .route("/sources", sourcesRoutes(deps))
     .route("/items", itemsRoutes(deps))
     .route("/folders", foldersRoutes(deps))

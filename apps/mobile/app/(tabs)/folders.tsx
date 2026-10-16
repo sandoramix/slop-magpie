@@ -1,9 +1,9 @@
+import { ActAsBanner } from "@/components/account-chrome";
 import { buildFolderTree, flattenFolderTree } from "@magpie/shared/api";
 import { useRouter } from "expo-router";
 import { Folder, Hash, Plus, Wand2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import { Alert, Pressable, RefreshControl, ScrollView, View } from "react-native";
-import { SetupNotice } from "@/components/setup-notice";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,6 @@ import {
   useSmartFolders,
   useTags,
 } from "@/lib/queries";
-import { useAuth } from "@/stores/auth";
-import { useSettings } from "@/stores/settings";
 
 function SectionTitle({ children }: { children: string }) {
   return <Text className="mb-1 mt-5 px-4 text-xs font-semibold uppercase text-muted-foreground">{children}</Text>;
@@ -55,8 +53,6 @@ function Row({
 
 export default function FoldersScreen() {
   const router = useRouter();
-  const hasToken = useAuth((s) => s.token !== null);
-  const hasUrl = useSettings((s) => s.apiUrl !== "");
   const folders = useFolders();
   const tags = useTags();
   const smart = useSmartFolders();
@@ -69,7 +65,6 @@ export default function FoldersScreen() {
 
   const tree = useMemo(() => flattenFolderTree(buildFolderTree(folders.data ?? [])), [folders.data]);
 
-  if (!hasToken || !hasUrl) return <SetupNotice />;
 
   const fail = (e: Error) => {
     Alert.alert("Failed", e.message);
@@ -97,8 +92,10 @@ export default function FoldersScreen() {
   };
 
   return (
+    <View className="flex-1 bg-background">
+    <ActAsBanner />
     <ScrollView
-      className="flex-1 bg-background"
+      className="flex-1"
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
       keyboardShouldPersistTaps="handled"
     >
@@ -214,5 +211,6 @@ export default function FoldersScreen() {
       ))}
       <View className="h-12" />
     </ScrollView>
+    </View>
   );
 }

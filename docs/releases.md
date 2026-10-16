@@ -44,7 +44,7 @@ The changelog is bundled, so it works offline and always matches the installed b
 
 ### Update check
 
-`lib/updates.ts` calls `GET https://api.github.com/repos/<owner>/<repo>/releases/latest` (repo slug in `app.config.ts` `extra.githubRepo`), compares the tag with the installed version and, when newer, offers the `.apk` asset in Settings and as a banner on the library screen. Android installs it over the existing app (same signing key). A 404 (no release yet, or a private repo) is treated as "up to date".
+`lib/updates.ts` calls `GET https://api.github.com/repos/<owner>/<repo>/releases/latest` (repo slug in `app.config.ts` `extra.githubRepo`), compares the tag with the installed version and, when newer, offers it in Settings and as a banner on the library screen. Tapping it downloads the `.apk` asset into the app cache with a progress readout (`lib/install-update.ts`, `expo-file-system`) and opens Android's package installer through a content URI (`expo-intent-launcher`); the manifest needs `REQUEST_INSTALL_PACKAGES`, and Android asks once to allow installs from Magpie. It installs over the existing app because releases share one signing key; a debug or differently signed build must be uninstalled first. A 404 (no release yet, or a private repo) is treated as "up to date".
 
 ## What CI does
 

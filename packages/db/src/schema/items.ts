@@ -1,12 +1,14 @@
 import { sql } from "drizzle-orm";
 import { bigint, boolean, check, index, integer, jsonb, pgTable, smallint, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, timestamptz, tsvector } from "./columns.ts";
+import { ownerId } from "./users.ts";
 import { availability, fetchStatus, itemKind, mediaType, workflow } from "./enums.ts";
 
 export const items = pgTable(
   "items",
   {
     id: id(),
+    userId: ownerId(),
     sourceUrl: text().notNull(),
     canonicalUrl: text().notNull(),
     // registry id, validated in app code; not a pg enum so new sources need no migration
@@ -47,10 +49,10 @@ export const items = pgTable(
       .$onUpdate(() => new Date()),
   },
   (t) => [
-    uniqueIndex("items_canonical_url_key").on(t.canonicalUrl),
-    uniqueIndex("items_source_item_key").on(t.source, t.sourceItemId).where(sql`${t.sourceItemId} is not null`),
+    uniqueIndex("items_canonical_url_key").on(t.userId, t.canonicalUrl),
+    uniqueIndex("items_source_item_key").on(t.userId, t.source, t.sourceItemId).where(sql`${t.sourceItemId} is not null`),
     index("items_source_idx").on(t.source),
-    index("items_saved_at_idx").on(t.savedAt.desc()),
+    index("items_saved_at_idx").on(t.userId, t.savedAt.desc()),
     index("items_workflow_idx").on(t.workflow),
     index("items_fetch_status_idx").on(t.fetchStatus).where(sql`${t.fetchStatus} <> 'ready'`),
     index("items_availability_checked_idx").on(t.availabilityCheckedAt.asc().nullsFirst()),
