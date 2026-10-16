@@ -69,30 +69,21 @@ export default function AdminScreen() {
     ]);
   };
 
-  /** Three confirmations: a warning, a "really?", then typing the username. */
+  /** Two confirmations: a warning, then typing the username. */
   const startDelete = (u: User) => {
     const label = accountLabel(u);
     const target: PendingDelete = { id: u.id, name: label, username: u.name, items: u.itemCount };
     alert(
       `Delete ${label}?`,
-      `This permanently deletes @${u.name} and everything in the account: ${String(u.itemCount)} item(s) with their downloaded files, folders, tags, fields and smart folders. Their devices are signed out and told the account was deleted.`,
+      `This permanently deletes @${u.name} and everything in the account: ${String(u.itemCount)} item(s) with their downloaded files, folders, tags, fields and smart folders. There is no trash and no backup. Their devices are signed out and told the account was deleted.`,
       [
         { text: "Cancel", style: "cancel" },
         {
           text: "Continue",
           style: "destructive",
           onPress: () => {
-            alert("This cannot be undone", `There is no trash and no backup. ${String(u.itemCount)} item(s) will be gone for good. Are you absolutely sure?`, [
-              { text: "No, keep it", style: "cancel" },
-              {
-                text: "Yes, delete everything",
-                style: "destructive",
-                onPress: () => {
-                  setTyped("");
-                  setPendingDelete(target);
-                },
-              },
-            ]);
+            setTyped("");
+            setPendingDelete(target);
           },
         },
       ],

@@ -119,6 +119,11 @@ jobs:
           (cd dist && sha256sum -- *.apk > SHA256SUMS)
           gh release upload "$GITHUB_REF_NAME" dist/*.apk dist/SHA256SUMS --clobber
 
+      # The release was created as a pre-release so `releases/latest` (what the app's update check
+      # reads) keeps pointing at the previous version until this APK exists.
+      - name: Publish as the latest release
+        run: gh release edit "$GITHUB_REF_NAME" --prerelease=false --latest
+
   images:
     needs: verify
     runs-on: ubuntu-24.04-arm
@@ -150,7 +155,8 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
 
-  # Created right after verify so the release page exists immediately; the APK is attached by the android job.
+  # Created right after verify so the release page exists immediately; the APK is attached by the android job,
+  # which then promotes it from pre-release to latest. Until then the app does not offer it as an update.
   release:
     needs: verify
     runs-on: ubuntu-24.04
@@ -197,6 +203,7 @@ jobs:
           gh release create "$GITHUB_REF_NAME" \
             --title "Magpie $VERSION" \
             --notes-file notes.md \
+            --prerelease \
             --verify-tag
 
   # The server does not wait for the APK: deploy as soon as the images are pushed.

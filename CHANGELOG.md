@@ -6,6 +6,14 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-16
+### Changed
+
+- Deleting an account now takes a warning and then typing the username (one confirmation fewer).
+- The invite message and the page it opens are reworded: clearer steps, and what to do if you do not have the app yet.
+- A new release only becomes the one the app offers once its APK is attached, so the app never offers an update that cannot be installed yet.
+
+
 ## [1.0.1] - 2026-10-16
 ### Changed
 
