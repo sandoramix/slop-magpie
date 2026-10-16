@@ -158,6 +158,8 @@ Saved searches shown alongside folders.
 
 `sessions`: one row per device that signed in with username + password: `token_hash` (sha256), `label` (user agent), `last_used_at`, `expires_at` (180 days, sliding). Deleting a user cascades to its library and sessions; the API queues blob deletion for its items first.
 
+`deleted_tokens`: `token_hash` (sha256, primary key), `user_name`, `deleted_at`. Written when an account is deleted (its generated token and its sessions) so devices still holding one are told the account was deleted; rows older than a year are purged on the next delete.
+
 ### audit_log
 
 | Column | Type | Notes |

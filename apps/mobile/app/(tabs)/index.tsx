@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { ItemBrowser } from "@/components/item-browser";
+import { UpdateCard } from "@/components/update-card";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { installLabel, useInstallUpdate } from "@/lib/install-update";
 import { useMe } from "@/lib/queries";
 import { useUpdateCheck } from "@/lib/updates";
 
@@ -39,7 +39,6 @@ export default function Library() {
   const available = update.data;
   const me = useMe();
   const router = useRouter();
-  const install = useInstallUpdate(available);
   const q = useDebounced(text.trim(), 300);
 
   const filter = useMemo<ItemFilter>(
@@ -66,14 +65,7 @@ export default function Library() {
         </Pressable>
       ) : null}
       {available ? (
-        <Pressable
-          onPress={() => {
-            void install.start();
-          }}
-          className="mx-3 mt-2 rounded-lg bg-primary px-3 py-2"
-        >
-          <Text className="text-sm text-primary-foreground">{install.state.status === "idle" ? `Update available: Magpie ${available.version}. Tap to install.` : installLabel(install.state, available.version)}</Text>
-        </Pressable>
+        <UpdateCard update={available} className="mx-3 mt-2" />
       ) : null}
       <View className="gap-2 px-3 pb-1 pt-2">
         <Input

@@ -1,66 +1,71 @@
 import * as FileSystem from "expo-file-system/legacy";
 import * as IntentLauncher from "expo-intent-launcher";
-import { Linking, Platform } from "react-native";
-import { useCallback, useState } from "react";
+import { useUpdateInstall } from "@/stores/update";
 import type { UpdateInfo } from "./updates";
 
 const APK_MIME = "application/vnd.android.package-archive";
 const FLAG_GRANT_READ_URI_PERMISSION = 1;
 
-export type InstallState =
-  | { status: "idle" }
-  | { status: "downloading"; progress: number }
-  | { status: "installing" }
-  | { status: "error"; message: string };
+let active: FileSystem.DownloadResumable | null = null;
+const flags = { cancelled: false };
+// a call, so TypeScript does not assume the flag is still false after the awaits
+const isCancelled = () => flags.cancelled;
+let targetPath: string | null = null;
 
-/** Downloads the APK into the app cache and hands it to Android's package installer. */
-export function useInstallUpdate(update: UpdateInfo | null | undefined) {
-  const [state, setState] = useState<InstallState>({ status: "idle" });
+const setState = useUpdateInstall.getState().set;
 
-  const start = useCallback(async () => {
-    if (!update || state.status === "downloading" || state.status === "installing") return;
-    // only a release APK can be installed in place; anything else is a page to open
-    if (Platform.OS !== "android" || !update.url.endsWith(".apk")) {
-      await Linking.openURL(update.url);
-      return;
-    }
-    try {
-      setState({ status: "downloading", progress: 0 });
-      const target = `${FileSystem.cacheDirectory ?? ""}magpie-${update.version}.apk`;
-      await FileSystem.deleteAsync(target, { idempotent: true });
-      const download = FileSystem.createDownloadResumable(update.url, target, {}, (p) => {
-        if (p.totalBytesExpectedToWrite > 0) {
-          setState({ status: "downloading", progress: p.totalBytesWritten / p.totalBytesExpectedToWrite });
-        }
-      });
-      const result = await download.downloadAsync();
-      if (!result || result.status !== 200) throw new Error(`Download failed (${result?.status ?? "no response"})`);
+/**
+ * Downloads the release APK into the app cache and hands it to Android's package installer. Android
+ * always asks the person to confirm an install (and, the first time, to allow Magpie to install
+ * apps); everything before that happens inside the app.
+ */
+export async function startInstall(update: UpdateInfo): Promise<void> {
+  const { status } = useUpdateInstall.getState().state;
+  if (status === "downloading" || status === "installing") return;
 
-      setState({ status: "installing" });
-      const contentUri = await FileSystem.getContentUriAsync(result.uri);
-      await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
-        data: contentUri,
-        flags: FLAG_GRANT_READ_URI_PERMISSION,
-        type: APK_MIME,
-      });
-      setState({ status: "idle" });
-    } catch (e) {
-      setState({ status: "error", message: e instanceof Error ? e.message : "Update failed" });
-    }
-  }, [update, state.status]);
+  const target = `${FileSystem.cacheDirectory ?? ""}magpie-${update.version}.apk`;
+  flags.cancelled = false;
+  targetPath = target;
+  try {
+    setState({ status: "downloading", received: 0, total: 0 });
+    await FileSystem.deleteAsync(target, { idempotent: true });
+    active = FileSystem.createDownloadResumable(update.url, target, {}, (p) => {
+      if (!flags.cancelled) setState({ status: "downloading", received: p.totalBytesWritten, total: p.totalBytesExpectedToWrite });
+    });
+    const result = await active.downloadAsync();
+    active = null;
+    if (isCancelled()) return;
+    if (!result || result.status !== 200) throw new Error(`Download failed (${result?.status ?? "no response"})`);
 
-  return { state, start };
+    setState({ status: "installing" });
+    const contentUri = await FileSystem.getContentUriAsync(result.uri);
+    await IntentLauncher.startActivityAsync("android.intent.action.VIEW", {
+      data: contentUri,
+      flags: FLAG_GRANT_READ_URI_PERMISSION,
+      type: APK_MIME,
+    });
+    setState({ status: "idle" });
+  } catch (e) {
+    active = null;
+    if (!isCancelled()) setState({ status: "error", message: e instanceof Error ? e.message : "Update failed" });
+  }
 }
 
-export function installLabel(state: InstallState, version: string): string {
-  switch (state.status) {
-    case "downloading":
-      return `Downloading… ${Math.round(state.progress * 100)}%`;
-    case "installing":
-      return "Opening installer…";
-    case "error":
-      return `${state.message}. Tap to retry`;
-    case "idle":
-      return `Update to ${version}`;
+/** Stops a running download and removes the partial file. */
+export async function cancelInstall(): Promise<void> {
+  if (useUpdateInstall.getState().state.status !== "downloading") return;
+  flags.cancelled = true;
+  const running = active;
+  active = null;
+  setState({ status: "idle" });
+  try {
+    await running?.pauseAsync();
+  } catch {
+    // already finished or failed; nothing left to stop
   }
+  if (targetPath) await FileSystem.deleteAsync(targetPath, { idempotent: true });
+}
+
+export function formatMb(bytes: number): string {
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

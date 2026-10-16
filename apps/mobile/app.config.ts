@@ -47,6 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       { android: { usesCleartextTraffic: true } },
     ],
     ["expo-share-intent", { androidIntentFilters: ["text/*"], disableIOS: true }],
+    "./plugins/with-quick-save-share.ts",
     "./plugins/with-release-signing.ts",
   ],
   experiments: { typedRoutes: true },

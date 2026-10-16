@@ -2,7 +2,8 @@ import { buildFolderTree, flattenFolderTree, type ItemDetail, type Workflow } fr
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ExternalLink, Heart, RefreshCw, Star, Trash2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, View } from "react-native";
+import { alert } from "@/lib/alert";
 import { Chip } from "@/components/chip";
 import { FieldEditor } from "@/components/field-editor";
 import { OptionPicker } from "@/components/option-picker";
@@ -127,14 +128,14 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
   const tagOptions = useMemo(() => (tags.data ?? []).map((t) => ({ id: t.id, label: t.name })), [tags.data]);
 
   const fail = (e: Error) => {
-    Alert.alert("Failed", e.message);
+    alert("Failed", e.message);
   };
   const patch = (body: Parameters<typeof update.mutate>[0]) => {
     update.mutate(body, { onError: fail });
   };
 
   const confirmDelete = () => {
-    Alert.alert("Delete this item?", "The item and its downloaded files are removed.", [
+    alert("Delete this item?", "The item and its downloaded files are removed.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",

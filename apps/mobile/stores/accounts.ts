@@ -13,8 +13,12 @@ const tokenKey = (id: string) => `magpie.token.${id}`;
 // single-server builds (<= 0.1.3) kept these
 const LEGACY_TOKEN_KEY = "magpie.api-token";
 
+/** Left behind when an admin deleted an account that was saved on this phone; shown once. */
+export type DeletedNotice = { name: string; url: string };
+
 type AccountsState = {
   accounts: Account[];
+  deletedNotices: DeletedNotice[];
   activeId: string | null;
   /** false until the active token has been read from secure storage. */
   ready: boolean;
@@ -27,6 +31,10 @@ type AccountsState = {
   save: (account: { id?: string; name: string; url: string; isAdmin: boolean }, token: string) => Promise<Account>;
   switchTo: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
+  /** The server says an admin deleted this account: remove it here and queue a notice. */
+  reportDeleted: (id: string) => Promise<void>;
+  /** Pops the oldest pending notice. */
+  takeNotice: () => DeletedNotice | null;
   setRole: (id: string, isAdmin: boolean) => void;
   setActAs: (target: ActAs | null) => void;
 };
@@ -58,6 +66,7 @@ export const useAccounts = create<AccountsState>()(
   persist(
     (set, get) => ({
       accounts: [],
+      deletedNotices: [],
       activeId: null,
       ready: false,
       token: null,
@@ -113,6 +122,20 @@ export const useAccounts = create<AccountsState>()(
         set({ accounts, activeId: next, token, actAs: null });
       },
 
+      reportDeleted: async (id) => {
+        const account = get().accounts.find((a) => a.id === id);
+        if (!account) return;
+        await get().remove(id);
+        set({ deletedNotices: [...get().deletedNotices, { name: account.name, url: account.url }] });
+      },
+
+      takeNotice: () => {
+        const [first, ...rest] = get().deletedNotices;
+        if (!first) return null;
+        set({ deletedNotices: rest });
+        return first;
+      },
+
       setRole: (id, isAdmin) => {
         const account = get().accounts.find((a) => a.id === id);
         if (!account || account.isAdmin === isAdmin) return;
@@ -127,7 +150,7 @@ export const useAccounts = create<AccountsState>()(
       name: "accounts",
       storage: createJSONStorage(() => mmkvStorage),
       // tokens, the ready flag and act-as are never persisted
-      partialize: (s) => ({ accounts: s.accounts, activeId: s.activeId }),
+      partialize: (s) => ({ accounts: s.accounts, activeId: s.activeId, deletedNotices: s.deletedNotices }),
     },
   ),
 );

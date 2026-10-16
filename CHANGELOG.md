@@ -6,6 +6,25 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-16
+### Added
+
+- Two entries in Android's share sheet: **Magpie** (open the item and organize it now) and **Magpie: save for later** (saves the link to your Inbox and takes you straight back to the app you came from). Settings > Sharing chooses what plain "Magpie" does: organize now, or ask each time.
+- Invite links are now ordinary `https://` links, so WhatsApp and other chats make them tappable. The page they open has an "Open in Magpie" button and a link to get the app.
+- Admins can share an invite again for an account that has not signed in yet ("Invite" on the Users screen). It issues a fresh token, so the earlier invite stops working.
+- Admins can delete an account from Users: two confirmations and typing the username. The person is told their account was deleted the next time they open the app, and it is removed from their phone.
+- App updates show a progress bar with the size, can be cancelled, and the same progress shows on the Library and Settings screens.
+- Magpie is now open source under the MIT license.
+
+### Changed
+
+- Every dialog can be closed with the back button or by tapping outside it, and menus with more than three actions open in a sheet with a close button. This also brings back the admin menu entries (such as delete) that Android was hiding.
+- An update is only offered once the release's APK is attached, instead of sending you to the GitHub page.
+
+### Upgrade notes
+
+- The server migrates the database on start (one new `deleted_tokens` table). Older app builds keep working. Update the server first: invite links and the "account deleted" notice need the new server, and the new app's Users screen shows "Invite" only once the server reports which accounts are still pending.
+
 ## [0.3.0] - 2026-10-16
 ### Added
 

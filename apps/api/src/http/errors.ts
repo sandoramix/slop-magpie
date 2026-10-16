@@ -1,4 +1,4 @@
-import type { ApiErrorBody, ErrorCode } from "@magpie/shared/api";
+import type { ApiErrorBody, ErrorCode, ErrorReason } from "@magpie/shared/api";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 
@@ -13,10 +13,10 @@ export class ApiError extends Error {
   }
 }
 
-export function errorBody(code: ErrorCode, message: string): ApiErrorBody {
-  return { error: { code, message } };
+export function errorBody(code: ErrorCode, message: string, reason?: ErrorReason): ApiErrorBody {
+  return { error: { code, message, ...(reason ? { reason } : {}) } };
 }
 
-export function errorResponse(c: Context, status: ContentfulStatusCode, code: ErrorCode, message: string) {
-  return c.json(errorBody(code, message), status);
+export function errorResponse(c: Context, status: ContentfulStatusCode, code: ErrorCode, message: string, reason?: ErrorReason) {
+  return c.json(errorBody(code, message, reason), status);
 }
