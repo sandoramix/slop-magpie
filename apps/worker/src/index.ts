@@ -19,7 +19,7 @@ import { runTool } from "./tools/run.ts";
 import { toolVersions } from "./tools/versions.ts";
 import { APP_VERSION } from "./version.ts";
 
-const log = createLogger(env.LOG_LEVEL);
+const log = createLogger(env.LOG_LEVEL, env.LOG_FORMAT);
 log.info({ version: APP_VERSION, tools: await toolVersions() }, "worker starting");
 
 const database = createDb(env.DATABASE_URL, { max: 3 });

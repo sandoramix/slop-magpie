@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       version: ${{ steps.version.outputs.version }}
+      app_changed: ${{ steps.app.outputs.changed }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -44,11 +47,32 @@ jobs:
           node scripts/changelog.ts check "$version"
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      # The APK is only rebuilt when something the app is built from changed since the last release
+      # that shipped one (the one `releases/latest` points at; server-only releases stay pre-releases).
+      - name: Did the app change?
+        id: app
+        run: |
+          last="$(gh api "repos/$GITHUB_REPOSITORY/releases/latest" --jq .tag_name 2>/dev/null || true)"
+          if [ -z "$last" ] || ! git rev-parse -q --verify "refs/tags/$last" >/dev/null; then
+            echo "no previous app release: building the app"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed="$(git diff --name-only "$last" "$GITHUB_SHA" -- apps/mobile packages/shared ':(exclude)packages/shared/src/env' scripts/changelog.ts pnpm-workspace.yaml .nvmrc)"
+          if [ -n "$changed" ]; then
+            echo "app changed since $last:"; echo "$changed"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "no app changes since $last: server-only release"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm test
 
   android:
+    if: needs.verify.outputs.app_changed == 'true'
     needs: [verify, release]
     runs-on: ubuntu-24.04
     permissions:
@@ -164,6 +188,7 @@ jobs:
       contents: write
     env:
       VERSION: ${{ needs.verify.outputs.version }}
+      APP_CHANGED: ${{ needs.verify.outputs.app_changed }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
@@ -182,7 +207,11 @@ jobs:
             echo
             echo "## Install"
             echo
-            echo "**Android:** \`magpie-$VERSION.apk\` is attached below once the build finishes (a few minutes after the release appears). Open it on the device (allow installs from unknown sources); it updates an existing install in place."
+            if [ "$APP_CHANGED" = "true" ]; then
+              echo "**Android:** \`magpie-$VERSION.apk\` is attached below once the build finishes (a few minutes after the release appears). Open it on the device (allow installs from unknown sources); it updates an existing install in place."
+            else
+              echo "**Android:** server-only release. The app did not change, so there is no new APK; keep using your installed version."
+            fi
             echo
             echo "**Server:**"
             echo
