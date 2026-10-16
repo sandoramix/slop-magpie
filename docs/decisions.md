@@ -99,3 +99,7 @@ Suggestions below the auto-assign threshold must survive until the user accepts 
 Owner prefers one variable over a separate test URL.
 **Decision:** vitest reads `DATABASE_URL` (env or root `.env`); each test file creates a `magpie_test_*` database on that server and drops it afterwards. Without it, integration tests are skipped.
 **Consequences:** the role needs `CREATEDB`; the named database itself is never written by tests.
+
+## D22 — Mobile conventions (2026-10-16)
+**Decision:** Expo/Babel/Metro/Tailwind configs in `apps/mobile` are CommonJS (`*.cjs`; the package has no `"type": "module"`) because those tools load them with `require`. NativeWind forbids inline styles, so media aspect ratios snap to a fixed set of Tailwind `aspect-*` classes (`lib/media.ts`). `expo-share-intent` 8.0.1 declares `expo ^57` but is used on SDK 58 (prebuild verified). The update check reads GitHub's public `releases/latest` endpoint.
+**Consequences:** card heights are approximate; no per-folder/tag colors in the UI (they would need inline styles).
