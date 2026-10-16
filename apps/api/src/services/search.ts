@@ -129,7 +129,7 @@ function fieldCondition(cond: FieldCondition, def: Pick<FieldDef, "type"> | unde
 }
 
 /** Lazily loaded lookups; most queries need none of them. */
-function lookups(db: Database) {
+function lookups(db: Database, userId: string) {
   let folderTree: Promise<ReturnType<typeof flattenFolderTree>> | undefined;
   let fields: Promise<Map<string, Pick<FieldDef, "type">>> | undefined;
   return {
@@ -144,11 +144,13 @@ function lookups(db: Database) {
           position: folders.position,
         })
         .from(folders)
+        .where(eq(folders.userId, userId))
         .then((rows) => flattenFolderTree(buildFolderTree(rows.map((r) => ({ ...r, itemCount: 0 })))))),
     fields: () =>
       (fields ??= db
         .select({ key: fieldDefs.key, type: fieldDefs.type })
         .from(fieldDefs)
+        .where(eq(fieldDefs.userId, userId))
         .then((rows) => new Map(rows.map((r) => [r.key, r])))),
   };
 }
@@ -244,9 +246,9 @@ async function filterConditions(db: Database, look: Lookups, f: ItemFilter): Pro
 }
 
 /** Builds the WHERE clause for one or more filters (ANDed, e.g. request params + smart folder). */
-export async function itemConditions(db: Database, filters: readonly ItemFilter[], now: Date = new Date()): Promise<ItemConditions> {
-  const look = lookups(db);
-  const all: SQL[] = [];
+export async function itemConditions(db: Database, userId: string, filters: readonly ItemFilter[], now: Date = new Date()): Promise<ItemConditions> {
+  const look = lookups(db, userId);
+  const all: SQL[] = [eq(items.userId, userId)];
   const terms: string[] = [];
   let parsed: ParsedQuery | null = null;
   for (const f of filters) {
@@ -258,5 +260,5 @@ export async function itemConditions(db: Database, filters: readonly ItemFilter[
       all.push(...(await queryConditions(db, look, q)));
     }
   }
-  return { where: all.length ? and(...all) : undefined, rank: rankFor(terms), parsed };
+  return { where: and(...all), rank: rankFor(terms), parsed };
 }

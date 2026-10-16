@@ -1,6 +1,6 @@
 # Data model
 
-PostgreSQL via Drizzle. Single-tenant: no `user_id` columns. All IDs are UUIDv7. All timestamps are `timestamptz`.
+PostgreSQL via Drizzle. Multi-account: `users` own `items`, `folders`, `tags`, `field_defs` and `smart_folders` through a `user_id` column (the link tables inherit it through their item). Uniqueness (canonical URL, folder and tag names, field keys) is per account. All IDs are UUIDv7. All timestamps are `timestamptz`.
 
 Extensions: `pg_trgm` (required, v1). `vector` (optional, v2 semantic search — only if available on the instance).
 
@@ -151,6 +151,12 @@ Saved searches shown alongside folders.
 | icon / color | text | |
 | query | jsonb | `ItemQuery` from `packages/shared` (same shape as `GET /items` filters) |
 | position | int | |
+
+### users / sessions
+
+`users`: `id`, `name` (username: set by the admin, unique case-insensitively, never changes), `display_name` (chosen by the owner, optional), `is_admin`, `token_hash` (sha256 of the generated temporary token, null once a password is set and for the admin), `password_hash` (scrypt, optional). The admin row has the fixed id `00000000-0000-7000-8000-000000000001` and owns everything that existed before accounts; it signs in with `API_TOKEN`.
+
+`sessions`: one row per device that signed in with username + password: `token_hash` (sha256), `label` (user agent), `last_used_at`, `expires_at` (180 days, sliding). Deleting a user cascades to its library and sessions; the API queues blob deletion for its items first.
 
 ### audit_log
 

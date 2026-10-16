@@ -45,7 +45,8 @@ export function scoreTargets(
 
 type LinkTable = typeof itemFolders | typeof itemTags;
 
-async function evidence(ctx: WorkerContext, itemId: string, words: string[], table: LinkTable, targetColumn: PgColumn) {
+/** Evidence comes only from the owner's own items: libraries never learn from each other. */
+async function evidence(ctx: WorkerContext, userId: string, itemId: string, words: string[], table: LinkTable, targetColumn: PgColumn) {
   const categorized = exists(
     ctx.db
       .select({ one: sql`1` })
@@ -55,13 +56,15 @@ async function evidence(ctx: WorkerContext, itemId: string, words: string[], tab
   const dfRows = await ctx.db
     .select({ keyword: itemKeywords.keyword, n: countDistinct(itemKeywords.itemId) })
     .from(itemKeywords)
-    .where(and(inArray(itemKeywords.keyword, words), ne(itemKeywords.itemId, itemId), categorized))
+    .innerJoin(items, eq(items.id, itemKeywords.itemId))
+    .where(and(eq(items.userId, userId), inArray(itemKeywords.keyword, words), ne(itemKeywords.itemId, itemId), categorized))
     .groupBy(itemKeywords.keyword);
   const pairRows = await ctx.db
     .select({ keyword: itemKeywords.keyword, target: sql<string>`${targetColumn}`, n: countDistinct(itemKeywords.itemId) })
     .from(itemKeywords)
     .innerJoin(table, and(eq(table.itemId, itemKeywords.itemId), eq(table.assignedBy, "manual")))
-    .where(and(inArray(itemKeywords.keyword, words), ne(itemKeywords.itemId, itemId)))
+    .innerJoin(items, eq(items.id, itemKeywords.itemId))
+    .where(and(eq(items.userId, userId), inArray(itemKeywords.keyword, words), ne(itemKeywords.itemId, itemId)))
     .groupBy(itemKeywords.keyword, targetColumn);
   return {
     df: new Map(dfRows.map((r) => [r.keyword, r.n])),
@@ -77,7 +80,7 @@ export interface CategorizeResult {
 
 export async function categorizeItem(ctx: WorkerContext, itemId: string): Promise<CategorizeResult> {
   const result: CategorizeResult = { autoFolders: 0, autoTags: 0, suggestions: 0 };
-  const [item] = await ctx.db.select({ id: items.id }).from(items).where(eq(items.id, itemId));
+  const [item] = await ctx.db.select({ id: items.id, userId: items.userId }).from(items).where(eq(items.id, itemId));
   if (!item) return result;
   const keywords = await ctx.db
     .select({ keyword: itemKeywords.keyword, weight: itemKeywords.weight })
@@ -87,8 +90,8 @@ export async function categorizeItem(ctx: WorkerContext, itemId: string): Promis
 
   const [folderEv, tagEv] = words.length
     ? await Promise.all([
-        evidence(ctx, itemId, words, itemFolders, itemFolders.folderId),
-        evidence(ctx, itemId, words, itemTags, itemTags.tagId),
+        evidence(ctx, item.userId, itemId, words, itemFolders, itemFolders.folderId),
+        evidence(ctx, item.userId, itemId, words, itemTags, itemTags.tagId),
       ])
     : [null, null];
   const folderScores = folderEv ? scoreTargets(keywords, folderEv.df, folderEv.pairs) : new Map<string, number>();

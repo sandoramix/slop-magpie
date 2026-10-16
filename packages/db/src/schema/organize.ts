@@ -15,11 +15,13 @@ import {
 import { createdAt, id, timestamptz } from "./columns.ts";
 import { assignedBy, fieldType, keywordSource } from "./enums.ts";
 import { items } from "./items.ts";
+import { ownerId } from "./users.ts";
 
 export const folders = pgTable(
   "folders",
   {
     id: id(),
+    userId: ownerId(),
     parentId: uuid().references((): AnyPgColumn => folders.id, { onDelete: "cascade" }),
     name: text().notNull(),
     icon: text(),
@@ -30,6 +32,7 @@ export const folders = pgTable(
   (t) => [
     // coalesce makes root folders (parent_id null) unique by name too
     uniqueIndex("folders_parent_name_key").on(
+      t.userId,
       sql`coalesce(${t.parentId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
       sql`lower(${t.name})`,
     ),
@@ -56,11 +59,12 @@ export const tags = pgTable(
   "tags",
   {
     id: id(),
+    userId: ownerId(),
     name: text().notNull(),
     color: text(),
     createdAt: createdAt(),
   },
-  (t) => [uniqueIndex("tags_name_key").on(sql`lower(${t.name})`)],
+  (t) => [uniqueIndex("tags_name_key").on(t.userId, sql`lower(${t.name})`)],
 );
 
 export const itemTags = pgTable(
@@ -96,18 +100,20 @@ export const fieldDefs = pgTable(
   "field_defs",
   {
     id: id(),
+    userId: ownerId(),
     key: text().notNull(),
     label: text().notNull(),
     type: fieldType().notNull(),
     options: jsonb().$type<string[]>(),
     position: integer().notNull().default(0),
   },
-  (t) => [uniqueIndex("field_defs_key_key").on(t.key)],
+  (t) => [uniqueIndex("field_defs_key_key").on(t.userId, t.key)],
 );
 
 
 export const smartFolders = pgTable("smart_folders", {
   id: id(),
+  userId: ownerId(),
   name: text().notNull(),
   icon: text(),
   color: text(),

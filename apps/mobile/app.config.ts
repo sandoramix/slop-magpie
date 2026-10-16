@@ -25,6 +25,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: "dev.sandoramix.magpie",
     versionCode: major * 10000 + minor * 100 + patch,
+    // lets the in-app updater hand the downloaded APK to the package installer
+    permissions: ["android.permission.REQUEST_INSTALL_PACKAGES"],
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#7c3aed",

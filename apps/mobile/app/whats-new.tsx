@@ -1,10 +1,12 @@
 import { ScrollView, View } from "react-native";
+import { SafeAreaView } from "@/components/styled";
 import { Text } from "@/components/ui/text";
 import { changelog } from "@/lib/changelog";
 
 export default function WhatsNew() {
   return (
-    <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-6 p-4 pb-12">
+    <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
+    <ScrollView className="flex-1" contentContainerClassName="gap-6 p-4 pb-12">
       {changelog.length === 0 && <Text className="text-muted-foreground">No release notes in this build.</Text>}
       {changelog.map((entry) => (
         <View key={entry.version} className="gap-2">
@@ -25,5 +27,6 @@ export default function WhatsNew() {
         </View>
       ))}
     </ScrollView>
+    </SafeAreaView>
   );
 }

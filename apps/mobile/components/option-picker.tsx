@@ -1,6 +1,7 @@
 import { Check } from "lucide-react-native";
 import { useState } from "react";
 import { FlatList, Modal, Pressable, View } from "react-native";
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
@@ -59,8 +60,11 @@ export function OptionPicker({ visible, title, options, selected, multiple, onCr
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      {/* a Modal is its own window: it needs its own insets provider to clear the navigation bar */}
+      <SafeAreaProvider>
       <Pressable className="flex-1 bg-black/50" onPress={onClose} />
-      <View className="max-h-[75%] rounded-t-2xl bg-background p-4">
+      <View className="max-h-[75%] rounded-t-2xl bg-background px-4 pt-4">
+        <SafeAreaView edges={["bottom"]} className="pb-4">
         <Text className="mb-3 text-lg font-semibold">{title}</Text>
         <Input
           value={filter}
@@ -104,7 +108,9 @@ export function OptionPicker({ visible, title, options, selected, multiple, onCr
             <Text>Done</Text>
           </Button>
         ) : null}
+        </SafeAreaView>
       </View>
+      </SafeAreaProvider>
     </Modal>
   );
 }

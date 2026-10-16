@@ -9,3 +9,4 @@ export * from "./smart-folders.ts";
 export * from "./sources.ts";
 export * from "./stats.ts";
 export * from "./tags.ts";
+export * from "./users.ts";

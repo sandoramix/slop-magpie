@@ -8,6 +8,7 @@ import type { ItemJobData, JobSender, QueueKey } from "@magpie/jobs";
 import { createLocalBlobStore } from "@magpie/storage";
 import { pino } from "pino";
 import { createApp } from "./app.ts";
+import { createAccountLookup } from "./services/users.ts";
 import type { AppDeps, AuditEvent } from "./deps.ts";
 
 export const TOKEN = "t".repeat(48);
@@ -44,6 +45,8 @@ export function unitDeps(overrides: Partial<AppDeps> = {}): { deps: AppDeps; aud
       return Promise.resolve();
     },
     countItemsBySource: () => Promise.resolve(new Map([["instagram", 3]])),
+    // no accounts exist unless a test brings a database
+    accounts: { findByTokenHash: () => Promise.resolve(null), findById: () => Promise.resolve(null) },
     db: createDb("postgres://unused@127.0.0.1:1/unused").db,
     store: createLocalBlobStore({ root: tmpdir(), signingSecret: SIGNING_SECRET, publicBaseUrl: "https://m.test" }),
     jobs: fakeJobs(),
@@ -72,6 +75,7 @@ export async function integrationEnv(serverUrl: string): Promise<IntegrationEnv>
     db: database.db,
     jobs,
     store: createLocalBlobStore({ root: mediaRoot, signingSecret: SIGNING_SECRET, publicBaseUrl: "https://m.test" }),
+    accounts: createAccountLookup(database.db),
     countItemsBySource: () => Promise.resolve(new Map()),
     audit: () => Promise.resolve(),
     log: pino({ level: "error" }),

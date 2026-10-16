@@ -133,6 +133,8 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
         .where(
           and(
             ne(items.id, itemId),
+            // duplicates are per account: two accounts may save the same post
+            eq(items.userId, item.userId),
             resolved.sourceItemId
               ? or(eq(items.canonicalUrl, resolved.canonicalUrl), and(eq(items.source, source), eq(items.sourceItemId, resolved.sourceItemId)))
               : eq(items.canonicalUrl, resolved.canonicalUrl),
@@ -220,7 +222,7 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
         const taken = await tx
           .select({ id: items.id })
           .from(items)
-          .where(and(eq(items.source, source), eq(items.sourceItemId, result.sourceItemId), ne(items.id, itemId)));
+          .where(and(eq(items.userId, item.userId), eq(items.source, source), eq(items.sourceItemId, result.sourceItemId), ne(items.id, itemId)));
         if (taken.length === 0) await tx.update(items).set({ sourceItemId: result.sourceItemId }).where(eq(items.id, itemId));
       }
     });

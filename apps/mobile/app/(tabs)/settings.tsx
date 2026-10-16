@@ -1,15 +1,19 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { Alert, Linking, ScrollView, View } from "react-native";
+import { Shield } from "lucide-react-native";
+import { accountLabel } from "@magpie/shared/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { Alert, ScrollView, View } from "react-native";
 import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { checkServer } from "@/lib/api";
 import { appVersion } from "@/lib/changelog";
+import { installLabel, useInstallUpdate } from "@/lib/install-update";
+import { useMe, useSetPassword, useUpdateDisplayName } from "@/lib/queries";
 import { useUpdateCheck } from "@/lib/updates";
-import { useAuth } from "@/stores/auth";
+import { useAccounts, useActiveAccount } from "@/stores/accounts";
 import { useSettings, type ThemePreference } from "@/stores/settings";
 
 const THEMES: ThemePreference[] = ["system", "light", "dark"];
@@ -17,82 +21,125 @@ const COLUMNS = [1, 2, 3] as const;
 
 export default function SettingsScreen() {
   const router = useRouter();
-  const qc = useQueryClient();
   const settings = useSettings();
+  const account = useActiveAccount();
+  const setRole = useAccounts((s) => s.setRole);
+  const me = useMe();
   const update = useUpdateCheck();
+  const updateName = useUpdateDisplayName();
+  const setPasswordMutation = useSetPassword();
+  const qc = useQueryClient();
+  const saveAccount = useAccounts((s) => s.save);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const available = update.data;
-  const token = useAuth((s) => s.token);
-  const setToken = useAuth((s) => s.setToken);
-  const [url, setUrl] = useState(settings.apiUrl);
-  const [secret, setSecret] = useState(token ?? "");
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const install = useInstallUpdate(available);
 
-  const connect = async () => {
-    setBusy(true);
-    setStatus(null);
-    try {
-      const { version } = await checkServer(url, secret.trim());
-      settings.setApiUrl(url);
-      await setToken(secret.trim());
-      await qc.invalidateQueries();
-      setStatus(`Connected. Server ${version}`);
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(false);
-    }
+  // the server is the source of truth for the role (it may have changed since the account was added)
+  const role = me.data?.isAdmin;
+  useEffect(() => {
+    if (account && role !== undefined) setRole(account.id, role);
+  }, [account, role, setRole]);
+
+  // fill the field once the server has answered
+  const serverName = me.data?.displayName ?? "";
+  useEffect(() => {
+    setDisplayName(serverName);
+  }, [serverName]);
+
+  const saveName = () => {
+    const next = displayName.trim();
+    if (next === serverName) return;
+    updateName.mutate({ displayName: next === "" ? null : next }, { onError: (e) => { Alert.alert("Failed", e.message); } });
   };
 
-  const disconnect = () => {
-    Alert.alert("Disconnect?", "The token is removed from this device.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Disconnect",
-        style: "destructive",
-        onPress: () => {
-          void setToken(null).then(() => {
-            setSecret("");
-            qc.clear();
-            setStatus(null);
-          });
-        },
+  const changePassword = () => {
+    if (!account) return;
+    if (password !== confirm) {
+      Alert.alert("Passwords differ", "Type the same password twice.");
+      return;
+    }
+    setPasswordMutation.mutate(password, {
+      onSuccess: (login) => {
+        void (async () => {
+          // the temporary token no longer works: from now on this device uses its session token.
+          // The root admin gets none (token is null): its API_TOKEN stays valid and in use.
+          if (login.token) {
+            await saveAccount({ id: account.id, name: account.name, url: account.url, isAdmin: login.me.isAdmin }, login.token);
+          }
+          setPassword("");
+          setConfirm("");
+          await qc.invalidateQueries({ queryKey: ["me"] });
+          Alert.alert("Password set", "Use your username and password to sign in on other devices.");
+        })();
       },
-    ]);
+      onError: (e) => {
+        Alert.alert("Failed", e.message);
+      },
+    });
   };
 
   return (
     <ScrollView className="flex-1 bg-background" contentContainerClassName="gap-3 p-4" keyboardShouldPersistTaps="handled">
-      <Text variant="large">Server</Text>
-      <Input
-        value={url}
-        onChangeText={setUrl}
-        placeholder="https://magpie.example.com"
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-      />
-      <Input
-        value={secret}
-        onChangeText={setSecret}
-        placeholder="API token"
-        autoCapitalize="none"
-        autoCorrect={false}
-        secureTextEntry
-      />
+      <Text variant="large">Account</Text>
+      <View className="gap-1 rounded-lg border border-border p-3">
+        <View className="flex-row items-center gap-1.5">
+          <Text className="font-medium">{account?.name ?? "—"}</Text>
+          {account?.isAdmin ? <Icon as={Shield} size={14} className="text-muted-foreground" /> : null}
+        </View>
+        <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+          {account?.url}
+        </Text>
+        {me.data ? (
+          <Text className="text-xs text-muted-foreground">
+            Signed in as {accountLabel(me.data)} · username {me.data.name}
+            {me.data.isAdmin ? " (admin)" : ""}
+          </Text>
+        ) : null}
+      </View>
+      {me.data ? (
+        <View className="gap-1">
+          <Text className="text-sm text-muted-foreground">Display name</Text>
+          <Input value={displayName} onChangeText={setDisplayName} onBlur={saveName} placeholder={me.data.name} autoCapitalize="words" />
+          <Text className="text-xs text-muted-foreground">Shown instead of your username. Leave empty to use the username.</Text>
+        </View>
+      ) : null}
       <Button
-        disabled={busy || !url.trim() || !secret.trim()}
+        variant="outline"
         onPress={() => {
-          void connect();
+          router.push("/accounts");
         }}
       >
-        <Text>{busy ? "Checking…" : "Test and save"}</Text>
+        <Text>Switch or add account</Text>
       </Button>
-      {status ? <Text className="text-sm text-muted-foreground">{status}</Text> : null}
-      {token ? (
-        <Button variant="ghost" onPress={disconnect}>
-          <Text className="text-destructive">Disconnect</Text>
+      {account?.isAdmin ? (
+        <Button
+          variant="outline"
+          onPress={() => {
+            router.push("/admin");
+          }}
+        >
+          <Text>Manage users</Text>
         </Button>
+      ) : null}
+
+      {me.data ? (
+        <View className="gap-2 rounded-lg border border-border p-3">
+          <Text className="font-medium">{me.data.hasPassword ? "Change password" : "Choose a password"}</Text>
+          <Text className="text-xs text-muted-foreground">
+            {me.data.hasPassword
+              ? "Other devices are signed out when you change it."
+              : me.data.isAdmin
+                ? "Optional. You can sign in with the admin token, with a username and password, or both."
+                : "Your access token is temporary. Once you choose a password it stops working and you sign in with your username and password."}
+          </Text>
+          <Input value={password} onChangeText={setPassword} placeholder="New password (10+ characters)" autoCapitalize="none" autoCorrect={false} secureTextEntry />
+          <Input value={confirm} onChangeText={setConfirm} placeholder="Repeat password" autoCapitalize="none" autoCorrect={false} secureTextEntry />
+          <Button disabled={setPasswordMutation.isPending || password.length < 10 || confirm === ""} onPress={changePassword}>
+            <Text>{me.data.hasPassword ? "Change password" : "Set password"}</Text>
+          </Button>
+        </View>
       ) : null}
 
       <Text variant="large" className="mt-4">
@@ -133,17 +180,17 @@ export default function SettingsScreen() {
           ? "Checking for updates…"
           : update.isError
             ? "Couldn't check for updates"
-            : update.data
-              ? `Version ${update.data.version} is available`
+            : available
+              ? `Version ${available.version} is available`
               : "You're up to date"}
       </Text>
       {available ? (
         <Button
           onPress={() => {
-            void Linking.openURL(available.url);
+            void install.start();
           }}
         >
-          <Text>Download {available.version}</Text>
+          <Text>{installLabel(install.state, available.version)}</Text>
         </Button>
       ) : (
         <Button
@@ -164,6 +211,16 @@ export default function SettingsScreen() {
       >
         <Text>What's new</Text>
       </Button>
+      {me.isError ? (
+        <Button
+          variant="ghost"
+          onPress={() => {
+            Alert.alert("Can't reach your account", me.error.message);
+          }}
+        >
+          <Text className="text-destructive">Account problem: tap for details</Text>
+        </Button>
+      ) : null}
     </ScrollView>
   );
 }

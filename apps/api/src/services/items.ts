@@ -116,7 +116,7 @@ export async function getItem(deps: ServiceDeps, id: string, db: Db = deps.db): 
   const [row] = await db
     .select({ ...summaryColumns, item: items })
     .from(items)
-    .where(eq(items.id, id));
+    .where(and(eq(items.id, id), eq(items.userId, deps.userId)));
   if (!row) throw notFound();
   const { item } = row;
 
@@ -190,8 +190,11 @@ export async function getItem(deps: ServiceDeps, id: string, db: Db = deps.db): 
   };
 }
 
-async function smartFolderFilter(db: Database, id: string): Promise<ItemFilter> {
-  const [row] = await db.select({ query: smartFolders.query }).from(smartFolders).where(eq(smartFolders.id, id));
+async function smartFolderFilter(db: Database, userId: string, id: string): Promise<ItemFilter> {
+  const [row] = await db
+    .select({ query: smartFolders.query })
+    .from(smartFolders)
+    .where(and(eq(smartFolders.id, id), eq(smartFolders.userId, userId)));
   if (!row) throw new ApiError(404, "not_found", "Smart folder not found");
   const { sort: _sort, ...filter } = SmartFolderQuery.catch({}).parse(row.query);
   return filter;
@@ -200,8 +203,8 @@ async function smartFolderFilter(db: Database, id: string): Promise<ItemFilter> 
 export async function listItems(deps: ServiceDeps, query: ItemListQuery): Promise<ItemListResponse> {
   const { db } = deps;
   const filters = [filterFromListQuery(query)];
-  if (query.smartFolderId) filters.push(await smartFolderFilter(db, query.smartFolderId));
-  const { where, rank } = await itemConditions(db, filters);
+  if (query.smartFolderId) filters.push(await smartFolderFilter(db, deps.userId, query.smartFolderId));
+  const { where, rank } = await itemConditions(db, deps.userId, filters);
   const cursor = query.cursor ? decodeCursor(query.cursor) : null;
   const sort = query.sort === "relevance" && !rank ? "saved_desc" : query.sort;
   const limit = query.limit;
@@ -243,18 +246,18 @@ export async function listItems(deps: ServiceDeps, query: ItemListQuery): Promis
 
 // ── writing ─────────────────────────────────────────────────────────────
 
-async function assertExist(db: Db, table: typeof folders | typeof tags, ids: readonly string[], what: string) {
+async function assertExist(db: Db, userId: string, table: typeof folders | typeof tags, ids: readonly string[], what: string) {
   if (ids.length === 0) return;
   const unique = [...new Set(ids)];
-  const [row] = await db.select({ n: count() }).from(table).where(inArray(table.id, unique));
+  const [row] = await db.select({ n: count() }).from(table).where(and(eq(table.userId, userId), inArray(table.id, unique)));
   if ((row?.n ?? 0) !== unique.length) throw new ApiError(400, "bad_request", `Unknown ${what} id`);
 }
 
-async function findDuplicate(db: Db, canonicalUrl: string, source: string, sourceItemId: string | null) {
+async function findDuplicate(db: Db, userId: string, canonicalUrl: string, source: string, sourceItemId: string | null) {
   const match = sourceItemId
     ? or(eq(items.canonicalUrl, canonicalUrl), and(eq(items.source, source), eq(items.sourceItemId, sourceItemId)))
     : eq(items.canonicalUrl, canonicalUrl);
-  const [row] = await db.select({ id: items.id }).from(items).where(match).limit(1);
+  const [row] = await db.select({ id: items.id }).from(items).where(and(eq(items.userId, userId), match)).limit(1);
   return row?.id ?? null;
 }
 
@@ -283,9 +286,9 @@ export async function createItem(deps: ServiceDeps, body: CreateItemBody): Promi
   const tagIds = body.tagIds ?? [];
 
   const result = await deps.db.transaction(async (tx) => {
-    await assertExist(tx, folders, folderIds, "folder");
-    await assertExist(tx, tags, tagIds, "tag");
-    const existing = await findDuplicate(tx, resolved.canonicalUrl, resolved.source.id, resolved.sourceItemId);
+    await assertExist(tx, deps.userId, folders, folderIds, "folder");
+    await assertExist(tx, deps.userId, tags, tagIds, "tag");
+    const existing = await findDuplicate(tx, deps.userId, resolved.canonicalUrl, resolved.source.id, resolved.sourceItemId);
     if (existing) {
       // sharing again with a folder/tag picked files the existing item there
       await linkFoldersAndTags(tx, existing, folderIds, tagIds);
@@ -294,6 +297,7 @@ export async function createItem(deps: ServiceDeps, body: CreateItemBody): Promi
     const [row] = await tx
       .insert(items)
       .values({
+        userId: deps.userId,
         sourceUrl: body.url,
         canonicalUrl: resolved.canonicalUrl,
         source: resolved.source.id,
@@ -307,7 +311,7 @@ export async function createItem(deps: ServiceDeps, body: CreateItemBody): Promi
   }).catch(async (error: unknown) => {
     // lost a race with a concurrent save of the same URL
     if (!isUniqueViolation(error)) throw error;
-    const id = await findDuplicate(deps.db, resolved.canonicalUrl, resolved.source.id, resolved.sourceItemId);
+    const id = await findDuplicate(deps.db, deps.userId, resolved.canonicalUrl, resolved.source.id, resolved.sourceItemId);
     if (!id) throw error;
     return { id, created: false };
   });
@@ -330,7 +334,11 @@ async function enqueueFetch(deps: ServiceDeps, itemId: string) {
 
 export async function updateItem(deps: ServiceDeps, id: string, body: UpdateItemBody): Promise<ItemDetail> {
   await deps.db.transaction(async (tx) => {
-    const [current] = await tx.select({ custom: items.custom }).from(items).where(eq(items.id, id)).for("update");
+    const [current] = await tx
+      .select({ custom: items.custom })
+      .from(items)
+      .where(and(eq(items.id, id), eq(items.userId, deps.userId)))
+      .for("update");
     if (!current) throw notFound();
 
     const patch: Partial<typeof items.$inferInsert> = {};
@@ -340,7 +348,7 @@ export async function updateItem(deps: ServiceDeps, id: string, body: UpdateItem
     if (body.favorite !== undefined) patch.favorite = body.favorite;
     if (body.rating !== undefined) patch.rating = body.rating;
     if (body.custom !== undefined) {
-      const defs = await tx.select({ key: fieldDefs.key, type: fieldDefs.type, options: fieldDefs.options }).from(fieldDefs);
+      const defs = await tx.select({ key: fieldDefs.key, type: fieldDefs.type, options: fieldDefs.options }).from(fieldDefs).where(eq(fieldDefs.userId, deps.userId));
       const parsed = customValuesSchema(defs).safeParse(body.custom);
       if (!parsed.success) {
         throw new ApiError(400, "bad_request", parsed.error.issues.map((i) => `custom.${i.path.join(".")}: ${i.message}`).join("; "));
@@ -355,7 +363,10 @@ export async function updateItem(deps: ServiceDeps, id: string, body: UpdateItem
 
 export async function deleteItems(deps: ServiceDeps, ids: readonly string[], audit: Omit<AuditEvent, "action" | "details">, action: string) {
   const deleted = await deps.db.transaction(async (tx) => {
-    const rows = await tx.delete(items).where(inArray(items.id, [...ids])).returning({ id: items.id, url: items.canonicalUrl });
+    const rows = await tx
+      .delete(items)
+      .where(and(eq(items.userId, deps.userId), inArray(items.id, [...ids])))
+      .returning({ id: items.id, url: items.canonicalUrl });
     if (rows.length) {
       await tx.insert(auditLog).values({ ...audit, action, details: { count: rows.length, ids: rows.map((r) => r.id).slice(0, 100) } });
     }
@@ -375,7 +386,7 @@ export async function refetchItems(deps: ServiceDeps, ids: readonly string[]): P
   const rows = await deps.db
     .update(items)
     .set({ fetchStatus: "pending", fetchError: null, fetchAttempts: 0 })
-    .where(inArray(items.id, [...ids]))
+    .where(and(eq(items.userId, deps.userId), inArray(items.id, [...ids])))
     .returning({ id: items.id });
   for (const row of rows) await enqueueFetch(deps, row.id);
   return rows.length;
@@ -383,8 +394,8 @@ export async function refetchItems(deps: ServiceDeps, ids: readonly string[]): P
 
 export async function setItemFolders(deps: ServiceDeps, id: string, body: SetItemFoldersBody): Promise<ItemDetail> {
   await deps.db.transaction(async (tx) => {
-    await assertItem(tx, id);
-    await assertExist(tx, folders, body.folderIds, "folder");
+    await assertItem(tx, deps.userId, id);
+    await assertExist(tx, deps.userId, folders, body.folderIds, "folder");
     const keep = body.folderIds.length ? notInArray(itemFolders.folderId, body.folderIds) : undefined;
     await tx.delete(itemFolders).where(and(eq(itemFolders.itemId, id), keep));
     await linkFoldersAndTags(tx, id, body.folderIds, []);
@@ -394,8 +405,8 @@ export async function setItemFolders(deps: ServiceDeps, id: string, body: SetIte
 
 export async function setItemTags(deps: ServiceDeps, id: string, body: SetItemTagsBody): Promise<ItemDetail> {
   await deps.db.transaction(async (tx) => {
-    await assertItem(tx, id);
-    await assertExist(tx, tags, body.tagIds, "tag");
+    await assertItem(tx, deps.userId, id);
+    await assertExist(tx, deps.userId, tags, body.tagIds, "tag");
     const keep = body.tagIds.length ? notInArray(itemTags.tagId, body.tagIds) : undefined;
     await tx.delete(itemTags).where(and(eq(itemTags.itemId, id), keep));
     await linkFoldersAndTags(tx, id, [], body.tagIds);
@@ -403,8 +414,11 @@ export async function setItemTags(deps: ServiceDeps, id: string, body: SetItemTa
   return getItem(deps, id);
 }
 
-async function assertItem(db: Db, id: string) {
-  const [row] = await db.select({ id: items.id }).from(items).where(eq(items.id, id));
+async function assertItem(db: Db, userId: string, id: string) {
+  const [row] = await db
+    .select({ id: items.id })
+    .from(items)
+    .where(and(eq(items.id, id), eq(items.userId, userId)));
   if (!row) throw notFound();
 }
 
@@ -415,13 +429,13 @@ export function normalizeKeyword(keyword: string): string {
 export async function addKeyword(deps: ServiceDeps, id: string, keyword: string): Promise<ItemDetail> {
   const normalized = normalizeKeyword(keyword);
   if (!normalized) throw new ApiError(400, "bad_request", "Empty keyword");
-  await assertItem(deps.db, id);
+  await assertItem(deps.db, deps.userId, id);
   await deps.db.insert(itemKeywords).values({ itemId: id, keyword: normalized, source: "manual", weight: 1 }).onConflictDoNothing();
   return getItem(deps, id);
 }
 
 export async function deleteKeyword(deps: ServiceDeps, id: string, keyword: string, source: string | undefined): Promise<ItemDetail> {
-  await assertItem(deps.db, id);
+  await assertItem(deps.db, deps.userId, id);
   const bySource = source ? sql`${itemKeywords.source} = ${source}` : undefined;
   await deps.db.delete(itemKeywords).where(and(eq(itemKeywords.itemId, id), eq(itemKeywords.keyword, normalizeKeyword(keyword)), bySource));
   return getItem(deps, id);
@@ -470,7 +484,7 @@ export async function suggestionsAction(
   body: SuggestionsBody,
   action: "accept" | "dismiss",
 ): Promise<ItemDetail> {
-  await assertItem(deps.db, id);
+  await assertItem(deps.db, deps.userId, id);
   if (action === "accept") await deps.db.transaction((tx) => acceptSuggestions(deps, [id], body, tx));
   else await dismissSuggestions(deps, id, body);
   return getItem(deps, id);
@@ -479,7 +493,7 @@ export async function suggestionsAction(
 export async function bulk(deps: ServiceDeps, body: BulkBody, audit: Omit<AuditEvent, "action" | "details">): Promise<number> {
   const ids = [...new Set(body.ids)];
   const { db } = deps;
-  const existing = (await db.select({ id: items.id }).from(items).where(inArray(items.id, ids))).map((r) => r.id);
+  const existing = (await db.select({ id: items.id }).from(items).where(and(eq(items.userId, deps.userId), inArray(items.id, ids)))).map((r) => r.id);
   if (existing.length === 0) return 0;
 
   switch (body.op) {
@@ -495,7 +509,7 @@ export async function bulk(deps: ServiceDeps, body: BulkBody, audit: Omit<AuditE
       break;
     case "addFolder":
       await db.transaction(async (tx) => {
-        await assertExist(tx, folders, [body.folderId], "folder");
+        await assertExist(tx, deps.userId, folders, [body.folderId], "folder");
         for (const id of existing) await linkFoldersAndTags(tx, id, [body.folderId], []);
       });
       break;
@@ -504,7 +518,7 @@ export async function bulk(deps: ServiceDeps, body: BulkBody, audit: Omit<AuditE
       break;
     case "addTag":
       await db.transaction(async (tx) => {
-        await assertExist(tx, tags, [body.tagId], "tag");
+        await assertExist(tx, deps.userId, tags, [body.tagId], "tag");
         for (const id of existing) await linkFoldersAndTags(tx, id, [], [body.tagId]);
       });
       break;
