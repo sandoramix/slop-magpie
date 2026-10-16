@@ -1,0 +1,26 @@
+{
+  "name": "@magpie/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file-if-exists=../../.env --watch src/index.ts",
+    "start": "node src/index.ts",
+    "typecheck": "tsc",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.5",
+    "@hono/zod-validator": "^0.9.1",
+    "@magpie/db": "workspace:*",
+    "@magpie/jobs": "workspace:*",
+    "@magpie/shared": "workspace:*",
+    "@magpie/storage": "workspace:*",
+    "@t3-oss/env-core": "^0.13.11",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.13",
+    "pino": "^10.4.0",
+    "zod": "^4.6.7"
+  }
+}

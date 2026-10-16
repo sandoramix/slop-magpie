@@ -1,0 +1,15 @@
+**/node_modules
+**/.turbo
+**/.expo
+**/dist
+**/coverage
+**/*.test.ts
+.git
+.github
+.env
+.env.*
+data
+tmp
+secrets
+docs
+apps/mobile

@@ -36,10 +36,11 @@ Expo + Expo Router. Android first; the same code targets web (react-native-web) 
 
 | Concern | Choice |
 |---|---|
+| App ID | `dev.sandoramix.magpie` (Android `package`, iOS `bundleIdentifier`). Never change after the first release: Android treats a new ID as a different app |
 | Routing | **Expo Router** (file-based, typed routes, deep links `magpie://`) |
 | Native config | `app.config.ts` (typed, reads t3-env) + config plugins; local plugins in `plugins/` |
 | Dev | `expo run:android` → dev build on device/emulator, Metro with fast refresh |
-| Builds | EAS Build (free tier) or local `expo run:android --variant release`; profiles in `eas.json` |
+| Builds | release APK built by GitHub Actions on `v*` tags ([releases.md](releases.md)); local `expo run:android --variant release` for testing |
 | Updates | `expo-updates` (EAS Update) for JS-only changes, optional |
 | UI components | **React Native Reusables** (shadcn/ui port for RN: copy-paste components in `components/ui/`, built on rn-primitives) |
 | Styling | **NativeWind v4** (Tailwind classes, shadcn CSS-variable theme, light/dark) |
@@ -55,7 +56,7 @@ Expo + Expo Router. Android first; the same code targets web (react-native-web) 
 
 Rule of thumb: **anything that comes from the API lives in TanStack Query, never copied into Zustand.** Zustand holds only local UI/preferences.
 
-The API client is typed from `packages/shared` (Hono RPC client `hc<AppType>`), so endpoints, params and responses are checked at compile time.
+The API client is a small fetch wrapper that validates every response with the zod schemas from `packages/shared` (see D19).
 
 ### apps/api
 Hono on Node 24. Stateless; can be restarted any time.
@@ -77,7 +78,7 @@ Node 24 process consuming pg-boss queues. Runs heavy, slow, failure-prone work.
 The API contract: zod schemas, inferred types, enums, the source registry (URL matching/normalization, see [sources.md](sources.md)), query-language parser. Imported by api, worker and mobile. No Node-only APIs (must run in React Native).
 
 ### Env
-Every app validates its env with **t3-env** (`@t3-oss/env-core` + zod) in `src/env.ts`. Shared fragments (e.g. storage, database) live in `packages/shared/src/env/` and are composed with `extends`.
+Every app validates its env with **t3-env** (`@t3-oss/env-core` + zod) in `src/env.ts`. Shared fragments (zod shapes for database, storage, logging) live in `packages/shared/src/env/` and are spread into each app's `createEnv({ server: { ...databaseEnv, ... } })`.
 
 ### packages/db
 Drizzle schema, migrations and a configured client. Used by api and worker.
