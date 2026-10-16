@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-16
+### Changed
+
+- The Android APK now targets 64-bit ARM phones only, which makes the download smaller. Releases appear on GitHub right away and the APK is attached a few minutes later.
+
 ## [0.1.0] - 2026-10-16
 ### Added
 
