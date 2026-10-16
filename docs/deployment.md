@@ -69,7 +69,7 @@ See `.env.example`. Validated at startup by t3-env — the container exits with 
 | `STORAGE_LOCAL_ROOT` | api, worker | `/data/media` |
 | `COOKIES_DIR` | worker | `/run/secrets/cookies` |
 
-Optional: `LOG_LEVEL`, `MAX_VIDEO_MB`, `MAX_DOWNLOAD_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`, `WORKER_CONCURRENCY`, `CORS_ORIGINS`, `MEDIA_URL_TTL_SECONDS`.
+Optional: `LOG_LEVEL`, `LOG_FORMAT` (`pretty` default, `json` for log shippers), `MAX_VIDEO_MB`, `MAX_DOWNLOAD_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`, `WORKER_CONCURRENCY`, `CORS_ORIGINS`, `MEDIA_URL_TTL_SECONDS`.
 
 `TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.
 

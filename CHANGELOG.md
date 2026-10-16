@@ -6,6 +6,16 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-16
+### Changed
+
+- Server logs are now one readable line per event (set `LOG_FORMAT=json` for the old format), with the reason each download method failed.
+- Server-only releases no longer build a new app; the app only updates when it actually changed.
+
+### Fixed
+
+- Instagram posts that cannot be downloaded fail with a clear error again, instead of showing up as an empty item.
+
 ## [1.0.3] - 2026-10-16
 ### Changed
 

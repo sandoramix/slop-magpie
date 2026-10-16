@@ -11,7 +11,7 @@ import { transcodeVideo } from "../media/transcode.ts";
 import { BlockedTargetError, expandUrl } from "../net/ssrf.ts";
 import { getFetcher, strategyOrder } from "../sources/index.ts";
 import { runChain } from "../strategies/chain.ts";
-import { type ErrorClass, errorMessage } from "../strategies/errors.ts";
+import { type ErrorClass, errorMessage, logUrl } from "../strategies/errors.ts";
 import { DEFAULT_STRATEGY_OPTIONS, type FetchedFile, type FetchResult } from "../strategies/types.ts";
 import { titleFromCaption } from "../text/keywords.ts";
 
@@ -159,6 +159,8 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
     ctx.log.debug({ err: error, itemId }, "link expansion failed");
   }
 
+  ctx.log.info({ itemId, source, url: logUrl(url), attempt: item.fetchAttempts + 1 }, "fetching");
+
   // 2-4. strategy chain in a private temp dir
   await mkdir(ctx.tmpDir, { recursive: true });
   const tmpDir = await mkdtemp(path.join(ctx.tmpDir, `fetch-${itemId}-`));
@@ -178,7 +180,7 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
       ...(job.signal ? { signal: job.signal } : {}),
     });
     if (!outcome.ok) {
-      ctx.log.info({ itemId, source, attempts: outcome.attempts }, "fetch failed");
+      ctx.log.warn({ itemId, source, url: logUrl(url), class: outcome.errorClass, reason: outcome.error }, "fetch failed");
       return await fail(outcome.errorClass, outcome.error, outcome.attempts);
     }
 
@@ -228,7 +230,10 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
     });
 
     await ctx.jobs.sendItemJob(mediaRows.length || existingMedia.length ? "thumbnail" : "extract", { itemId });
-    ctx.log.info({ itemId, source, strategy: outcome.strategy, files: mediaRows.length }, "fetched");
+    ctx.log.info(
+      { itemId, source, url: logUrl(url), strategy: outcome.strategy, files: mediaRows.length, tried: outcome.attempts.map((a) => a.strategy).join(">") },
+      mediaRows.length ? "fetched" : "fetched without media",
+    );
     return "ready";
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
