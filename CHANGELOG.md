@@ -6,6 +6,12 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-10-16
+### Changed
+
+- A failed save now shows the error from every download method that was tried, not just the first.
+- Instagram posts that cannot be downloaded now still save their preview image and caption instead of failing.
+
 ## [1.0.2] - 2026-10-16
 ### Changed
 
