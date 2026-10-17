@@ -8,8 +8,13 @@ import { ItemBrowser } from "@/components/item-browser";
 import { UpdateCard } from "@/components/update-card";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
+import { alert } from "@/lib/alert";
+import { startInstall } from "@/lib/install-update";
 import { useMe } from "@/lib/queries";
 import { useUpdateCheck } from "@/lib/updates";
+
+/** Versions already offered in a dialog during this app launch. */
+const promptedVersions = new Set<string>();
 
 const KINDS: { kind: ItemKind; label: string }[] = [
   { kind: "video", label: "Videos" },
@@ -40,6 +45,25 @@ export default function Library() {
   const me = useMe();
   const router = useRouter();
   const q = useDebounced(text.trim(), 300);
+
+  // The banner is easy to scroll past and old builds can stop matching the server, so ask once per launch.
+  useEffect(() => {
+    if (!available || promptedVersions.has(available.version)) return;
+    promptedVersions.add(available.version);
+    alert(
+      `Update to Magpie ${available.version}`,
+      "A new version is ready. Updating keeps the app in step with your server; old versions may stop working.",
+      [
+        { text: "Later", style: "cancel" },
+        {
+          text: "Update now",
+          onPress: () => {
+            void startInstall(available);
+          },
+        },
+      ],
+    );
+  }, [available]);
 
   const filter = useMemo<ItemFilter>(
     () => ({

@@ -8,6 +8,7 @@ import { alert } from "@/lib/alert";
 import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { StorageMeter } from "@/components/storage-meter";
 import { UpdateCard } from "@/components/update-card";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
@@ -102,6 +103,7 @@ export default function SettingsScreen() {
             {me.data.isAdmin ? " (admin)" : ""}
           </Text>
         ) : null}
+        {me.data?.storage ? <StorageMeter storage={me.data.storage} /> : null}
       </View>
       {me.data ? (
         <View className="gap-1">

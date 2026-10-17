@@ -5,6 +5,7 @@ import { Plus, Send, Shield } from "lucide-react-native";
 import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Share, View } from "react-native";
 import { Chip } from "@/components/chip";
+import { StorageMeter } from "@/components/storage-meter";
 import { SafeAreaView } from "@/components/styled";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { alert } from "@/lib/alert";
 import { inviteMessage } from "@/lib/invite";
-import { useCreateUser, useDeleteUser, useMe, useRotateUserToken, useSetUserRole, useUsers } from "@/lib/queries";
+import { useCreateUser, useDeleteUser, useMe, useRotateUserToken, useSetUserRole, useSetUserStorageLimit, useUsers } from "@/lib/queries";
 import { useAccounts, useActiveAccount } from "@/stores/accounts";
 
 /** Shown once after creating an account or rotating its token. */
@@ -20,6 +21,11 @@ type Issued = { name: string; username: string; token: string };
 
 /** The last step of deleting an account: the admin has to type its username. */
 type PendingDelete = { id: string; name: string; username: string; items: number };
+
+/** The inline editor for one account's storage limit (whole or decimal GB; empty means no limit). */
+type LimitEdit = { id: string; name: string; text: string };
+
+const GB = 1024 ** 3;
 
 /** Accounts on the server. Admin token only; the server enforces it. */
 export default function AdminScreen() {
@@ -29,6 +35,8 @@ export default function AdminScreen() {
   const rotate = useRotateUserToken();
   const remove = useDeleteUser();
   const setRole = useSetUserRole();
+  const setLimit = useSetUserStorageLimit();
+  const [limitEdit, setLimitEdit] = useState<LimitEdit | null>(null);
   const me = useMe();
   const [role, setNewRole] = useState<Role>("user");
   const setActAs = useAccounts((s) => s.setActAs);
@@ -90,6 +98,25 @@ export default function AdminScreen() {
     );
   };
 
+  const startLimitEdit = (u: User) => {
+    const limit = u.storage?.limitBytes ?? null;
+    setLimitEdit({ id: u.id, name: accountLabel(u), text: limit === null ? "" : String(Math.round((limit / GB) * 100) / 100) });
+  };
+
+  const saveLimit = () => {
+    if (!limitEdit) return;
+    const raw = limitEdit.text.trim().replace(",", ".");
+    const gb = raw === "" ? null : Number(raw);
+    if (gb !== null && (!Number.isFinite(gb) || gb <= 0)) {
+      alert("Invalid limit", "Enter a number of GB greater than 0, or leave it empty for no limit.");
+      return;
+    }
+    setLimit.mutate(
+      { id: limitEdit.id, limitBytes: gb === null ? null : Math.round(gb * GB) },
+      { onSuccess: () => { setLimitEdit(null); }, onError: fail },
+    );
+  };
+
   const options = (u: User) => {
     const userName = accountLabel(u);
     // the root admin (API_TOKEN) and your own account keep their role and cannot be removed here
@@ -102,6 +129,7 @@ export default function AdminScreen() {
           router.dismissTo("/");
         },
       },
+      { text: "Storage limit…", onPress: () => { startLimitEdit(u); } },
       ...(u.isRoot || self
         ? []
         : [
@@ -157,6 +185,24 @@ export default function AdminScreen() {
           />
         }
       >
+        {limitEdit ? (
+          <View className="gap-2 rounded-lg border border-primary p-3">
+            <Text className="font-medium">Storage limit for {limitEdit.name}</Text>
+            <Text className="text-xs text-muted-foreground">
+              Maximum size of the downloaded media this account may keep, in GB. Empty means no limit. Saving is refused and downloads fail once it is full; nothing is deleted if you lower it below the current use.
+            </Text>
+            <Input value={limitEdit.text} onChangeText={(text) => { setLimitEdit({ ...limitEdit, text }); }} placeholder="No limit" keyboardType="decimal-pad" />
+            <View className="flex-row gap-2">
+              <Button size="sm" disabled={setLimit.isPending} onPress={saveLimit}>
+                <Text>{setLimit.isPending ? "Saving…" : "Save"}</Text>
+              </Button>
+              <Button variant="ghost" size="sm" onPress={() => { setLimitEdit(null); }}>
+                <Text>Cancel</Text>
+              </Button>
+            </View>
+          </View>
+        ) : null}
+
         {pendingDelete ? (
           <View className="gap-2 rounded-lg border border-destructive p-3">
             <Text className="font-medium text-destructive">Last step: delete {pendingDelete.name}</Text>
@@ -292,6 +338,7 @@ export default function AdminScreen() {
                 <Text className="text-xs text-muted-foreground">
                   @{u.name} · {u.isAdmin ? "admin" : "user"} · {u.itemCount} items{pending ? " · invite pending" : ""}
                 </Text>
+                {u.storage ? <StorageMeter storage={u.storage} compact /> : null}
               </View>
               {pending ? (
                 <Button
@@ -308,7 +355,7 @@ export default function AdminScreen() {
             </Pressable>
           );
         })}
-        <Text className="text-center text-xs text-muted-foreground">Tap an account to view its library, share its invite again, replace its token or delete it.</Text>
+        <Text className="text-center text-xs text-muted-foreground">Tap an account to view its library, change its storage limit, share its invite again, replace its token or delete it.</Text>
       </ScrollView>
     </SafeAreaView>
   );

@@ -38,6 +38,7 @@ import type { AuditEvent, ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
 import { isUniqueViolation } from "./pg-errors.ts";
+import { assertHasRoom } from "./storage.ts";
 import { itemConditions } from "./search.ts";
 
 type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -281,6 +282,7 @@ async function linkFoldersAndTags(db: Db, itemId: string, folderIds: readonly st
 export async function createItem(deps: ServiceDeps, body: CreateItemBody): Promise<{ status: 200 | 202; body: CreateItemResponse }> {
   const check = checkPublicUrl(body.url);
   if (!check.ok) throw new ApiError(422, "unsupported_url", `URL not accepted (${check.reason})`);
+  await assertHasRoom(deps.db, deps.userId);
   const resolved = resolveSource(check.url);
   const folderIds = body.folderIds ?? [];
   const tagIds = body.tagIds ?? [];

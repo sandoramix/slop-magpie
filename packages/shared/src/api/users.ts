@@ -4,6 +4,17 @@ import { Name } from "./common.ts";
 /** Header an admin sends to read or write inside another account's library. */
 export const ACT_AS_HEADER = "X-Magpie-Act-As";
 
+/** Default per-account storage limit: 50 GB (1 GB = 1024^3 bytes, like the sizes the app shows). */
+export const DEFAULT_STORAGE_LIMIT_BYTES = 50 * 1024 ** 3;
+
+/** Bytes an account has stored (original media files; thumbnails are not counted) against its limit. */
+export const Storage = z.object({
+  usedBytes: z.number().int().nonnegative(),
+  /** Null means unlimited. */
+  limitBytes: z.number().int().positive().nullable(),
+});
+export type Storage = z.infer<typeof Storage>;
+
 export const User = z.object({
   id: z.uuid(),
   /** Username: set by the admin at creation and fixed. */
@@ -17,6 +28,8 @@ export const User = z.object({
   isRoot: z.boolean(),
   createdAt: z.iso.datetime(),
   itemCount: z.number().int().nonnegative(),
+  /** Absent on servers that predate storage limits. */
+  storage: Storage.optional(),
 });
 export type User = z.infer<typeof User>;
 
@@ -31,7 +44,10 @@ export type Role = z.infer<typeof Role>;
 export const CreateUserBody = z.object({ name: Name.max(100), role: Role.default("user") });
 export type CreateUserBody = z.infer<typeof CreateUserBody>;
 
-export const UpdateUserBody = z.object({ role: Role });
+/** At least one field; `storageLimitBytes: null` removes the limit. */
+export const UpdateUserBody = z
+  .object({ role: Role.optional(), storageLimitBytes: z.number().int().positive().nullable().optional() })
+  .refine((b) => b.role !== undefined || b.storageLimitBytes !== undefined, { message: "Nothing to change" });
 export type UpdateUserBody = z.infer<typeof UpdateUserBody>;
 
 /** `PATCH /me`: only the display name can change; the username is fixed. */
@@ -71,6 +87,8 @@ export const MeResponse = z.object({
   hasPassword: z.boolean(),
   /** Set when an admin sent `X-Magpie-Act-As`. */
   actingAs: AccountRef.nullable(),
+  /** Storage of the library the request works in (the acted-as account for an admin). Only sent by `GET /me`; absent on older servers. */
+  storage: Storage.optional(),
 });
 export type MeResponse = z.infer<typeof MeResponse>;
 

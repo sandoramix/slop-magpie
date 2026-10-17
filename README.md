@@ -171,7 +171,7 @@ pnpm dev
 
 Then install the APK from the latest [GitHub release](../../releases), enter your server address and the `API_TOKEN` (or open an invite link), and share your first link.
 
-See [docs/deployment.md](docs/deployment.md) for production setup (a Docker Compose file is included, built for `linux/arm64`, targeting a Raspberry Pi 5 under Coolify). Server images are published to GHCR. Changes are listed in [CHANGELOG.md](CHANGELOG.md).
+See [docs/deployment.md](docs/deployment.md) for production setup (a Docker Compose file is included, built for `linux/arm64`, targeting a Raspberry Pi 5 under Coolify). Changes are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## Documentation
 
