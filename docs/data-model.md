@@ -154,7 +154,7 @@ Saved searches shown alongside folders.
 
 ### users / sessions
 
-`users`: `id`, `name` (username: set by the admin, unique case-insensitively, never changes), `display_name` (chosen by the owner, optional), `is_admin`, `token_hash` (sha256 of the generated temporary token, null once a password is set and for the admin), `password_hash` (scrypt, optional). The admin row has the fixed id `00000000-0000-7000-8000-000000000001` and owns everything that existed before accounts; it signs in with `API_TOKEN`.
+`users`: `id`, `name` (username: set by the admin, unique case-insensitively, never changes), `display_name` (chosen by the owner, optional), `is_admin`, `token_hash` (sha256 of the generated temporary token, null once a password is set and for the admin), `password_hash` (scrypt, optional), `storage_limit_bytes` (cap on the account's original media, default 50 GB = 53687091200, null = unlimited; the used size is `sum(media.bytes)` over the account's items, thumbnails not counted). The admin row has the fixed id `00000000-0000-7000-8000-000000000001` and owns everything that existed before accounts; it signs in with `API_TOKEN`.
 
 `sessions`: one row per device that signed in with username + password: `token_hash` (sha256), `label` (user agent), `last_used_at`, `expires_at` (180 days, sliding). Deleting a user cascades to its library and sessions; the API queues blob deletion for its items first.
 

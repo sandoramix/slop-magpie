@@ -31,6 +31,13 @@ export function extractUrls(text: string | null | undefined): string[] {
   return [...new Set(found.map((u) => u.replace(/[).,;]+$/, "")))];
 }
 
+/** Sizes the way the server counts them: 1 GB = 1024^3 bytes. */
+export function formatBytes(bytes: number): string {
+  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1).replace(/.0$/, "")} GB`;
+  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(0)} MB`;
+  return `${String(Math.round(bytes / 1024))} KB`;
+}
+
 export function formatDuration(ms: number | null): string {
   if (ms === null) return "";
   const s = Math.round(ms / 1000);

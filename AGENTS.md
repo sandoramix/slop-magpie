@@ -49,7 +49,7 @@ Magpie: self-hosted archive (one private library per account) for content from a
   1. On `dev`, confirm the bump with the owner (patch / minor / major) and update `version` in the root `package.json`.
   2. Fill gaps in `[Unreleased]` from `git log <last tag>..dev`, then `node scripts/changelog.ts release X.Y.Z`; show the owner the entry.
   3. `pnpm typecheck && pnpm lint && pnpm test` pass; commit `chore(release): vX.Y.Z`.
-  4. Merge `dev` into `main` (`--no-ff`), tag `vX.Y.Z` on `main`, push `main`, `dev` and the tag. CI (`.github/workflows/release.yml`) builds the APK and images and publishes the GitHub release.
+  4. Merge `dev` into `main` (`--no-ff`), tag `vX.Y.Z` on `main`, push `main`, `dev` and the tag. CI (`.github/workflows/release.yml`) builds the APK, publishes the GitHub release and triggers the Coolify deploy.
 
 ## Commands
 

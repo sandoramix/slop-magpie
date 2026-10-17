@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { DEFAULT_STORAGE_LIMIT_BYTES } from "@magpie/shared/api";
+import { bigint, boolean, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, timestamptz } from "./columns.ts";
 
 /** The admin account owns the library that existed before accounts did; it signs in with API_TOKEN. */
@@ -18,6 +19,8 @@ export const users = pgTable(
     tokenHash: text(),
     // optional: set by the person after their first login with the generated token (scrypt, see services/credentials.ts)
     passwordHash: text(),
+    // cap on the bytes of original media the account may store; null = unlimited. Set by the admin.
+    storageLimitBytes: bigint({ mode: "number" }).default(DEFAULT_STORAGE_LIMIT_BYTES),
     createdAt: createdAt(),
   },
   (t) => [

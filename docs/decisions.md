@@ -73,7 +73,8 @@ Owner wants Expo + Expo Router for easy routing, development and deployment, wit
 ## D16 — Changelog file + tag-triggered GitHub releases (2026-10-14)
 Owner's commit messages are not always conventional, so commit-derived changelogs are unreliable.
 **Decision:** hand-written `CHANGELOG.md` (Keep a Changelog) is the single source for release notes and the in-app "What's new" (embedded at build time via `app.config.ts` `extra`). Pushing `v<version>` on `main` runs a GitHub Actions workflow: verify (tag = root `package.json` version, changelog entry, checks) → signed APK built on the runner (no EAS dependency) + ARM64 `api`/`worker` images to GHCR → GitHub release with notes, APK and checksums.
-**Consequences:** release keystore lives in repo secrets and must be backed up; one changelog edit per user-visible change; Coolify can deploy pinned image tags instead of building on the host.
+**Consequences:** release keystore lives in repo secrets and must be backed up; one changelog edit per user-visible change.
+**Update (2026-10-17):** the GHCR image publishing was dropped; Coolify builds from `docker-compose.yml` and never pulled them, so the release workflow only builds the APK and triggers the deploy.
 
 ## D17 — Release version lives in the root `package.json` (2026-10-14)
 Supersedes the `app.config.ts` location from D15. `app.config.ts` is code, so reading its version needs Expo's config loader; the API and CI need the version too.
@@ -126,3 +127,8 @@ Phones keep old app builds for months and the server is redeployed on every rele
 Most fixes touch only the API or worker, and an APK build takes about 30 minutes.
 **Decision:** the release workflow diffs the tag against the last release that shipped an APK over the paths the app is built from; with no changes it skips the Android job and leaves the release a pre-release. Details in [releases.md](releases.md#server-only-releases).
 **Consequences:** the root version can run ahead of the installed app version; the in-app "What's new" shows server-only entries with the next app build.
+
+## D27 — Per-account storage limit (2026-10-17)
+One account could fill the Pi's disk.
+**Decision:** `users.storage_limit_bytes` (default 50 GB, null = unlimited), changed by an admin through `PATCH /users/:id`. Usage is the sum of `media.bytes` (originals only; thumbnails are small and untracked), computed on demand. At the limit, `POST /items` answers `403 forbidden` and the worker fails a fetch whose files would overflow it. Errors reuse existing codes so older app builds still parse them (D24).
+**Consequences:** lowering a limit below current use deletes nothing; it only blocks new data. The check is not atomic, so concurrent fetches can overshoot by the size of one item.
