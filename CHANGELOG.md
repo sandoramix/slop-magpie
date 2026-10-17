@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-17
+### Added
+
+- Tap a photo (or start pinching it) to open it full screen. There you can pinch or double-tap to zoom, drag to look around, and swipe to the next photo or video.
+
 ## [1.2.0] - 2026-10-17
 ### Added
 
