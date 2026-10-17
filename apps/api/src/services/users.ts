@@ -14,6 +14,7 @@ import { hashToken } from "../middleware/auth.ts";
 import { hashPassword, newSessionToken, revokeSessions, SESSION_TTL_DAYS, touchSession } from "./credentials.ts";
 import { deleteItems } from "./items.ts";
 import { isUniqueViolation } from "./pg-errors.ts";
+import { usedBytesSql, usersIdSql } from "./storage.ts";
 
 const accountColumns = {
   id: users.id,
@@ -69,6 +70,8 @@ const toUser = (row: {
   hasPassword: boolean;
   createdAt: Date;
   itemCount: number;
+  storageLimitBytes: number | null;
+  storageUsedBytes: number;
 }): User => ({
   id: row.id,
   name: row.name,
@@ -78,6 +81,7 @@ const toUser = (row: {
   isRoot: row.id === ADMIN_USER_ID,
   createdAt: row.createdAt.toISOString(),
   itemCount: row.itemCount,
+  storage: { usedBytes: row.storageUsedBytes, limitBytes: row.storageLimitBytes },
 });
 
 const userColumns = {
@@ -88,9 +92,11 @@ const userColumns = {
   hasPassword: isNotNull(users.passwordHash).mapWith(Boolean),
   createdAt: users.createdAt,
   itemCount: count(items.id),
+  storageLimitBytes: users.storageLimitBytes,
+  storageUsedBytes: usedBytesSql(usersIdSql),
 };
 
-async function getUser(db: Database, id: string): Promise<User> {
+export async function getUser(db: Database, id: string): Promise<User> {
   const [row] = await db
     .select(userColumns)
     .from(users)
@@ -131,6 +137,13 @@ export async function setRole(db: Database, id: string, role: Role, actorId: str
   const rows = await db.update(users).set({ isAdmin: role === "admin" }).where(eq(users.id, id)).returning({ id: users.id });
   if (rows.length === 0) throw new ApiError(404, "not_found", "Account not found");
   // a demoted account must not keep acting as an admin through a session opened earlier: roles are read per request, so nothing to revoke
+  return getUser(db, id);
+}
+
+/** Cap on an account's stored media, in bytes; null removes the cap. Applies to the root admin too. */
+export async function setStorageLimit(db: Database, id: string, limitBytes: number | null): Promise<User> {
+  const rows = await db.update(users).set({ storageLimitBytes: limitBytes }).where(eq(users.id, id)).returning({ id: users.id });
+  if (rows.length === 0) throw new ApiError(404, "not_found", "Account not found");
   return getUser(db, id);
 }
 

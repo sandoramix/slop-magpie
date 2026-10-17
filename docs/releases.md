@@ -1,6 +1,6 @@
 # Releases
 
-`main` is the release branch and `dev` is where work happens (see [AGENTS.md](../AGENTS.md#branches-and-releases)). Pushing a `v<major>.<minor>.<patch>` tag on `main` triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml). The workflow builds the Android APK and the server images and publishes a GitHub release.
+`main` is the release branch and `dev` is where work happens (see [AGENTS.md](../AGENTS.md#branches-and-releases)). Pushing a `v<major>.<minor>.<patch>` tag on `main` triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml). The workflow builds the Android APK, publishes a GitHub release and triggers a Coolify redeploy (Coolify builds the server images itself from `docker-compose.yml`).
 
 ## Version
 
@@ -53,14 +53,13 @@ On a pushed `v*.*.*` tag:
 1. **verify**: the tag must be on `main`, the tag must equal the root `package.json` `version`, the changelog entry must exist, and typecheck, lint and test must pass.
 2. **release**: right after verify, creates the GitHub release `Magpie <version>` with the changelog entry, install instructions and a compare link, so the page exists immediately. It starts as a **pre-release**, because the app's update check reads `releases/latest`, which skips pre-releases: phones keep seeing the previous version until the APK is attached. The android job promotes it to the latest release as its last step. If that job fails, the release stays a pre-release; fix the build and re-run the job, or promote it by hand (`gh release edit vX.Y.Z --prerelease=false --latest`) once the APK is attached.
 3. **android** (after release; skipped for server-only releases, see below): `expo prebuild`, then `gradlew assembleRelease`, signed with the release keystore from repository secrets, then attaches `magpie-<version>.apk` and `SHA256SUMS` to the release. It builds every ABI. Two caches keep it fast: the Gradle build cache (`setup-gradle`) and ccache for the native C++ compile (`actions/cache`). GitHub scopes caches by ref and a tag run can only read caches from its own ref or from `main`, so the tag run only **restores**; [`android-cache.yml`](../.github/workflows/android-cache.yml) builds on `main` (when it moves at a release, weekly so unused caches are not evicted after 7 days, or by hand from the Actions tab) and saves them. Until that workflow has run once on `main`, the next release builds cold (about 30 minutes); the first release after that reads the warm caches. Check `ccache --show-stats` at the end of the "Build release APK" step: hits should be well above 0%.
-4. **images** (parallel to android): `api` and `worker` images built natively on an ARM64 runner and pushed to GHCR as `ghcr.io/<owner>/<repo>-<app>:<version>` and `:latest`.
-5. **deploy** (after images, does not wait for the APK): calls the Coolify deploy webhook ([`deploy.yml`](../.github/workflows/deploy.yml)), so the server redeploys. Coolify rebuilds the branch configured in the resource, so point the resource at `main`.
+4. **deploy** (after verify, does not wait for the APK): calls the Coolify deploy webhook ([`deploy.yml`](../.github/workflows/deploy.yml)), so the server redeploys. Coolify rebuilds the branch configured in the resource, so point the resource at `main`.
 
 If **verify** fails, nothing is created. If **android** fails, the release stays without an APK; re-run the job. If only **deploy** fails, re-run it or run **Deploy** by hand from the Actions tab.
 
 ### Server-only releases
 
-verify diffs the tag against the tag `releases/latest` points at (the last release that shipped an APK) over `apps/mobile`, `packages/shared` (except `src/env`, which only the server reads), `scripts/changelog.ts`, `pnpm-workspace.yaml` and `.nvmrc`. No changes means **android** is skipped: images and deploy still run, the release page says there is no new APK, and the release stays a **pre-release**, so `releases/latest` (the update check in the app) keeps pointing at the last app release and no phone is offered an update without an APK. The next release that changes the app builds a normal APK with the current version and is promoted to latest. Edit the path list in the "Did the app change?" step to adjust.
+verify diffs the tag against the tag `releases/latest` points at (the last release that shipped an APK) over `apps/mobile`, `packages/shared` (except `src/env`, which only the server reads), `scripts/changelog.ts`, `pnpm-workspace.yaml` and `.nvmrc`. No changes means **android** is skipped: deploy still runs, the release page says there is no new APK, and the release stays a **pre-release**, so `releases/latest` (the update check in the app) keeps pointing at the last app release and no phone is offered an update without an APK. The next release that changes the app builds a normal APK with the current version and is promoted to latest. Edit the path list in the "Did the app change?" step to adjust.
 
 ## One-time setup
 
@@ -84,13 +83,9 @@ gh secret set ANDROID_KEY_ALIAS --body magpie
 gh secret set ANDROID_KEY_PASSWORD
 ```
 
-On macOS, use `base64 -i magpie-release.jks` instead of `base64 -w0`. `GITHUB_TOKEN` covers the release and GHCR.
+On macOS, use `base64 -i magpie-release.jks` instead of `base64 -w0`. `GITHUB_TOKEN` covers the release.
 
-### 3. GHCR package visibility
-
-After the first release, the images appear under the repository's **Packages**. To pull them without logging in, set each package's visibility to public. Otherwise, run `docker login ghcr.io` on the server with a token that has the `read:packages` scope.
-
-### 4. Coolify deploy webhook
+### 3. Coolify deploy webhook
 
 The **Deploy** workflow needs two more repository secrets:
 

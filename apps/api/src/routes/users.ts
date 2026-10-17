@@ -6,6 +6,7 @@ import {
   SetPasswordBody,
   UpdateMeBody,
   UpdateUserBody,
+  type User,
   type UsersResponse,
 } from "@magpie/shared/api";
 import { Hono } from "hono";
@@ -15,11 +16,17 @@ import { errorResponse } from "../http/errors.ts";
 import { requestMeta } from "../http/request-meta.ts";
 import { validate } from "../http/validate.ts";
 import * as credentials from "../services/credentials.ts";
+import { getStorage } from "../services/storage.ts";
 import * as svc from "../services/users.ts";
 
 export const meRoutes = (deps: AppDeps) =>
   new Hono<AppEnv>()
-    .get("/", (c) => c.json(svc.whoAmI(c.get("principal")) satisfies MeResponse, 200))
+    .get("/", async (c) => {
+      const principal = c.get("principal");
+      // quota of the library the request works in, so an admin acting as someone sees that account's numbers
+      const storage = await getStorage(deps.db, principal.actingAs?.id ?? principal.id);
+      return c.json({ ...svc.whoAmI(principal), storage } satisfies MeResponse, 200);
+    })
     // the token owner edits their own display name, even while an admin is acting as someone else
     .patch("/", validate("json", UpdateMeBody), async (c) => {
       const principal = c.get("principal");
@@ -60,10 +67,18 @@ export const usersRoutes = (deps: AppDeps) =>
     })
     .patch("/:id", validate("param", IdParam), validate("json", UpdateUserBody), async (c) => {
       const { id } = c.req.valid("param");
-      const { role } = c.req.valid("json");
-      const user = await svc.setRole(deps.db, id, role, c.get("principal").id);
-      await deps.audit({ action: "user.set_role", ...requestMeta(c, deps.trustProxy), details: { id, role } });
-      return c.json(user, 200);
+      const { role, storageLimitBytes } = c.req.valid("json");
+      let user: User | undefined;
+      if (role !== undefined) {
+        user = await svc.setRole(deps.db, id, role, c.get("principal").id);
+        await deps.audit({ action: "user.set_role", ...requestMeta(c, deps.trustProxy), details: { id, role } });
+      }
+      if (storageLimitBytes !== undefined) {
+        user = await svc.setStorageLimit(deps.db, id, storageLimitBytes);
+        await deps.audit({ action: "user.set_storage_limit", ...requestMeta(c, deps.trustProxy), details: { id, storageLimitBytes } });
+      }
+      // the schema guarantees one of the two was present
+      return c.json(user ?? (await svc.getUser(deps.db, id)), 200);
     })
     .post("/:id/token", validate("param", IdParam), async (c) => {
       const { id } = c.req.valid("param");
