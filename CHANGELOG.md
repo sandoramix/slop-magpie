@@ -6,6 +6,15 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.7] - 2026-10-17
+### Changed
+
+- The cookies folder on the server now defaults to `/opt/magpie/secrets/cookies`.
+
+### Upgrade notes
+
+- Put `instagram.txt` in `/opt/magpie/secrets/cookies/` (or set `COOKIES_HOST_DIR`).
+
 ## [1.0.6] - 2026-10-17
 ### Fixed
 
