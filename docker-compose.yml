@@ -1,6 +1,6 @@
 # Coolify "Docker Compose" resource (or plain `docker compose up -d`). Env vars: .env.example, docs/deployment.md.
 # Postgres is an existing external instance reached through DATABASE_URL.
-# Host dirs: media defaults to ~/magpie/media of the user running compose, cookies to /opt/magpie/cookies (Coolify rewrites a ~ default into its own app directory, so an absolute path is the only one that stays where you put it); override with MEDIA_DIR / COOKIES_HOST_DIR.
+# Host dirs default to /opt/magpie/media and /opt/magpie/cookies (Coolify rewrites a ~ default into its own app directory, so an absolute path is the only one that stays where you put it); override with MEDIA_DIR / COOKIES_HOST_DIR.
 x-common-env: &common-env
   DATABASE_URL: ${DATABASE_URL:?}
   MEDIA_SIGNING_SECRET: ${MEDIA_SIGNING_SECRET:?}
@@ -30,7 +30,7 @@ services:
       find /cookies -type f -exec chmod 600 {} + &&
       chmod 700 /cookies"
     volumes:
-      - ${MEDIA_DIR:-~/magpie/media}:/data/media
+      - ${MEDIA_DIR:-/opt/magpie/media}:/data/media
       - ${COOKIES_HOST_DIR:-/opt/magpie/cookies}:/cookies
     restart: "no"
 
@@ -45,7 +45,7 @@ services:
       MEDIA_URL_TTL_SECONDS: ${MEDIA_URL_TTL_SECONDS:-3600}
       TRUST_PROXY: ${TRUST_PROXY:-true}
     volumes:
-      - ${MEDIA_DIR:-~/magpie/media}:/data/media
+      - ${MEDIA_DIR:-/opt/magpie/media}:/data/media
     tmpfs: [/tmp]
     depends_on:
       init: { condition: service_completed_successfully }
@@ -66,7 +66,7 @@ services:
       MAX_DOWNLOAD_MB: ${MAX_DOWNLOAD_MB:-500}
       AUTO_ASSIGN_THRESHOLD: ${AUTO_ASSIGN_THRESHOLD:-0.8}
     volumes:
-      - ${MEDIA_DIR:-~/magpie/media}:/data/media
+      - ${MEDIA_DIR:-/opt/magpie/media}:/data/media
       - ${COOKIES_HOST_DIR:-/opt/magpie/cookies}:/run/secrets/cookies:ro
     # downloads land here before moving to the media volume
     tmpfs: ["/tmp:size=4g"]

@@ -6,6 +6,15 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.6] - 2026-10-17
+### Fixed
+
+- Saved media is now stored in `/opt/magpie/media` on the server by default, for the same reason as the cookies folder.
+
+### Upgrade notes
+
+- Existing media stays in the old folder. Before redeploying, copy it over (for Coolify: `sudo cp -a /data/coolify/applications/<uuid>/magpie/media/. /opt/magpie/media/`), or set `MEDIA_DIR` to the old path.
+
 ## [1.0.5] - 2026-10-16
 ### Fixed
 
