@@ -1,6 +1,9 @@
 import type { ItemDetail } from "@magpie/shared/api";
 import { useState } from "react";
-import { FlatList, type NativeScrollEvent, type NativeSyntheticEvent, View } from "react-native";
+import { FlatList, type NativeScrollEvent, type NativeSyntheticEvent, Pressable, View } from "react-native";
+import { GestureDetector, usePinchGesture } from "react-native-gesture-handler";
+import { scheduleOnRN } from "react-native-worklets";
+import { MediaViewer } from "@/components/media-viewer";
 import { Image } from "@/components/styled";
 import { Text } from "@/components/ui/text";
 import { VideoPlayer } from "@/components/video-player";
@@ -18,10 +21,26 @@ function dotWindow(count: number, index: number): { start: number; end: number }
   return { start, end: start + MAX_DOTS };
 }
 
+/** Starting a pinch on an image opens the full-screen viewer, where zooming happens. */
+function PinchToOpen({ onOpen, children }: { onOpen: () => void; children: React.ReactNode }) {
+  const pinch = usePinchGesture({
+    onActivate: () => {
+      "worklet";
+      scheduleOnRN(onOpen);
+    },
+  });
+  return (
+    <GestureDetector gesture={pinch}>
+      <View className="h-full w-full">{children}</View>
+    </GestureDetector>
+  );
+}
+
 /** Instagram-style pager: every slide uses the first media's frame so the page doesn't jump while swiping. */
 export function MediaCarousel({ media, fallbackRatio }: { media: MediaEntry[]; fallbackRatio: number | null }) {
   const [width, setWidth] = useState(0);
   const [index, setIndex] = useState(0);
+  const [viewing, setViewing] = useState<number | null>(null);
 
   const first = media[0];
   const frame = aspectClass(first?.width && first.height ? first.width / first.height : fallbackRatio);
@@ -64,10 +83,34 @@ export function MediaCarousel({ media, fallbackRatio }: { media: MediaEntry[]; f
               {m.type === "video" ? (
                 <VideoPlayer url={m.url} aspectClass="h-full" active={i === index} />
               ) : (
-                <Image source={{ uri: m.url }} className="h-full w-full" contentFit="contain" transition={150} />
+                // tap or start pinching to open the full-screen viewer, where the zoom happens
+                <Pressable
+                  accessibilityLabel="Open full screen"
+                  className="h-full w-full"
+                  onPress={() => {
+                    setViewing(i);
+                  }}
+                >
+                  <PinchToOpen
+                    onOpen={() => {
+                      setViewing(i);
+                    }}
+                  >
+                    <Image source={{ uri: m.url }} className="h-full w-full" contentFit="contain" transition={150} />
+                  </PinchToOpen>
+                </Pressable>
               )}
             </View>
           )}
+        />
+      )}
+      {viewing !== null && (
+        <MediaViewer
+          media={media}
+          startIndex={viewing}
+          onClose={() => {
+            setViewing(null);
+          }}
         />
       )}
       {many && (
