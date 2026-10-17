@@ -6,6 +6,15 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-17
+### Added
+
+- Each account now has a storage limit (50 GB by default). Settings shows how much you use; the admin can see everyone's usage and change or remove a limit under Accounts → Storage limit. At the limit, saving new links is refused and downloads that would not fit fail with a clear message.
+
+### Changed
+
+- When a new version is available, the app now asks once per launch whether to update, instead of only showing a banner.
+
 ## [1.1.0] - 2026-10-17
 ### Added
 

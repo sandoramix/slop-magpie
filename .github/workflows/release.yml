@@ -148,37 +148,6 @@ jobs:
       - name: Publish as the latest release
         run: gh release edit "$GITHUB_REF_NAME" --prerelease=false --latest
 
-  images:
-    needs: verify
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-      packages: write
-    strategy:
-      matrix:
-        app: [api, worker]
-    env:
-      VERSION: ${{ needs.verify.outputs.version }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/${{ matrix.app }}/Dockerfile
-          platforms: linux/arm64
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository }}-${{ matrix.app }}:${{ env.VERSION }}
-            ghcr.io/${{ github.repository }}-${{ matrix.app }}:latest
-          cache-from: type=gha,scope=${{ matrix.app }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.app }}
-
   # Created right after verify so the release page exists immediately; the APK is attached by the android job,
   # which then promotes it from pre-release to latest. Until then the app does not offer it as an update.
   release:
@@ -200,7 +169,6 @@ jobs:
 
       - name: Write release notes
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY}"
           previous="$(git describe --tags --abbrev=0 "${GITHUB_REF_NAME}^" 2>/dev/null || true)"
           {
             node scripts/changelog.ts notes "$VERSION"
@@ -213,14 +181,7 @@ jobs:
               echo "**Android:** server-only release. The app did not change, so there is no new APK; keep using your installed version."
             fi
             echo
-            echo "**Server:**"
-            echo
-            echo '```sh'
-            echo "docker pull $image-api:$VERSION"
-            echo "docker pull $image-worker:$VERSION"
-            echo '```'
-            echo
-            echo "Database migrations run automatically when the API container starts."
+            echo "**Server:** redeploy the Docker Compose resource from this tag. Database migrations run automatically when the API container starts."
             if [ -n "$previous" ]; then
               echo
               echo "**Full diff:** https://github.com/$GITHUB_REPOSITORY/compare/$previous...$GITHUB_REF_NAME"
@@ -235,9 +196,9 @@ jobs:
             --prerelease \
             --verify-tag
 
-  # The server does not wait for the APK: deploy as soon as the images are pushed.
+  # The server does not wait for the APK: Coolify builds the images itself, so deploy right after verify.
   deploy:
-    needs: [verify, images]
+    needs: verify
     uses: ./.github/workflows/deploy.yml
     secrets:
       COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}

@@ -46,13 +46,13 @@ Not part of the versioned API. `GET /invite` (no auth, static HTML) is the page 
 | Method | Path | Notes |
 |---|---|---|
 | POST | `/auth/login` | **no bearer.** `{ username, password }` → `{ token, me }` (a session token for this device). Rate limited |
-| GET | `/me` | `{ id, name, displayName, isAdmin, hasPassword, actingAs }` |
+| GET | `/me` | `{ id, name, displayName, isAdmin, hasPassword, actingAs, storage }`; `storage` is `{ usedBytes, limitBytes }` (`limitBytes: null` = unlimited) for the library the request works in |
 | PATCH | `/me` | `{ displayName }` (`null` clears it). The username cannot change |
 | PUT | `/me/password` | `{ password }` (10+ chars) → `{ token, me }`. Retires the temporary token, signs out other devices. The root admin gets `token: null` and keeps `API_TOKEN` |
 | POST | `/me/logout` | revokes the session token that made the call |
-| GET | `/users` | **admin only.** All accounts with item counts and `hasPassword` (false while an invite is still pending) |
+| GET | `/users` | **admin only.** All accounts with item counts, `storage` (`{ usedBytes, limitBytes }`) and `hasPassword` (false while an invite is still pending) |
 | POST | `/users` | **admin only.** `{ name, role? }` (the fixed username; `role` is `user` (default) or `admin`) → `201 { user, token }`; the token is shown once |
-| PATCH | `/users/:id` | **admin only.** `{ role }` promotes or demotes. Not the root admin, not yourself |
+| PATCH | `/users/:id` | **admin only.** `{ role?, storageLimitBytes? }`, at least one. `role` promotes or demotes (not the root admin, not yourself). `storageLimitBytes` sets the account's storage cap in bytes, `null` removes it (allowed for any account, including the root admin) |
 | POST | `/users/:id/token` | **admin only.** Reset: new temporary token, password removed, sessions revoked → `{ token }` |
 | DELETE | `/users/:id` | **admin only.** Deletes the account, its library and its files. Not the root admin, not yourself. The hashes of its tokens and sessions are kept (`deleted_tokens`, one year) so its devices get `reason: "account_deleted"` |
 
@@ -66,7 +66,7 @@ Not part of the versioned API. `GET /invite` (no auth, static HTML) is the page 
 
 | Method | Path | Notes |
 |---|---|---|
-| POST | `/items` | `{ url, folderIds?, tagIds?, notes? }` → `202` new item, `200` if already saved (dedupe by canonical URL / source item id). Any public http(s) URL is accepted; unknown sites use the `generic` source. `422 unsupported_url` only for non-http(s) or blocked (private/internal) targets |
+| POST | `/items` | `{ url, folderIds?, tagIds?, notes? }` → `202` new item, `200` if already saved (dedupe by canonical URL / source item id). Any public http(s) URL is accepted; unknown sites use the `generic` source. `422 unsupported_url` only for non-http(s) or blocked (private/internal) targets. `403 forbidden` when the library is at its storage limit (new saves are refused until space is freed or the limit raised) |
 | GET | `/items` | list/search, cursor-paginated. Query: `q`, `folderId`, `includeSubfolders`, `tagId[]`, `source[]`, `kind[]`, `workflow`, `favorite`, `fetchStatus`, `availability`, `sort` (`saved_desc`, `saved_asc`, `posted_desc`, `relevance`), `cursor`, `limit` |
 | GET | `/items/:id` | full item: media (with signed URLs), folders, tags, keywords, suggestions |
 | PATCH | `/items/:id` | `title`, `notes`, `workflow`, `favorite`, `rating`, `custom` |

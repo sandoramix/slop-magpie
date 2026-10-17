@@ -1,10 +1,10 @@
 import { createReadStream } from "node:fs";
 import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import path from "node:path";
-import { items, itemFolders, itemTags, media } from "@magpie/db";
+import { items, itemFolders, itemTags, media, users } from "@magpie/db";
 import { resolveSource } from "@magpie/shared/sources";
 import { extensionForContentType, itemKeys } from "@magpie/storage";
-import { and, eq, ne, or } from "drizzle-orm";
+import { and, eq, ne, or, sql } from "drizzle-orm";
 import type { WorkerContext } from "../context.ts";
 import { probeFile, sha256File } from "../media/probe.ts";
 import { transcodeVideo } from "../media/transcode.ts";
@@ -64,6 +64,24 @@ async function cookiesFor(ctx: WorkerContext, sourceId: string, tmpDir: string):
   const copy = path.join(tmpDir, "cookies.txt");
   await copyFile(file, copy);
   return copy;
+}
+
+/**
+ * Message when saving `incoming` more bytes would push the account over its storage limit, else null.
+ * Other items only: the item being (re)fetched replaces its own files.
+ */
+async function quotaError(ctx: WorkerContext, userId: string, itemId: string, incoming: number): Promise<string | null> {
+  const [owner] = await ctx.db.select({ limit: users.storageLimitBytes }).from(users).where(eq(users.id, userId));
+  if (!owner || owner.limit === null) return null;
+  const [row] = await ctx.db
+    .select({ used: sql<number>`coalesce(sum(${media.bytes}), 0)::float8` })
+    .from(media)
+    .innerJoin(items, eq(items.id, media.itemId))
+    .where(and(eq(items.userId, userId), ne(items.id, itemId)));
+  const used = row?.used ?? 0;
+  if (used + incoming <= owner.limit) return null;
+  const gb = (n: number) => `${(n / 1024 ** 3).toFixed(1)} GB`;
+  return `Storage limit reached (${gb(used)} used of ${gb(owner.limit)}, this item needs ${gb(incoming)}). Delete items or ask the admin to raise the limit, then refetch.`;
 }
 
 async function storeFiles(ctx: WorkerContext, itemId: string, files: readonly FetchedFile[], signal?: AbortSignal) {
@@ -190,6 +208,10 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
     const existingMedia = await ctx.db.select({ id: media.id }).from(media).where(eq(media.itemId, itemId));
     let mediaRows: (typeof media.$inferInsert)[] = [];
     if (files.length && (result.files.length || existingMedia.length === 0)) {
+      // transcoding only shrinks files, so the downloaded size is a safe upper bound
+      const incoming = (await Promise.all(files.map(async (f) => (await stat(f.path)).size))).reduce((a, b) => a + b, 0);
+      const over = await quotaError(ctx, item.userId, itemId, incoming);
+      if (over) return await fail("fatal", over, outcome.attempts);
       if (existingMedia.length) await ctx.store.deletePrefix(itemKeys.prefix(itemId));
       mediaRows = await storeFiles(ctx, itemId, files, job.signal);
     }

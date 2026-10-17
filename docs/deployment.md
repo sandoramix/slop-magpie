@@ -51,9 +51,9 @@ Services:
 
 Volumes: bind mounts from `MEDIA_DIR` and `COOKIES_HOST_DIR` (see above).
 
-Redeploys can be triggered from GitHub Actions (the **Deploy** workflow, also run at the end of every release); it calls the resource's deploy webhook. Setup in [releases.md](releases.md#4-coolify-deploy-webhook).
+Redeploys can be triggered from GitHub Actions (the **Deploy** workflow, also run at the end of every release); it calls the resource's deploy webhook. Setup in [releases.md](releases.md#3-coolify-deploy-webhook).
 
-Images can build on the Pi via Coolify, or be pulled from GHCR: each release publishes `ghcr.io/sandoramix/slop-magpie-{api,worker}:<version>` (ARM64). See [releases.md](releases.md).
+Coolify builds the `api` and `worker` images on the Pi from the Dockerfiles; releases do not publish prebuilt images. See [releases.md](releases.md).
 
 ## 4. Environment
 

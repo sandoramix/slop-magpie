@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aspectClass, extractUrl, extractUrls, formatDuration } from "./media.ts";
+import { aspectClass, extractUrl, extractUrls, formatBytes, formatDuration } from "./media.ts";
 
 describe("aspectClass", () => {
   it("snaps to the nearest known ratio", () => {
@@ -39,5 +39,14 @@ describe("formatDuration", () => {
   it("formats mm:ss", () => {
     expect(formatDuration(65_000)).toBe("1:05");
     expect(formatDuration(null)).toBe("");
+  });
+});
+
+describe("formatBytes", () => {
+  it("uses 1024-based units like the server", () => {
+    expect(formatBytes(0)).toBe("0 KB");
+    expect(formatBytes(5 * 1024 ** 2)).toBe("5 MB");
+    expect(formatBytes(50 * 1024 ** 3)).toBe("50 GB");
+    expect(formatBytes(1.5 * 1024 ** 3)).toBe("1.5 GB");
   });
 });

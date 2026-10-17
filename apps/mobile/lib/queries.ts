@@ -347,6 +347,16 @@ export function useSetUserRole() {
   });
 }
 
+/** `limitBytes: null` removes the limit. */
+export function useSetUserStorageLimit() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, limitBytes }: { id: string; limitBytes: number | null }) =>
+      request("PATCH", `/users/${id}`, { body: { storageLimitBytes: limitBytes }, schema: User }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["users"] }),
+  });
+}
+
 export function useRotateUserToken() {
   return useMutation({
     mutationFn: (id: string) => request("POST", `/users/${id}/token`, { schema: RotateTokenResponse }),

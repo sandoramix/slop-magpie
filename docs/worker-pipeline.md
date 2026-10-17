@@ -23,7 +23,7 @@ Source-agnostic. Details of sources and strategies: [sources.md](sources.md).
 3. Run its strategy chain (`yt-dlp`, `gallery-dl`, `opengraph`, `direct`) into a temp dir (`WORKER_TMP_DIR`), using `COOKIES_DIR/<source>.txt` if present. Video format: best ≤1080p MP4.
 4. Each strategy parses its tool output with zod into a common `FetchResult`. Unknown fields go to `raw_meta`.
 5. Optionally re-encode oversized video (`ffmpeg`, H.264 720p, CRF 23) if `> MAX_VIDEO_MB`.
-6. Hash (sha256), `BlobStore.put` each file under `items/<itemId>/<position>.<ext>`, insert `media` rows. No media at all → `kind = link`, preview image (if any) stored as media.
+6. Storage limit: if the downloaded files plus the account's other media would exceed `users.storage_limit_bytes`, the item fails (`fetch_status = failed`, no retry) with a message saying so; "Refetch" works once space is freed or the limit raised. Otherwise hash (sha256), `BlobStore.put` each file under `items/<itemId>/<position>.<ext>`, insert `media` rows. No media at all → `kind = link`, preview image (if any) stored as media.
 7. Update item metadata (author, title, caption, posted_at, kind, source_item_id), set `availability = available`.
 
 Retries: 3 with exponential backoff (1 min, 10 min, 1 h). On final failure: `fetch_status = failed`, `fetch_error` set.
@@ -36,6 +36,7 @@ Typical errors and handling:
 | content not found / private | `failed`, `availability = gone` |
 | no strategy yields anything | `failed` immediately, no retry |
 | blocked target (SSRF guard) | `failed` immediately, no retry, audited |
+| account over its storage limit | `failed` immediately, no retry; message shows used / limit |
 
 ### thumbnail
 - Video: `ffmpeg` frame at ~1 s (or 10% of duration), scaled to 480 px wide.
