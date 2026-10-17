@@ -6,6 +6,15 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-10-16
+### Fixed
+
+- Instagram cookies are now read from `/opt/magpie/cookies` on the server (Coolify moved the old `~/magpie/cookies` default into its own folder, so the worker never saw your `instagram.txt`).
+
+### Upgrade notes
+
+- Put `instagram.txt` in `/opt/magpie/cookies/` on the server, or set `COOKIES_HOST_DIR` to where it is.
+
 ## [1.0.4] - 2026-10-16
 ### Changed
 
