@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-17
+### Added
+
+- Posts with several photos or videos now open as a swipeable slideshow with a counter and page dots, like Instagram.
+
 ## [1.0.7] - 2026-10-17
 ### Changed
 

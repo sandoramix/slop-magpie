@@ -12,8 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { VideoPlayer } from "@/components/video-player";
-import { aspectClass } from "@/lib/media";
+import { MediaCarousel } from "@/components/media-carousel";
 import {
   useCreateFolder,
   useCreateTag,
@@ -28,7 +27,6 @@ import {
   useTags,
   useUpdateItem,
 } from "@/lib/queries";
-import { cn } from "@/lib/utils";
 
 const WORKFLOWS: { value: Workflow; label: string }[] = [
   { value: "inbox", label: "Inbox" },
@@ -60,18 +58,7 @@ function Media({ item }: { item: ItemDetail }) {
       <Image source={{ uri: item.thumbUrl }} className="aspect-video w-full bg-muted" contentFit="cover" />
     ) : null;
   }
-  return (
-    <View className="gap-1">
-      {item.media.map((m) => {
-        const aspect = aspectClass(m.width && m.height ? m.width / m.height : item.aspectRatio);
-        return m.type === "video" ? (
-          <VideoPlayer key={m.id} url={m.url} aspectClass={aspect} />
-        ) : (
-          <Image key={m.id} source={{ uri: m.url }} className={cn("w-full bg-muted", aspect)} contentFit="contain" />
-        );
-      })}
-    </View>
-  );
+  return <MediaCarousel media={item.media} fallbackRatio={item.aspectRatio} />;
 }
 
 export default function ItemScreen() {
