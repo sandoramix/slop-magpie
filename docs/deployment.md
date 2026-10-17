@@ -32,7 +32,7 @@ Nothing to prepare by default. Media and cookies live in host directories that d
 
 | Var | Default | Mounted into |
 |---|---|---|
-| `MEDIA_DIR` | `~/magpie/media` | api, worker (`/data/media`) |
+| `MEDIA_DIR` | `/opt/magpie/media` | api, worker (`/data/media`) |
 | `COOKIES_HOST_DIR` | `/opt/magpie/cookies` | worker, read-only (`/run/secrets/cookies`) |
 
 Point `MEDIA_DIR` at a big disk (e.g. an SSD mount) for real use. A one-shot `init` service creates missing directories and gives them to uid 1000 (the container user), so no manual `mkdir`/`chown` is needed. Under Coolify it shows as *exited* after it runs; that is expected.
@@ -73,7 +73,7 @@ Optional: `LOG_LEVEL`, `LOG_FORMAT` (`pretty` default, `json` for log shippers),
 
 `TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.
 
-Compose-only: `MEDIA_DIR` (default `~/magpie/media`) and `COOKIES_HOST_DIR` (default `/opt/magpie/cookies`); see step 2.
+Compose-only: `MEDIA_DIR` (default `/opt/magpie/media`) and `COOKIES_HOST_DIR` (default `/opt/magpie/cookies`); see step 2.
 
 Containers run as the `node` user (uid 1000) with a read-only root filesystem; only the media volume and `/tmp` (tmpfs) are writable.
 
