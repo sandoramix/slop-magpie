@@ -4,7 +4,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { items } from "@magpie/db";
 import { asc, eq, sql } from "drizzle-orm";
 import type { WorkerContext } from "../context.ts";
-import { cookiesFor } from "../sessions.ts";
+import { cookiesFor, loginFor } from "../sessions.ts";
 import { getFetcher, strategyOrder } from "../sources/index.ts";
 import { DEFAULT_STRATEGY_OPTIONS } from "../strategies/types.ts";
 
@@ -34,6 +34,7 @@ export async function sourceCheck(ctx: WorkerContext, options: { batch?: number;
         url: row.canonicalUrl,
         tmpDir,
         cookiesFile,
+        login: loginFor(ctx, row.source),
         guard: ctx.guard,
         run: ctx.run,
         log: ctx.log,

@@ -2,7 +2,7 @@ import type { Logger } from "../logger.ts";
 import type { Guard } from "../net/ssrf.ts";
 import type { Runner } from "../tools/run.ts";
 
-export const strategyIds = ["yt-dlp", "gallery-dl", "opengraph", "direct"] as const;
+export const strategyIds = ["instaloader", "yt-dlp", "gallery-dl", "opengraph", "direct"] as const;
 export type StrategyId = (typeof strategyIds)[number];
 
 export interface FetchedFile {
@@ -34,11 +34,21 @@ export interface StrategyOptions {
   maxItems: number;
 }
 
+/** Account the worker may log in with, for tools that keep their own session (instaloader). */
+export interface StrategyLogin {
+  username: string;
+  /** In a writable, persistent dir; the tool creates it on the first successful login. */
+  sessionFile: string;
+  /** The password when a login attempt is allowed now (rate limited; calling it counts as an attempt), else null. */
+  password(): string | null;
+}
+
 export interface StrategyContext {
   url: string;
   /** Empty per-job directory; deleted after the job. */
   tmpDir: string;
   cookiesFile: string | null;
+  login: StrategyLogin | null;
   guard: Guard;
   run: Runner;
   log: Logger;

@@ -6,6 +6,7 @@ const run = promisify(execFile);
 const TOOLS = [
   { name: "yt-dlp", args: ["--version"] },
   { name: "gallery-dl", args: ["--version"] },
+  { name: "instaloader", args: ["--version"] },
   { name: "ffmpeg", args: ["-version"] },
 ] as const;
 
