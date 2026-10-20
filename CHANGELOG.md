@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-10-20
+### Fixed
+
+- Instagram saves that failed with a login-page error now trigger the automatic sign-in and a retry, instead of failing for good.
+
 ## [1.4.0] - 2026-10-20
 ### Added
 
