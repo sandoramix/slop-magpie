@@ -34,10 +34,13 @@ Nothing to prepare by default. Media and cookies live in host directories that d
 |---|---|---|
 | `MEDIA_DIR` | `/opt/magpie/media` | api, worker (`/data/media`) |
 | `COOKIES_HOST_DIR` | `/opt/magpie/secrets/cookies` | worker, read-only (`/run/secrets/cookies`) |
+| `SESSIONS_HOST_DIR` | `/opt/magpie/secrets/sessions` | worker, writable (`/run/secrets/sessions`) |
 
 Point `MEDIA_DIR` at a big disk (e.g. an SSD mount) for real use. A one-shot `init` service creates missing directories and gives them to uid 1000 (the container user), so no manual `mkdir`/`chown` is needed. Under Coolify it shows as *exited* after it runs; that is expected.
 
 Put per-source cookie files in the cookies dir named `<source-id>.txt`, e.g. `instagram.txt`. `init` makes them `600` and owned by uid 1000 on the next deploy.
+
+To skip the manual upload for Instagram, set `INSTAGRAM_USERNAME` and `INSTAGRAM_PASSWORD` (a secondary account **without 2FA**). The worker logs in itself, keeps the session in the sessions dir and logs in again when it dies; see [sources.md](sources.md#automatic-login). Redeploying keeps the session; deleting `instagram.txt` from the sessions dir forces a fresh login.
 
 ## 3. Coolify
 
@@ -69,13 +72,13 @@ See `.env.example`. Validated at startup by t3-env — the container exits with 
 | `STORAGE_LOCAL_ROOT` | api, worker | `/data/media` |
 | `COOKIES_DIR` | worker | `/run/secrets/cookies` |
 
-Optional: `LOG_LEVEL`, `LOG_FORMAT` (`pretty` default, `json` for log shippers), `MAX_VIDEO_MB`, `MAX_DOWNLOAD_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`, `WORKER_CONCURRENCY`, `CORS_ORIGINS`, `MEDIA_URL_TTL_SECONDS`.
+Optional: `INSTAGRAM_USERNAME`, `INSTAGRAM_PASSWORD`, `SESSIONS_DIR` (worker, default `./secrets/sessions`; compose sets `/run/secrets/sessions`), `LOG_LEVEL`, `LOG_FORMAT` (`pretty` default, `json` for log shippers), `MAX_VIDEO_MB`, `MAX_DOWNLOAD_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`, `WORKER_CONCURRENCY`, `CORS_ORIGINS`, `MEDIA_URL_TTL_SECONDS`.
 
 `TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.
 
-Compose-only: `MEDIA_DIR` (default `/opt/magpie/media`) and `COOKIES_HOST_DIR` (default `/opt/magpie/secrets/cookies`); see step 2.
+Compose-only: `MEDIA_DIR` (default `/opt/magpie/media`), `COOKIES_HOST_DIR` (default `/opt/magpie/secrets/cookies`) and `SESSIONS_HOST_DIR` (default `/opt/magpie/secrets/sessions`); see step 2.
 
-Containers run as the `node` user (uid 1000) with a read-only root filesystem; only the media volume and `/tmp` (tmpfs) are writable.
+Containers run as the `node` user (uid 1000) with a read-only root filesystem; only the media volume, the sessions volume (worker) and `/tmp` (tmpfs) are writable.
 
 ## 5. Mobile app
 

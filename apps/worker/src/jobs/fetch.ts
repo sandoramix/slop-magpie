@@ -1,5 +1,5 @@
 import { createReadStream } from "node:fs";
-import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { items, itemFolders, itemTags, media, users } from "@magpie/db";
 import { resolveSource } from "@magpie/shared/sources";
@@ -11,7 +11,8 @@ import { transcodeVideo } from "../media/transcode.ts";
 import { BlockedTargetError, expandUrl } from "../net/ssrf.ts";
 import { getFetcher, strategyOrder } from "../sources/index.ts";
 import { runChain } from "../strategies/chain.ts";
-import { type ErrorClass, errorMessage, logUrl } from "../strategies/errors.ts";
+import { cookiesFor, refreshSession } from "../sessions.ts";
+import { type ErrorClass, errorMessage, logUrl, looksLikeAuthFailure } from "../strategies/errors.ts";
 import { DEFAULT_STRATEGY_OPTIONS, type FetchedFile, type FetchResult } from "../strategies/types.ts";
 import { titleFromCaption } from "../text/keywords.ts";
 
@@ -51,19 +52,6 @@ async function mergeInto(ctx: WorkerContext, fromId: string, toId: string): Prom
     await tx.delete(items).where(eq(items.id, fromId));
   });
   await ctx.jobs.sendItemJob("blobDelete", { itemId: fromId });
-}
-
-async function cookiesFor(ctx: WorkerContext, sourceId: string, tmpDir: string): Promise<string | null> {
-  const file = path.join(ctx.cookiesDir, `${sourceId}.txt`);
-  try {
-    if (!(await stat(file)).isFile()) return null;
-  } catch {
-    return null;
-  }
-  // the tools write cookies back on exit and the mount is read-only: hand them a private copy
-  const copy = path.join(tmpDir, "cookies.txt");
-  await copyFile(file, copy);
-  return copy;
 }
 
 /**
@@ -184,19 +172,24 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
   const tmpDir = await mkdtemp(path.join(ctx.tmpDir, `fetch-${itemId}-`));
   try {
     const fetcher = getFetcher(source);
-    const cookiesFile = await cookiesFor(ctx, source, tmpDir);
     const order = strategyOrder(fetcher, url).map((id) => ctx.strategies[id]);
-    const outcome = await runChain(order, {
-      url,
-      tmpDir,
-      cookiesFile,
-      guard: ctx.guard,
-      run: ctx.run,
-      log: ctx.log,
-      maxDownloadBytes: ctx.maxDownloadBytes,
-      options: { ...DEFAULT_STRATEGY_OPTIONS, ...fetcher.options },
-      ...(job.signal ? { signal: job.signal } : {}),
-    });
+    const runWith = async () =>
+      runChain(order, {
+        url,
+        tmpDir,
+        cookiesFile: await cookiesFor(ctx, source, tmpDir),
+        guard: ctx.guard,
+        run: ctx.run,
+        log: ctx.log,
+        maxDownloadBytes: ctx.maxDownloadBytes,
+        options: { ...DEFAULT_STRATEGY_OPTIONS, ...fetcher.options },
+        ...(job.signal ? { signal: job.signal } : {}),
+      });
+    let outcome = await runWith();
+    // a dead session looks like a transient failure; renew it once (cooldown-limited) and retry in place
+    if (!outcome.ok && outcome.errorClass === "retry" && looksLikeAuthFailure(outcome.error) && (await refreshSession(ctx, source))) {
+      outcome = await runWith();
+    }
     if (!outcome.ok) {
       ctx.log.warn({ itemId, source, url: logUrl(url), class: outcome.errorClass, reason: outcome.error }, "fetch failed");
       return await fail(outcome.errorClass, outcome.error, outcome.attempts);

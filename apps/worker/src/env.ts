@@ -8,6 +8,10 @@ export const env = createEnv({
     ...loggingEnv,
     ...storageEnv,
     COOKIES_DIR: z.string().min(1),
+    SESSIONS_DIR: z.string().min(1).default("./secrets/sessions"),
+    // optional: log in automatically and renew the session instead of uploading instagram.txt
+    INSTAGRAM_USERNAME: z.string().min(1).optional(),
+    INSTAGRAM_PASSWORD: z.string().min(1).optional(),
     WORKER_TMP_DIR: z.string().min(1),
     WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(8).default(1),
     MAX_VIDEO_MB: z.coerce.number().positive().default(60),
