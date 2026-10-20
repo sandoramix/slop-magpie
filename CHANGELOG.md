@@ -6,6 +6,15 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-10-20
+### Fixed
+
+- Instagram posts, carousels and reels are now downloaded with a logged-in session that the server keeps and reuses. It signs in only when the session has died, so you no longer upload a cookie file every day.
+
+### Upgrade notes
+
+- Set `INSTAGRAM_USERNAME` and `INSTAGRAM_PASSWORD` on the worker (a dedicated account without 2FA) and redeploy. The first sign-in may ask you to confirm "it was me" in the Instagram app.
+
 ## [1.4.2] - 2026-10-20
 ### Fixed
 

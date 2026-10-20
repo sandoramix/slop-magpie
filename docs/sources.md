@@ -26,8 +26,7 @@ export interface SourceFetcher {
   id: string;                         // same id as SourceDef
   strategies: StrategyId[];           // tried in order, e.g. ['yt-dlp', 'gallery-dl']
   options?: Partial<StrategyOptions>; // per-source tweaks (format selection, headers, ...)
-  login?(ctx): Promise<string>;       // optional automatic login, returns cookies.txt; see Cookies below
-  // cookies are resolved by the worker: SESSIONS_DIR/<id>.txt, else COOKIES_DIR/<id>.txt
+  // cookies are resolved by the worker: COOKIES_DIR/<id>.txt if present
 }
 ```
 
@@ -54,6 +53,7 @@ interface FetchResult {
 
 | Strategy | Engine | Good for |
 |---|---|---|
+| `instaloader` | `instaloader -- -<shortcode>` into a temp dir | Instagram posts, carousels and reels, with its own logged-in session (see [Automatic login](#automatic-login)) |
 | `yt-dlp` | `yt-dlp -J` + download | videos on 1800+ sites (Instagram reels, TikTok, YouTube/Shorts, X, Reddit, Facebook, Vimeo, Pinterest video pins, ...) |
 | `gallery-dl` | `gallery-dl -j` + download | image posts/galleries/carousels (Instagram posts, Pinterest, Reddit galleries, Tumblr, X images, DeviantArt, ...) |
 | `opengraph` | HTTP GET + parse `og:*` / `twitter:*` / oEmbed / JSON-LD | any web page: title, description, preview image, sometimes `og:video` |
@@ -78,7 +78,7 @@ This means most sites work out of the box; a dedicated source is only needed for
 
 | id | Strategies | Notes |
 |---|---|---|
-| `instagram` | yt-dlp (reels) → gallery-dl (posts/carousels) | needs cookies; id = shortcode |
+| `instagram` | instaloader → yt-dlp (reels) → gallery-dl (posts/carousels) | needs a login (instaloader session) or cookies; id = shortcode |
 | `tiktok` | yt-dlp → gallery-dl | photo-mode posts via gallery-dl |
 | `youtube` | yt-dlp | Shorts + videos; cap resolution |
 | `pinterest` | gallery-dl → yt-dlp | resolve `pin.it` short links |
@@ -99,17 +99,6 @@ Per-source cookie files in Netscape format at `COOKIES_DIR/<source-id>.txt` (rea
 
 ### Automatic login
 
-A `SourceFetcher` may define `login(ctx)`, which logs in with credentials from the worker env and returns Netscape cookies. Today only `instagram` has one: it replays the website's own login (`/api/v1/web/accounts/login/ajax/`) with `INSTAGRAM_USERNAME` / `INSTAGRAM_PASSWORD`. Neither yt-dlp nor gallery-dl can log in to Instagram any more, so the worker does it and both tools read the resulting cookies. Instagram may answer a login from a server IP with a checkpoint; the failure reason is logged (`session login failed`). Sessions are stored in the writable `SESSIONS_DIR/<source-id>.txt` and win over the manual `COOKIES_DIR` file.
+Instagram needs a logged-in account. With `INSTAGRAM_USERNAME` / `INSTAGRAM_PASSWORD` set (one dedicated account owned by the server admin; users never provide credentials or cookies), the `instaloader` strategy keeps a session file in the writable `SESSIONS_DIR/instagram.session` and reuses it for every fetch. It logs in only when there is no session or the saved one has died, passes the password on stdin (not argv), and the worker allows one password use per 15 minutes, because repeated logins get accounts flagged. Neither yt-dlp nor gallery-dl can log in to Instagram, so they only see the manual cookie file.
 
-The worker logs in when no session exists, and again (once per job) when the fetch chain fails with a login/checkpoint/cookies error. At most one login attempt per source every 15 minutes, because repeated logins get accounts flagged. Accounts with 2FA or a checkpoint challenge cannot use this; keep the manual cookie file for them.
-
-## Adding a source — checklist
-
-1. `packages/shared/src/sources/<id>.ts` — `SourceDef` + unit tests for `match`/`normalize`/`extractId` with real URL samples.
-2. Add to `packages/shared/src/sources/index.ts`.
-3. `apps/worker/src/sources/<id>.ts` — strategy order + options.
-4. Add to `apps/worker/src/sources/index.ts`.
-5. Optional: cookies file, icon in the app.
-6. Update the table above.
-
-No DB migration needed: `items.source` is text validated against the registry, not a Postgres enum.
+If the first login hits a checkpoint, confirm "it was me" in the Instagram app, then wait out the 15 minutes (or restart the worker) and save a link again. The account must not use 2FA. Without credentials, `instaloader` fails fast and the chain falls back to yt-dlp / gallery-dl with `instagram.txt`. Deleting the session file forces a fresh login.

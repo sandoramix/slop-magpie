@@ -17,12 +17,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 
 FROM base
 ENV NODE_ENV=production PATH=/opt/tools/bin:$PATH
-# yt-dlp / gallery-dl are external CLIs (Python lives only here); rebuild the image to update them
+# yt-dlp / gallery-dl / instaloader are external CLIs (Python lives only here); rebuild the image to update them
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ffmpeg python3 python3-venv ca-certificates \
  && rm -rf /var/lib/apt/lists/* \
  && python3 -m venv /opt/tools \
- && /opt/tools/bin/pip install --no-cache-dir --upgrade yt-dlp gallery-dl
+ && /opt/tools/bin/pip install --no-cache-dir --upgrade yt-dlp gallery-dl instaloader
 COPY --from=deps /app ./
 COPY packages/shared packages/shared
 COPY packages/db packages/db
