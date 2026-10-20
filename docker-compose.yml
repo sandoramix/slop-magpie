@@ -26,12 +26,13 @@ services:
     cap_add: [CHOWN, FOWNER, DAC_OVERRIDE]
     command: >-
       sh -c "chown 1000:1000 /data/media &&
-      chown -R 1000:1000 /cookies &&
+      chown -R 1000:1000 /cookies /sessions &&
       find /cookies -type f -exec chmod 600 {} + &&
-      chmod 700 /cookies"
+      chmod 700 /cookies /sessions"
     volumes:
       - ${MEDIA_DIR:-/opt/magpie/media}:/data/media
       - ${COOKIES_HOST_DIR:-/opt/magpie/secrets/cookies}:/cookies
+      - ${SESSIONS_HOST_DIR:-/opt/magpie/secrets/sessions}:/sessions
     restart: "no"
 
   api:
@@ -60,6 +61,9 @@ services:
     environment:
       <<: *common-env
       COOKIES_DIR: /run/secrets/cookies
+      SESSIONS_DIR: /run/secrets/sessions
+      INSTAGRAM_USERNAME: ${INSTAGRAM_USERNAME:-}
+      INSTAGRAM_PASSWORD: ${INSTAGRAM_PASSWORD:-}
       WORKER_TMP_DIR: /tmp/magpie
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
       MAX_VIDEO_MB: ${MAX_VIDEO_MB:-60}
@@ -68,6 +72,7 @@ services:
     volumes:
       - ${MEDIA_DIR:-/opt/magpie/media}:/data/media
       - ${COOKIES_HOST_DIR:-/opt/magpie/secrets/cookies}:/run/secrets/cookies:ro
+      - ${SESSIONS_HOST_DIR:-/opt/magpie/secrets/sessions}:/run/secrets/sessions
     # downloads land here before moving to the media volume
     tmpfs: ["/tmp:size=4g"]
     depends_on:

@@ -1,9 +1,10 @@
-import { copyFile, mkdir, mkdtemp, rm, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { items } from "@magpie/db";
 import { asc, eq, sql } from "drizzle-orm";
 import type { WorkerContext } from "../context.ts";
+import { cookiesFor } from "../sessions.ts";
 import { getFetcher, strategyOrder } from "../sources/index.ts";
 import { DEFAULT_STRATEGY_OPTIONS } from "../strategies/types.ts";
 
@@ -28,12 +29,7 @@ export async function sourceCheck(ctx: WorkerContext, options: { batch?: number;
     try {
       const fetcher = getFetcher(row.source);
       const first = strategyOrder(fetcher, row.canonicalUrl)[0] ?? "opengraph";
-      let cookiesFile: string | null = null;
-      const cookies = path.join(ctx.cookiesDir, `${row.source}.txt`);
-      if (await stat(cookies).then((s) => s.isFile(), () => false)) {
-        cookiesFile = path.join(tmpDir, "cookies.txt");
-        await copyFile(cookies, cookiesFile);
-      }
+      const cookiesFile = await cookiesFor(ctx, row.source, tmpDir);
       const status = await ctx.strategies[first].probe({
         url: row.canonicalUrl,
         tmpDir,

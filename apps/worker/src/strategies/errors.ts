@@ -10,6 +10,10 @@ const GONE =
 const RETRY =
   /\b(429|5\d\d)\b|rate.?limit|too many requests|login required|log in|sign in|requested content is not available|checkpoint|timed out|timeout|temporar|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|network|unable to download webpage|cookies/i;
 
+/** Failure text that means the session is missing or dead, as opposed to a plain rate limit. */
+const AUTH = /login required|log ?in|sign in|checkpoint|cookies|\b(401|403)\b/i;
+export const looksLikeAuthFailure = (message: string) => AUTH.test(message);
+
 export function classifyError(error: unknown): ErrorClass {
   if (error instanceof BlockedTargetError) return error.reason === "too_large" ? "fatal" : "blocked";
   if (error instanceof HttpStatusError) {

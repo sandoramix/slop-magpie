@@ -132,3 +132,8 @@ Most fixes touch only the API or worker, and an APK build takes about 30 minutes
 One account could fill the Pi's disk.
 **Decision:** `users.storage_limit_bytes` (default 50 GB, null = unlimited), changed by an admin through `PATCH /users/:id`. Usage is the sum of `media.bytes` (originals only; thumbnails are small and untracked), computed on demand. At the limit, `POST /items` answers `403 forbidden` and the worker fails a fetch whose files would overflow it. Errors reuse existing codes so older app builds still parse them (D24).
 **Consequences:** lowering a limit below current use deletes nothing; it only blocks new data. The check is not atomic, so concurrent fetches can overshoot by the size of one item.
+
+## D28 — Automatic Instagram login (2026-10-20)
+Exported browser cookies for Instagram kept dying, so `instagram.txt` had to be re-uploaded often.
+**Decision:** a source may define `login()`; Instagram's runs `gallery-dl` with `INSTAGRAM_USERNAME` / `INSTAGRAM_PASSWORD` and `--cookies-export`, since yt-dlp cannot log in. The session lives in a writable `SESSIONS_DIR` and beats the manual cookie file. The worker logs in when no session exists and once per fetch when the chain fails with an auth-looking error, at most once per source every 15 minutes (in memory, per worker process). Password goes to gallery-dl through a 0600 config file in tmpfs, not argv.
+**Consequences:** the password sits in the worker env. Accounts with 2FA or a checkpoint fail the login and keep using the manual file. A flagged account stops working until the owner resolves it on the Instagram side; use a secondary account.
