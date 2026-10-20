@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-10-20
+### Fixed
+
+- Instagram's automatic sign-in now works through Instagram's own web login. The previous method no longer exists, so it never signed in.
+
 ## [1.4.1] - 2026-10-20
 ### Fixed
 

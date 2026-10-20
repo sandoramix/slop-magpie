@@ -1,5 +1,4 @@
 import type { StrategyId, StrategyOptions } from "../strategies/types.ts";
-import type { Runner } from "../tools/run.ts";
 
 export interface LoginCredentials {
   username: string;
@@ -7,9 +6,7 @@ export interface LoginCredentials {
 }
 
 export interface SourceLoginContext {
-  run: Runner;
-  /** Empty directory; deleted after the login. */
-  tmpDir: string;
+  fetch: typeof globalThis.fetch;
   credentials: LoginCredentials;
 }
 
@@ -19,6 +16,6 @@ export interface SourceFetcher {
   /** Tried in order; the first that yields media wins. */
   strategies: readonly StrategyId[] | ((url: string) => readonly StrategyId[]);
   options?: Partial<StrategyOptions>;
-  /** Logs in with the configured credentials and writes the session cookies (Netscape format) to `cookiesFile`. Throws on failure. */
-  login?(ctx: SourceLoginContext, cookiesFile: string): Promise<void>;
+  /** Logs in with the configured credentials and returns the session as cookies.txt (Netscape format). Throws on failure. */
+  login?(ctx: SourceLoginContext): Promise<string>;
 }
