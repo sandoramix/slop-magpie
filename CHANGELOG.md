@@ -6,6 +6,12 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.4.4] - 2026-10-20
+### Changed
+
+- `INSTAGRAM_PASSWORD` is now optional. Without it the server never signs in to Instagram itself and only reuses a session file you imported, which avoids Instagram's login checkpoint.
+
+
 ## [1.4.3] - 2026-10-20
 ### Fixed
 

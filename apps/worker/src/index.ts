@@ -45,9 +45,7 @@ const ctx: WorkerContext = {
   cookiesDir: env.COOKIES_DIR,
   sessionsDir: env.SESSIONS_DIR,
   logins:
-    env.INSTAGRAM_USERNAME && env.INSTAGRAM_PASSWORD
-      ? { instagram: { username: env.INSTAGRAM_USERNAME, password: env.INSTAGRAM_PASSWORD } }
-      : {},
+    env.INSTAGRAM_USERNAME ? { instagram: { username: env.INSTAGRAM_USERNAME, password: env.INSTAGRAM_PASSWORD ?? null } } : {},
   tmpDir: env.WORKER_TMP_DIR,
   maxVideoBytes: env.MAX_VIDEO_MB * MB,
   maxDownloadBytes: env.MAX_DOWNLOAD_MB * MB,

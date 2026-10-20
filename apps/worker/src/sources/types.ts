@@ -2,7 +2,8 @@ import type { StrategyId, StrategyOptions } from "../strategies/types.ts";
 
 export interface LoginCredentials {
   username: string;
-  password: string;
+  /** Absent when the session is imported by hand and the worker must never sign in itself. */
+  password: string | null;
 }
 
 /** How to fetch one source (docs/sources.md). `id` matches the SourceDef in packages/shared. */

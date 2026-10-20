@@ -40,7 +40,7 @@ Point `MEDIA_DIR` at a big disk (e.g. an SSD mount) for real use. A one-shot `in
 
 Put per-source cookie files in the cookies dir named `<source-id>.txt`, e.g. `instagram.txt`. `init` makes them `600` and owned by uid 1000 on the next deploy.
 
-To skip the manual upload for Instagram, set `INSTAGRAM_USERNAME` and `INSTAGRAM_PASSWORD` (a secondary account **without 2FA**). The worker (through `instaloader`) logs in itself, keeps the session in the sessions dir and logs in again only when it dies; see [sources.md](sources.md#automatic-login). Redeploying keeps the session; deleting `instagram.session` from the sessions dir forces a fresh login.
+To skip the manual upload for Instagram, set `INSTAGRAM_USERNAME` and `INSTAGRAM_PASSWORD` (a secondary account **without 2FA**). The worker (through `instaloader`) logs in itself, keeps the session in the sessions dir and logs in again only when it dies; see [sources.md](sources.md#automatic-login). Redeploying keeps the session; deleting `instagram.session` from the sessions dir forces a fresh login. If Instagram answers the server's login with a checkpoint, leave `INSTAGRAM_PASSWORD` unset and create the session on a PC instead: log in to the account in Firefox, run `instaloader --load-cookies firefox --sessionfile instagram.session`, and copy the file into the sessions dir. The worker then only reuses it and never signs in.
 
 ## 3. Coolify
 
