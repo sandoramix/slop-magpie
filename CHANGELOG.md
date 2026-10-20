@@ -6,6 +6,15 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-10-20
+### Added
+
+- Instagram saves no longer need a cookie file uploaded by hand. The server can sign in to a spare Instagram account itself and renews the session when it expires.
+
+### Upgrade notes
+
+- Optional: set `INSTAGRAM_USERNAME` and `INSTAGRAM_PASSWORD` on the worker (a spare account without 2FA). Without them nothing changes and `instagram.txt` keeps working.
+
 ## [1.3.0] - 2026-10-17
 ### Added
 
