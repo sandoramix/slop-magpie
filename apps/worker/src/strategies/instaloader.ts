@@ -90,10 +90,12 @@ export const instaloader: Strategy = {
 
     const hasSession = await exists(login.sessionFile);
     let password = hasSession ? null : login.password();
-    if (!hasSession && password === null) throw new Error("instaloader: no session yet and the last login attempt was less than 15 minutes ago");
+    if (!hasSession && password === null) throw new Error("instaloader: no session file and no login allowed (INSTAGRAM_PASSWORD unset, or the last login attempt was less than 15 minutes ago)");
     try {
       await run(ctx, login, outDir, shortcode, password, [], 10 * 60_000);
     } catch (error) {
+      // the thrown message keeps only the last stderr line ("EOFError"), which hides why the session was refused
+      if (error instanceof ToolError) ctx.log.warn({ hasSession, stderr: error.stderr.split("\n").slice(-8).join("\n") }, "instaloader stderr");
       if (password !== null || !isAuthFailure(error)) throw error;
       // the saved session died: one rate-limited login, then the same download again
       password = login.password();

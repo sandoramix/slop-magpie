@@ -18,6 +18,7 @@ export function loginFor(ctx: WorkerContext, sourceId: string): StrategyLogin | 
     username: credentials.username,
     sessionFile: path.join(ctx.sessionsDir, `${sourceId}.session`),
     password() {
+      if (credentials.password === null) return null;
       const last = lastAttempt.get(sourceId);
       if (last !== undefined && Date.now() - last < LOGIN_COOLDOWN_MS) return null;
       lastAttempt.set(sourceId, Date.now());
