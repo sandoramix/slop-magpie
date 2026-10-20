@@ -8,10 +8,11 @@ export type ErrorClass = "blocked" | "gone" | "retry" | "fatal";
 const GONE =
   /\b(404|410)\b|not found|no longer available|not available|has been removed|was removed|been deleted|does not exist|private (video|account|post)|this (video|post|content) is (unavailable|private)|unavailable video|account.*(suspended|terminated)/i;
 const RETRY =
-  /\b(429|5\d\d)\b|rate.?limit|too many requests|login required|log in|sign in|requested content is not available|checkpoint|timed out|timeout|temporar|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|network|unable to download webpage|cookies/i;
+  /\b(429|5\d\d)\b|rate.?limit|too many requests|login required|\blog ?in\b|sign in|requested content is not available|checkpoint|timed out|timeout|temporar|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|network|unable to download webpage|cookies/i;
 
 /** Failure text that means the session is missing or dead, as opposed to a plain rate limit. */
-const AUTH = /login required|log ?in|sign in|checkpoint|cookies|\b(401|403)\b/i;
+// yt-dlp reports Instagram's login wall as a JSON parse failure, gallery-dl as a redirect to the login page
+const AUTH = /\blog ?in\b|sign in|checkpoint|cookies|\b(401|403)\b|failed to parse json/i;
 export const looksLikeAuthFailure = (message: string) => AUTH.test(message);
 
 export function classifyError(error: unknown): ErrorClass {

@@ -187,7 +187,7 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
       });
     let outcome = await runWith();
     // a dead session looks like a transient failure; renew it once (cooldown-limited) and retry in place
-    if (!outcome.ok && outcome.errorClass === "retry" && looksLikeAuthFailure(outcome.error) && (await refreshSession(ctx, source))) {
+    if (!outcome.ok && outcome.errorClass !== "blocked" && looksLikeAuthFailure(outcome.error) && (await refreshSession(ctx, source))) {
       outcome = await runWith();
     }
     if (!outcome.ok) {
