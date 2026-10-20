@@ -26,7 +26,7 @@ export interface SourceFetcher {
   id: string;                         // same id as SourceDef
   strategies: StrategyId[];           // tried in order, e.g. ['yt-dlp', 'gallery-dl']
   options?: Partial<StrategyOptions>; // per-source tweaks (format selection, headers, ...)
-  login?(ctx, cookiesFile): Promise<void>; // optional automatic login, see Cookies below
+  login?(ctx): Promise<string>;       // optional automatic login, returns cookies.txt; see Cookies below
   // cookies are resolved by the worker: SESSIONS_DIR/<id>.txt, else COOKIES_DIR/<id>.txt
 }
 ```
@@ -99,7 +99,7 @@ Per-source cookie files in Netscape format at `COOKIES_DIR/<source-id>.txt` (rea
 
 ### Automatic login
 
-A `SourceFetcher` may define `login(ctx, cookiesFile)`, which logs in with credentials from the worker env and writes Netscape cookies. Today only `instagram` has one (gallery-dl logs in with `INSTAGRAM_USERNAME` / `INSTAGRAM_PASSWORD`; yt-dlp cannot log in to Instagram, so the exported cookies serve both tools). Sessions are stored in the writable `SESSIONS_DIR/<source-id>.txt` and win over the manual `COOKIES_DIR` file.
+A `SourceFetcher` may define `login(ctx)`, which logs in with credentials from the worker env and returns Netscape cookies. Today only `instagram` has one: it replays the website's own login (`/api/v1/web/accounts/login/ajax/`) with `INSTAGRAM_USERNAME` / `INSTAGRAM_PASSWORD`. Neither yt-dlp nor gallery-dl can log in to Instagram any more, so the worker does it and both tools read the resulting cookies. Instagram may answer a login from a server IP with a checkpoint; the failure reason is logged (`session login failed`). Sessions are stored in the writable `SESSIONS_DIR/<source-id>.txt` and win over the manual `COOKIES_DIR` file.
 
 The worker logs in when no session exists, and again (once per job) when the fetch chain fails with a login/checkpoint/cookies error. At most one login attempt per source every 15 minutes, because repeated logins get accounts flagged. Accounts with 2FA or a checkpoint challenge cannot use this; keep the manual cookie file for them.
 

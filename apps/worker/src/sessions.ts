@@ -1,4 +1,4 @@
-import { chmod, copyFile, mkdir, mkdtemp, rename, rm, stat } from "node:fs/promises";
+import { copyFile, mkdir, rename, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { WorkerContext } from "./context.ts";
 import { getFetcher } from "./sources/index.ts";
@@ -23,17 +23,13 @@ async function login(ctx: WorkerContext, sourceId: string): Promise<boolean> {
   if (last !== undefined && Date.now() - last < LOGIN_COOLDOWN_MS) return false;
   lastAttempt.set(sourceId, Date.now());
 
-  await mkdir(ctx.tmpDir, { recursive: true });
-  const tmpDir = await mkdtemp(path.join(ctx.tmpDir, "login-"));
   try {
-    const exported = path.join(tmpDir, "cookies.txt");
-    await fetcher.login({ run: ctx.run, tmpDir, credentials }, exported);
-    // the sessions dir is a different filesystem than tmp: stage next to the target so the rename is atomic
+    const cookies = await fetcher.login({ fetch: globalThis.fetch, credentials });
+    // stage next to the target so the rename is atomic
     await mkdir(ctx.sessionsDir, { recursive: true, mode: 0o700 });
     const target = sessionFile(ctx, sourceId);
     const staged = `${target}.new`;
-    await copyFile(exported, staged);
-    await chmod(staged, 0o600);
+    await writeFile(staged, cookies, { mode: 0o600 });
     await rename(staged, target);
     ctx.log.info({ source: sourceId }, "session refreshed");
     await ctx.audit("session.login", { source: sourceId, ok: true });
@@ -42,8 +38,6 @@ async function login(ctx: WorkerContext, sourceId: string): Promise<boolean> {
     ctx.log.warn({ source: sourceId, reason: errorMessage(error) }, "session login failed");
     await ctx.audit("session.login", { source: sourceId, ok: false, reason: errorMessage(error) });
     return false;
-  } finally {
-    await rm(tmpDir, { recursive: true, force: true });
   }
 }
 
