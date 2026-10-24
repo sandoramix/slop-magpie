@@ -17,14 +17,21 @@ export const auth = { Authorization: `Bearer ${TOKEN}` };
 
 export interface FakeJobs extends JobSender {
   sent: { queue: QueueKey; data: ItemJobData }[];
+  sentPlain: QueueKey[];
 }
 
 export function fakeJobs(): FakeJobs {
   const sent: FakeJobs["sent"] = [];
+  const sentPlain: QueueKey[] = [];
   return {
     sent,
+    sentPlain,
     sendItemJob(queue, data) {
       sent.push({ queue, data });
+      return Promise.resolve();
+    },
+    sendJob(queue) {
+      sentPlain.push(queue);
       return Promise.resolve();
     },
   };

@@ -4,6 +4,7 @@ import { setTimeout as sleep } from "node:timers/promises";
 import { items } from "@magpie/db";
 import { asc, eq, sql } from "drizzle-orm";
 import type { WorkerContext } from "../context.ts";
+import { syncCredentials } from "../credentials.ts";
 import { cookiesFor, loginFor } from "../sessions.ts";
 import { getFetcher, strategyOrder } from "../sources/index.ts";
 import { DEFAULT_STRATEGY_OPTIONS } from "../strategies/types.ts";
@@ -27,6 +28,7 @@ export async function sourceCheck(ctx: WorkerContext, options: { batch?: number;
   for (const row of rows) {
     const tmpDir = await mkdtemp(path.join(ctx.tmpDir, "check-"));
     try {
+      await syncCredentials(ctx, row.source);
       const fetcher = getFetcher(row.source);
       const first = strategyOrder(fetcher, row.canonicalUrl)[0] ?? "opengraph";
       const cookiesFile = await cookiesFor(ctx, row.source, tmpDir);

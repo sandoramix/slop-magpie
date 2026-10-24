@@ -3,6 +3,7 @@ import path from "node:path";
 import { items } from "@magpie/db";
 import { and, desc, eq, gt, lt, ne, or, sql } from "drizzle-orm";
 import type { WorkerContext } from "../context.ts";
+import { syncCredentials } from "../credentials.ts";
 import { loginFor, readSessionState, writeSessionState } from "../sessions.ts";
 import { getFetcher } from "../sources/index.ts";
 import { checkSession } from "../strategies/instaloader.ts";
@@ -41,6 +42,7 @@ async function requeueAffected(ctx: WorkerContext, sourceId: string): Promise<nu
  * back, everything saved in the meantime is fetched again.
  */
 export async function sessionCheck(ctx: WorkerContext, sourceId = "instagram") {
+  await syncCredentials(ctx, sourceId);
   const [probe] = await ctx.db
     .select({ url: items.canonicalUrl })
     .from(items)

@@ -184,6 +184,7 @@ function Root() {
           <Stack.Screen name="accounts" options={{ title: "Accounts", presentation: "modal" }} />
           <Stack.Screen name="account-form" options={{ title: "Account", presentation: "modal" }} />
           <Stack.Screen name="admin" options={{ title: "Users" }} />
+          <Stack.Screen name="credentials" options={{ title: "Instagram login" }} />
         </Stack.Protected>
         <Stack.Protected guard={!hasAccount}>
           <Stack.Screen name="welcome" options={{ headerShown: false }} />

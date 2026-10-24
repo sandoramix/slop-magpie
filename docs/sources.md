@@ -114,4 +114,6 @@ Instagram kills sessions and flags logins on purpose, so nothing here is "fixed 
 
 #### When the session dies
 
+**From the app (admin):** Settings → *Instagram login* uploads a session file or cookies and shows the verdict, so no SSH is needed. They are stored in the `source_credentials` table; before each fetch and check the worker writes them to `SESSIONS_DIR` (`instagram.session`, `instagram.cookies.txt`) when they are newer than the file there. Uploaded cookies win over `COOKIES_DIR/instagram.txt`. `INSTAGRAM_USERNAME` must still name the account the session belongs to.
+
 If `INSTAGRAM_PASSWORD` is unset, or Instagram answers the login with a checkpoint, `session.dead` stays until you import a session: log in to the account in Firefox on a PC, run `instaloader --load-cookies firefox --sessionfile instagram.session`, and copy the file into the sessions dir. The next `session-check` (or restart) sees it and re-fetches what was saved meanwhile. A session created from a real browser lasts far longer than one created by the server's own login.

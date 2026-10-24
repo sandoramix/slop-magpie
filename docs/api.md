@@ -74,6 +74,10 @@ Not part of the versioned API. `GET /invite` (no auth, static HTML) is the page 
 | POST | `/items/:id/refetch` | re-run pipeline (e.g. after failure) |
 | POST | `/items/refetch-failed` | re-run every failed item of the account → `{ affected }` (202) |
 | POST | `/items/refresh-suggestions` | re-extract keywords and suggestions for every ready item → `{ affected }` (202) |
+| GET | `/sources/:id/credentials` | admin: what login material is uploaded and the worker's session verdict (`ok` / `dead`) |
+| PUT | `/sources/:id/credentials/:kind` | admin: upload `session` (base64 of the instaloader session file) or `cookies` (cookies.txt); triggers a session check |
+| DELETE | `/sources/:id/credentials/:kind` | admin: remove uploaded `cookies` |
+| POST | `/sources/:id/credentials/check` | admin: run the session check now (202) |
 | PUT | `/items/:id/folders` | `{ folderIds }` — replaces manual assignments |
 | PUT | `/items/:id/tags` | `{ tagIds }` |
 | POST | `/items/:id/keywords` | `{ keyword }` manual |

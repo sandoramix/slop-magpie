@@ -1,6 +1,7 @@
 import { copyFile, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { WorkerContext } from "./context.ts";
+import { publishSessionState, uploadedCookiesFile } from "./credentials.ts";
 import type { StrategyLogin } from "./strategies/types.ts";
 
 // Instagram flags accounts that log in in a loop: one password use per source per window, success or not.
@@ -42,11 +43,14 @@ export async function readSessionState(ctx: WorkerContext, sourceId: string): Pr
 
 export async function writeSessionState(ctx: WorkerContext, sourceId: string, state: SessionState): Promise<void> {
   await writeFile(stateFile(ctx, sourceId), `${state}\n`, { mode: 0o600 });
+  await publishSessionState(ctx, sourceId, state);
 }
 
 /** `COOKIES_DIR/<id>.txt` as a private copy in `tmpDir`: the tools write cookies back on exit and the mount is read-only. */
 export async function cookiesFor(ctx: WorkerContext, sourceId: string, tmpDir: string): Promise<string | null> {
-  const file = path.join(ctx.cookiesDir, `${sourceId}.txt`);
+  // cookies uploaded from the app win over the mounted file
+  const uploaded = uploadedCookiesFile(ctx, sourceId);
+  const file = (await isFile(uploaded)) ? uploaded : path.join(ctx.cookiesDir, `${sourceId}.txt`);
   if (!(await isFile(file))) return null;
   const copy = path.join(tmpDir, "cookies.txt");
   await copyFile(file, copy);

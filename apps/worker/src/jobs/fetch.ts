@@ -11,6 +11,7 @@ import { transcodeVideo } from "../media/transcode.ts";
 import { BlockedTargetError, expandUrl } from "../net/ssrf.ts";
 import { getFetcher, strategyOrder } from "../sources/index.ts";
 import { runChain } from "../strategies/chain.ts";
+import { syncCredentials } from "../credentials.ts";
 import { cookiesFor, loginFor } from "../sessions.ts";
 import { type ErrorClass, errorMessage, logUrl } from "../strategies/errors.ts";
 import { DEFAULT_STRATEGY_OPTIONS, type FetchedFile, type FetchResult } from "../strategies/types.ts";
@@ -171,6 +172,7 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
   await mkdir(ctx.tmpDir, { recursive: true });
   const tmpDir = await mkdtemp(path.join(ctx.tmpDir, `fetch-${itemId}-`));
   try {
+    await syncCredentials(ctx, source);
     const fetcher = getFetcher(source);
     const order = strategyOrder(fetcher, url).map((id) => ctx.strategies[id]);
     const outcome = await runChain(order, {

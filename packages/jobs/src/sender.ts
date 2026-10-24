@@ -5,6 +5,8 @@ import { queues, type ItemJobData, type QueueKey } from "./queues.ts";
 export interface JobSender {
   /** Enqueues a per-item job. Duplicate fetches for the same item are collapsed. */
   sendItemJob(queue: QueueKey, data: ItemJobData): Promise<void>;
+  /** Enqueues a job without a payload (e.g. `sessionCheck` right after credentials changed). Repeats within seconds collapse. */
+  sendJob(queue: QueueKey): Promise<void>;
 }
 
 export interface PgBossSender extends JobSender {
@@ -24,6 +26,9 @@ export function senderFromBoss(boss: PgBoss): JobSender {
   return {
     async sendItemJob(queue, data) {
       await boss.send(queues[queue].name, data, { singletonKey: data.itemId });
+    },
+    async sendJob(queue) {
+      await boss.send(queues[queue].name, {}, { singletonKey: queue, singletonSeconds: 10 });
     },
   };
 }
