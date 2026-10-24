@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ToolError, type Runner } from "../tools/run.ts";
-import { instaloader } from "./instaloader.ts";
+import { checkSession, instaloader } from "./instaloader.ts";
 import { DEFAULT_STRATEGY_OPTIONS, type StrategyContext } from "./types.ts";
 
 let dir: string;
@@ -94,6 +94,48 @@ describe("instaloader", () => {
     };
     await expect(instaloader.fetch(context(run, { username: "bot", sessionFile, password: () => null }))).rejects.toThrow(/exited with 3/);
     expect(calls).toBe(1);
+  });
+
+  describe("checkSession", () => {
+    const sessionFile = () => path.join(dir, "s", "instagram.session");
+    const withSession = async () => {
+      await mkdir(path.dirname(sessionFile()), { recursive: true });
+      await writeFile(sessionFile(), "x");
+    };
+
+    it("is ok when the metadata-only run succeeds", async () => {
+      await withSession();
+      const run: Runner = () => Promise.resolve({ stdout: Buffer.alloc(0), stderr: "" });
+      expect(await checkSession(context(run, { username: "bot", sessionFile: sessionFile(), password: () => null }))).toBe("ok");
+    });
+
+    it("is dead when the session is refused and no login is allowed", async () => {
+      await withSession();
+      const run: Runner = () => Promise.reject(new ToolError("instaloader", 3, "Login required"));
+      expect(await checkSession(context(run, { username: "bot", sessionFile: sessionFile(), password: () => null }))).toBe("dead");
+    });
+
+    it("is dead without a session file and without a password", async () => {
+      const run: Runner = () => Promise.reject(new Error("must not run"));
+      expect(await checkSession(context(run, { username: "bot", sessionFile: sessionFile(), password: () => null }))).toBe("dead");
+    });
+
+    it("heals through one login", async () => {
+      await withSession();
+      let calls = 0;
+      const run: Runner = () => {
+        calls += 1;
+        if (calls === 1) return Promise.reject(new ToolError("instaloader", 3, "Login required"));
+        return Promise.resolve({ stdout: Buffer.alloc(0), stderr: "" });
+      };
+      expect(await checkSession(context(run, { username: "bot", sessionFile: sessionFile(), password: () => "pw" }))).toBe("ok");
+    });
+
+    it("is unknown on a network error", async () => {
+      await withSession();
+      const run: Runner = () => Promise.reject(new ToolError("instaloader", 1, "ConnectionException: timed out"));
+      expect(await checkSession(context(run, { username: "bot", sessionFile: sessionFile(), password: () => null }))).toBe("unknown");
+    });
   });
 
   it("fails fast without an account", async () => {

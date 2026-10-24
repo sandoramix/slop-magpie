@@ -102,3 +102,16 @@ Per-source cookie files in Netscape format at `COOKIES_DIR/<source-id>.txt` (rea
 Instagram needs a logged-in account. With `INSTAGRAM_USERNAME` / `INSTAGRAM_PASSWORD` set (one dedicated account owned by the server admin; users never provide credentials or cookies), the `instaloader` strategy keeps a session file in the writable `SESSIONS_DIR/instagram.session` and reuses it for every fetch. It logs in only when there is no session or the saved one has died, passes the password on stdin (not argv), and the worker allows one password use per 15 minutes, because repeated logins get accounts flagged. Neither yt-dlp nor gallery-dl can log in to Instagram, so they only see the manual cookie file.
 
 If the first login hits a checkpoint, confirm "it was me" in the Instagram app, then wait out the 15 minutes (or restart the worker) and save a link again. The account must not use 2FA. Without credentials, `instaloader` fails fast and the chain falls back to yt-dlp / gallery-dl with `instagram.txt`. Deleting the session file forces a fresh login.
+
+### Staying alive without babysitting
+
+Instagram kills sessions and flags logins on purpose, so nothing here is "fixed once"; the worker instead notices and heals:
+
+- **`session-check`** (every 6 h) runs a metadata-only instaloader request for the newest archived post. That keeps the session in use, renews a dead one through the rate-limited password login (if `INSTAGRAM_PASSWORD` is set), and records `ok`/`dead` in `SESSIONS_DIR/instagram.state`. `session.dead` and `session.recovered` go to the audit log; a dead session is also logged at `error`.
+- **Last-resort strategy `opengraph`** with a link-preview crawler User-Agent (`pageUserAgent`). Instagram serves caption, author and a preview image to crawlers without a login, so a save during an outage becomes a `link` item with a preview instead of a failure. Private or deleted posts return no tags and still fail.
+- **Re-fetch on recovery.** When a `dead` session turns `ok`, items from the last 30 days that failed or were kept as an OpenGraph-only `link` are fetched again (up to 100).
+- **`tool-update`** (daily and once at start) installs the newest yt-dlp, gallery-dl and instaloader into `SESSIONS_DIR/pytools`, which shadows the versions baked into the image. The new set must start (`--version`) or it is rolled back. Extractor breakage from site changes is therefore fixed within a day without a rebuild.
+
+#### When the session dies
+
+If `INSTAGRAM_PASSWORD` is unset, or Instagram answers the login with a checkpoint, `session.dead` stays until you import a session: log in to the account in Firefox on a PC, run `instaloader --load-cookies firefox --sessionfile instagram.session`, and copy the file into the sessions dir. The next `session-check` (or restart) sees it and re-fetches what was saved meanwhile. A session created from a real browser lasts far longer than one created by the server's own login.

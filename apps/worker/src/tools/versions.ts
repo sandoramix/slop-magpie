@@ -11,11 +11,11 @@ const TOOLS = [
 ] as const;
 
 /** Versions of the external CLIs; null when a tool is missing. Logged at start-up. */
-export async function toolVersions(): Promise<Record<string, string | null>> {
+export async function toolVersions(env?: NodeJS.ProcessEnv): Promise<Record<string, string | null>> {
   const entries = await Promise.all(
     TOOLS.map(async ({ name, args }) => {
       try {
-        const { stdout } = await run(name, args, { timeout: 10_000 });
+        const { stdout } = await run(name, args, { timeout: 10_000, ...(env ? { env } : {}) });
         return [name, stdout.split("\n")[0]?.trim() ?? ""] as const;
       } catch {
         return [name, null] as const;

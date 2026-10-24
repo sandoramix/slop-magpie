@@ -3,24 +3,28 @@ import { ensureQueues, ItemJobData, queues, senderFromBoss } from "@magpie/jobs"
 import { createBlobStore } from "@magpie/storage";
 import { PgBoss } from "pg-boss";
 import type { WorkerContext } from "./context.ts";
-import { env } from "./env.ts";
+import { env, toolEnv } from "./env.ts";
 import { auditPrune } from "./jobs/audit-prune.ts";
 import { blobDelete } from "./jobs/blob-delete.ts";
 import { categorizeItem } from "./jobs/categorize.ts";
 import { extractItem } from "./jobs/extract.ts";
 import { fetchItem } from "./jobs/fetch.ts";
+import { sessionCheck } from "./jobs/session-check.ts";
 import { sourceCheck } from "./jobs/source-check.ts";
 import { sweep } from "./jobs/sweep.ts";
 import { thumbnailItem } from "./jobs/thumbnail.ts";
 import { createLogger } from "./logger.ts";
 import { createGuard } from "./net/ssrf.ts";
 import { strategies } from "./strategies/index.ts";
-import { runTool } from "./tools/run.ts";
+import { runTool, setToolEnv } from "./tools/run.ts";
+import { toolsDirFor, updateTools } from "./tools/update.ts";
 import { toolVersions } from "./tools/versions.ts";
 import { APP_VERSION } from "./version.ts";
 
 const log = createLogger(env.LOG_LEVEL, env.LOG_FORMAT);
-log.info({ version: APP_VERSION, tools: await toolVersions() }, "worker starting");
+const toolsDir = toolsDirFor(env.SESSIONS_DIR);
+setToolEnv(toolEnv(toolsDir));
+log.info({ version: APP_VERSION, tools: await toolVersions(toolEnv(toolsDir)) }, "worker starting");
 
 const database = createDb(env.DATABASE_URL, { max: 3 });
 const { db } = database;
@@ -103,7 +107,20 @@ await boss.work(queues.sweep.name, async () => {
   if (requeued.fetch || requeued.thumbnail) log.info(requeued, "sweep re-enqueued work");
 });
 
+await boss.work(queues.sessionCheck.name, async () => {
+  log.info(await sessionCheck(ctx), "session check done");
+});
+
+await boss.work(queues.toolUpdate.name, async () => {
+  await updateTools(runTool, log, toolsDir);
+  log.info({ tools: await toolVersions(toolEnv(toolsDir)) }, "tools after update");
+});
+
 await boss.schedule(queues.auditPrune.name, "17 4 * * *");
+await boss.schedule(queues.sessionCheck.name, "41 */6 * * *");
+await boss.schedule(queues.toolUpdate.name, "11 5 * * *");
+// also once per start: a redeploy then picks up releases without waiting for the schedule
+await boss.send(queues.toolUpdate.name, {}, { singletonKey: "boot", singletonSeconds: 3600 });
 await boss.schedule(queues.sourceCheck.name, "23 3 * * 1");
 await boss.schedule(queues.sweep.name, "*/15 * * * *");
 

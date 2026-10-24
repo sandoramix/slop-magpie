@@ -32,6 +32,8 @@ export interface StrategyOptions {
   /** Extra HTTP headers for our own requests (opengraph/direct/gallery-dl downloads). */
   headers: Record<string, string>;
   maxItems: number;
+  /** User-Agent for the opengraph page request only, e.g. a link-preview crawler that sites serve without a login. */
+  pageUserAgent?: string;
 }
 
 /** Account the worker may log in with, for tools that keep their own session (instaloader). */
