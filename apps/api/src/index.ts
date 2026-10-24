@@ -26,6 +26,7 @@ const deps: AppDeps = {
   apiToken: env.API_TOKEN,
   corsOrigins: env.CORS_ORIGINS,
   trustProxy: env.TRUST_PROXY,
+  adminWebUi: env.ADMIN_WEB_UI,
   log,
   checkDb: database.ping,
   async audit(event) {

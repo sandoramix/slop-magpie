@@ -16,6 +16,8 @@ export const env = createEnv({
     MEDIA_URL_TTL_SECONDS: z.coerce.number().int().min(60).default(3600),
     // behind Coolify's proxy the client IP comes from X-Forwarded-For
     TRUST_PROXY: z.stringbool().default(false),
+    // the /admin page for replacing the Instagram login from a browser; the token is typed in, never stored
+    ADMIN_WEB_UI: z.stringbool().default(true),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

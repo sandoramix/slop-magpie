@@ -5,6 +5,9 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+### Added
+
+- Admins can also replace the Instagram session or cookies from a browser on a PC: open `https://<your server>/admin`, type the admin token, and upload. The token is kept only in that tab, never stored, and forgotten after 10 idle minutes.
 
 ## [1.6.0] - 2026-10-24
 ### Added

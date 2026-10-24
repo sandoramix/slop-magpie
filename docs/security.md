@@ -22,6 +22,10 @@ Rules:
 - **Isolation:** every query is scoped by the owner (`deps.userId`); ids from another account answer 404 (or 400 when used as a folder/tag reference). Tested in `apps/api/src/accounts.int.test.ts`.
 - Mobile app: the server URL and one token per saved account (the generated token, or the session token after a password login), kept in `expo-secure-store`; never in the APK or MMKV.
 
+## Admin web page
+
+`/admin` (`ADMIN_WEB_UI`, default on) is a static page for replacing the Instagram session or cookies from a browser. It adds no server-side session: the admin token is typed in, kept in a JS variable, sent as a bearer token to the admin-only `/api/v1/sources/:id/credentials` routes, and dropped on log out, after 10 idle minutes or on `pagehide`. Nothing is written to cookies or web storage, so there is nothing for CSRF to ride on, and wrong tokens hit the same failed-auth rate limit and audit entries as any API call. The page uses `textContent` only, a hash-based CSP (`default-src 'none'`, `connect-src 'self'`, no `unsafe-inline`), `frame-ancestors 'none'`, `no-store` and `no-referrer`. Uploaded material is never returned by the API, logged or audited (only that a change happened).
+
 ## Media authorization
 
 Media URLs are HMAC-signed with `MEDIA_SIGNING_SECRET` (separate from `API_TOKEN`) and expire (default 1 h). This lets `<Image>`/`<video>`/web `<img>` load media without headers and without ever putting the API token in a URL.
