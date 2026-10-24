@@ -5,6 +5,8 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+
+## [1.7.0] - 2026-10-24
 ### Added
 
 - Sharing a link to an Instagram comment now saves the post together with that comment (its text, author, date and likes), shown on the item. Sharing a different comment of a post you already saved adds it to that item.
