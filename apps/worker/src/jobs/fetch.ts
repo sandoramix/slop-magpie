@@ -2,6 +2,7 @@ import { createReadStream } from "node:fs";
 import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { items, itemFolders, itemTags, media, users } from "@magpie/db";
+import { SharedComment } from "@magpie/shared/api";
 import { resolveSource } from "@magpie/shared/sources";
 import { extensionForContentType, itemKeys } from "@magpie/storage";
 import { and, eq, ne, or, sql } from "drizzle-orm";
@@ -14,7 +15,7 @@ import { runChain } from "../strategies/chain.ts";
 import { syncCredentials } from "../credentials.ts";
 import { cookiesFor, loginFor } from "../sessions.ts";
 import { type ErrorClass, errorMessage, logUrl } from "../strategies/errors.ts";
-import { DEFAULT_STRATEGY_OPTIONS, type FetchedFile, type FetchResult } from "../strategies/types.ts";
+import { DEFAULT_STRATEGY_OPTIONS, type FetchedComment, type FetchedFile, type FetchResult } from "../strategies/types.ts";
 import { titleFromCaption } from "../text/keywords.ts";
 
 /** Thrown to make pg-boss retry the job. */
@@ -38,6 +39,34 @@ function needsExpansion(url: URL, sourceId: string): boolean {
   if (SHORT_LINK_HOSTS.has(url.hostname.toLowerCase())) return true;
   // Instagram /share/... links carry an opaque id and redirect to the post
   return sourceId === "instagram" && url.pathname.startsWith("/share/");
+}
+
+function commentIdOf(url: string): string | null {
+  try {
+    return resolveSource(new URL(url)).commentId;
+  } catch {
+    return null;
+  }
+}
+
+function storedCommentId(value: unknown): string | null {
+  const parsed = SharedComment.safeParse(value);
+  return parsed.success ? parsed.data.id : null;
+}
+
+/** What to store for the shared comment: the text just read, else what an earlier fetch found, else a bare reference. */
+function sharedCommentOf(commentId: string, found: FetchedComment | undefined, previous: unknown): SharedComment {
+  if (found) {
+    return {
+      id: commentId,
+      text: found.text,
+      authorHandle: found.authorHandle ?? null,
+      postedAt: found.postedAt?.toISOString() ?? null,
+      likeCount: found.likeCount ?? null,
+    };
+  }
+  const old = SharedComment.safeParse(previous);
+  return old.success && old.data.id === commentId ? old.data : { id: commentId, text: null, authorHandle: null, postedAt: null, likeCount: null };
 }
 
 /** Moves links and notes of a duplicate onto the existing item, then deletes the duplicate. */
@@ -175,8 +204,11 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
     await syncCredentials(ctx, source);
     const fetcher = getFetcher(source);
     const order = strategyOrder(fetcher, url).map((id) => ctx.strategies[id]);
+    // the link the user shared (also after a /share/ expansion) names the comment, if any
+    const commentId = commentIdOf(url) ?? commentIdOf(item.sourceUrl) ?? storedCommentId(item.sharedComment);
     const outcome = await runChain(order, {
       url,
+      ...(commentId ? { commentId } : {}),
       tmpDir,
       cookiesFile: await cookiesFor(ctx, source, tmpDir),
       login: loginFor(ctx, source),
@@ -220,6 +252,7 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
           kind,
           title: item.title ?? result.title?.trim() ?? (caption ? titleFromCaption(caption) : null),
           caption: caption ?? item.caption,
+          ...(commentId ? { sharedComment: sharedCommentOf(commentId, result.comment, item.sharedComment) } : {}),
           authorHandle: result.author?.handle ?? item.authorHandle,
           authorName: result.author?.name ?? item.authorName,
           authorUrl: result.author?.url ?? item.authorUrl,

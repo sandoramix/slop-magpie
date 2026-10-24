@@ -11,6 +11,14 @@ export interface FetchedFile {
   mime: string;
 }
 
+export interface FetchedComment {
+  id: string;
+  text: string;
+  authorHandle?: string;
+  postedAt?: Date;
+  likeCount?: number;
+}
+
 /** Normalized output of every strategy (docs/sources.md). */
 export interface FetchResult {
   kind: "video" | "image" | "gallery" | "link";
@@ -20,6 +28,8 @@ export interface FetchResult {
   caption?: string;
   postedAt?: Date;
   files: FetchedFile[];
+  /** The comment the saved link pointed at (`StrategyContext.commentId`), when the strategy could read it. */
+  comment?: FetchedComment;
   /** Preview image for `link` items (og:image etc.), stored as the item's only media. */
   preview?: FetchedFile;
   /** Trimmed tool output, stored in `items.raw_meta`. */
@@ -47,6 +57,8 @@ export interface StrategyLogin {
 
 export interface StrategyContext {
   url: string;
+  /** Set when the link points at a comment on the post; strategies that can read comments return it as `comment`. */
+  commentId?: string;
   /** Empty per-job directory; deleted after the job. */
   tmpDir: string;
   cookiesFile: string | null;

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ToolError, type Runner } from "../tools/run.ts";
-import { checkSession, instaloader } from "./instaloader.ts";
+import { checkSession, findComment, instaloader } from "./instaloader.ts";
 import { DEFAULT_STRATEGY_OPTIONS, type StrategyContext } from "./types.ts";
 
 let dir: string;
@@ -135,6 +135,51 @@ describe("instaloader", () => {
       await withSession();
       const run: Runner = () => Promise.reject(new ToolError("instaloader", 1, "ConnectionException: timed out"));
       expect(await checkSession(context(run, { username: "bot", sessionFile: sessionFile(), password: () => null }))).toBe("unknown");
+    });
+  });
+
+  describe("shared comment", () => {
+    const comments = [
+      { id: 111, text: "first", created_at: 1_700_000_000, likes_count: 2, owner: { username: "a" }, answers: [{ id: 222, text: "a reply", owner: { username: "b" } }] },
+      { id: 333, text: "other", owner: { username: "c" } },
+    ];
+    const withComments: Runner = async (cmd, args, options) => {
+      await writes(cmd, args, options);
+      if (args.includes("--comments")) {
+        const out = args[args.indexOf("--dirname-pattern") + 1] ?? "";
+        await writeFile(path.join(out, "AbC_d-1_comments.json"), JSON.stringify(comments));
+      }
+      return { stdout: Buffer.alloc(0), stderr: "" };
+    };
+    const login = () => ({ username: "bot", sessionFile: path.join(dir, "s", "instagram.session"), password: () => "pw" });
+
+    it("finds a comment and a reply by id", () => {
+      expect(findComment(comments, "111")).toMatchObject({ text: "first", authorHandle: "a", likeCount: 2 });
+      expect(findComment(comments, "222")).toMatchObject({ text: "a reply", authorHandle: "b" });
+      expect(findComment(comments, "999")).toBeUndefined();
+    });
+
+    it("reads the comment in a second pass when the link names one", async () => {
+      const result = await instaloader.fetch({ ...context(withComments, login()), commentId: "111" });
+      expect(result.comment).toMatchObject({ id: "111", text: "first" });
+      expect(result.files).toHaveLength(2);
+    });
+
+    it("keeps the post when the comment pass fails", async () => {
+      const run: Runner = (cmd, args, options) => (args.includes("--comments") ? Promise.reject(new ToolError("instaloader", 1, "boom")) : writes(cmd, args, options));
+      const result = await instaloader.fetch({ ...context(run, login()), commentId: "111" });
+      expect(result.comment).toBeUndefined();
+      expect(result.files).toHaveLength(2);
+    });
+
+    it("does not ask for comments on a plain post", async () => {
+      const seen: string[][] = [];
+      const run: Runner = (cmd, args, options) => {
+        seen.push([...args]);
+        return writes(cmd, args, options);
+      };
+      await instaloader.fetch(context(run, login()));
+      expect(seen).toHaveLength(1);
     });
   });
 

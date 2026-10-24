@@ -13,6 +13,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { MediaCarousel } from "@/components/media-carousel";
+import { SharedCommentCard } from "@/components/shared-comment-card";
 import { WORKFLOW_META, WORKFLOW_ORDER } from "@/lib/workflow";
 import {
   useCreateFolder,
@@ -191,6 +192,7 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
         </View>
 
         {item.caption ? <Text className="text-sm text-muted-foreground">{item.caption}</Text> : null}
+        {item.sharedComment ? <SharedCommentCard comment={item.sharedComment} /> : null}
 
         <View className="flex-row gap-1">
           {[1, 2, 3, 4, 5].map((n) => (

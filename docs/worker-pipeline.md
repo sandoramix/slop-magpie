@@ -24,7 +24,7 @@ Source-agnostic. Details of sources and strategies: [sources.md](sources.md).
 4. Each strategy parses its tool output with zod into a common `FetchResult`. Unknown fields go to `raw_meta`.
 5. Optionally re-encode oversized video (`ffmpeg`, H.264 720p, CRF 23) if `> MAX_VIDEO_MB`.
 6. Storage limit: if the downloaded files plus the account's other media would exceed `users.storage_limit_bytes`, the item fails (`fetch_status = failed`, no retry) with a message saying so; "Refetch" works once space is freed or the limit raised. Otherwise hash (sha256), `BlobStore.put` each file under `items/<itemId>/<position>.<ext>`, insert `media` rows. No media at all → `kind = link`, preview image (if any) stored as media.
-7. Update item metadata (author, title, caption, posted_at, kind, source_item_id), set `availability = available`.
+7. Update item metadata (author, title, caption, posted_at, kind, source_item_id, `shared_comment`), set `availability = available`. When the saved link names a comment (Instagram `/p/<code>/c/<id>/` or `?comment_id=`), the strategy context carries `commentId`; `instaloader` then runs a second, comments-only pass (`--comments`) and returns the comment as `FetchResult.comment`. A failed or empty pass never fails the post: `shared_comment` keeps just the id until a later refetch reads it.
 
 Retries: 3 with exponential backoff (1 min, 10 min, 1 h). On final failure: `fetch_status = failed`, `fetch_error` set.
 

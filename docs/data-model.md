@@ -36,6 +36,7 @@ One saved piece of content (a reel, a post, a carousel, a pin).
 | author_name | text | |
 | author_url | text | |
 | caption | text | original caption / description |
+| shared_comment | jsonb | the comment a shared link pointed at: `{ id, text, authorHandle, postedAt, likeCount }` (`SharedComment` in `packages/shared`), `text` null until fetched. Nullable |
 | title | text | user-editable display title (defaults from source title or caption) |
 | notes | text | user notes |
 | posted_at | timestamptz | from source |

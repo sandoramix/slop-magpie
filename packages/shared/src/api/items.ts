@@ -83,6 +83,19 @@ export const ItemSuggestions = z.object({
 });
 export type ItemSuggestions = z.infer<typeof ItemSuggestions>;
 
+/**
+ * The comment a shared link pointed at. Kept with the post it was left on; `text` stays null until the worker
+ * has found the comment (or when it no longer exists).
+ */
+export const SharedComment = z.object({
+  id: z.string(),
+  text: z.string().nullable(),
+  authorHandle: z.string().nullable(),
+  postedAt: z.iso.datetime().nullable(),
+  likeCount: z.number().int().nonnegative().nullable(),
+});
+export type SharedComment = z.infer<typeof SharedComment>;
+
 export const ItemDetail = ItemSummary.extend({
   sourceUrl: z.string(),
   canonicalUrl: z.string(),
@@ -91,6 +104,8 @@ export const ItemDetail = ItemSummary.extend({
   authorName: z.string().nullable(),
   authorUrl: z.string().nullable(),
   caption: z.string().nullable(),
+  /** Present when the saved link was a comment on a post. */
+  sharedComment: SharedComment.nullable(),
   notes: z.string().nullable(),
   postedAt: z.iso.datetime().nullable(),
   fetchError: z.string().nullable(),

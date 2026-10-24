@@ -16,6 +16,7 @@ export interface SourceDef {
   match(url: URL): boolean;           // host + path check (e.g. /reel/, /p/)
   normalize(url: URL): string;        // canonical URL: strip tracking params, fixed host, no trailing slash
   extractId?(url: URL): string | null;// platform ID / shortcode, used for dedupe across URL variants
+  extractCommentId?(url: URL): string | null; // id of the comment a link points at; the item keeps it as `shared_comment`
 }
 ```
 

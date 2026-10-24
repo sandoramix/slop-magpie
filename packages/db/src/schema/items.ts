@@ -19,6 +19,8 @@ export const items = pgTable(
     authorName: text(),
     authorUrl: text(),
     caption: text(),
+    // comment a shared link pointed at (`SharedComment` in packages/shared), validated on read
+    sharedComment: jsonb().$type<unknown>(),
     title: text(),
     notes: text(),
     postedAt: timestamptz(),

@@ -5,6 +5,13 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+### Added
+
+- Sharing a link to an Instagram comment now saves the post together with that comment (its text, author, date and likes), shown on the item. Sharing a different comment of a post you already saved adds it to that item.
+
+### Changed
+
+- The quick filing sheet after sharing now shows the preview picture, title and description of what you saved, with the download progress (Link saved, Downloading, Preview ready), and updates by itself as the download finishes.
 
 ## [1.6.1] - 2026-10-24
 ### Added

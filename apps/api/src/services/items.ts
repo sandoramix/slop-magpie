@@ -24,6 +24,7 @@ import {
   type ItemListResponse,
   type ItemSummary,
   type SetItemFoldersBody,
+  SharedComment,
   type SetItemTagsBody,
   SmartFolderQuery,
   type SuggestionsBody,
@@ -164,6 +165,7 @@ export async function getItem(deps: ServiceDeps, id: string, db: Db = deps.db): 
     authorName: item.authorName,
     authorUrl: item.authorUrl,
     caption: item.caption,
+    sharedComment: parseSharedComment(item.sharedComment),
     notes: item.notes,
     postedAt: iso(item.postedAt),
     fetchError: item.fetchError,
@@ -255,6 +257,13 @@ async function assertExist(db: Db, userId: string, table: typeof folders | typeo
   if ((row?.n ?? 0) !== unique.length) throw new ApiError(400, "bad_request", `Unknown ${what} id`);
 }
 
+const pendingComment = (id: string): SharedComment => ({ id, text: null, authorHandle: null, postedAt: null, likeCount: null });
+
+function parseSharedComment(value: unknown): SharedComment | null {
+  const parsed = SharedComment.safeParse(value);
+  return parsed.success ? parsed.data : null;
+}
+
 async function findDuplicate(db: Db, userId: string, canonicalUrl: string, source: string, sourceItemId: string | null) {
   const match = sourceItemId
     ? or(eq(items.canonicalUrl, canonicalUrl), and(eq(items.source, source), eq(items.sourceItemId, sourceItemId)))
@@ -295,7 +304,16 @@ export async function createItem(deps: ServiceDeps, body: CreateItemBody): Promi
     if (existing) {
       // sharing again with a folder/tag picked files the existing item there
       await linkFoldersAndTags(tx, existing, folderIds, tagIds);
-      return { id: existing, created: false };
+      // a comment on a post that is already saved: remember which one, the worker fetches its text
+      let commentChanged = false;
+      if (resolved.commentId) {
+        const [row] = await tx.select({ sharedComment: items.sharedComment }).from(items).where(eq(items.id, existing));
+        if (parseSharedComment(row?.sharedComment)?.id !== resolved.commentId) {
+          await tx.update(items).set({ sharedComment: pendingComment(resolved.commentId) }).where(eq(items.id, existing));
+          commentChanged = true;
+        }
+      }
+      return { id: existing, created: false, commentChanged };
     }
     const [row] = await tx
       .insert(items)
@@ -305,21 +323,23 @@ export async function createItem(deps: ServiceDeps, body: CreateItemBody): Promi
         canonicalUrl: resolved.canonicalUrl,
         source: resolved.source.id,
         sourceItemId: resolved.sourceItemId,
+        sharedComment: resolved.commentId ? pendingComment(resolved.commentId) : null,
         notes: body.notes ?? null,
       })
       .returning({ id: items.id });
     if (!row) throw new Error("insert returned no row");
     await linkFoldersAndTags(tx, row.id, folderIds, tagIds);
-    return { id: row.id, created: true };
+    return { id: row.id, created: true, commentChanged: false };
   }).catch(async (error: unknown) => {
     // lost a race with a concurrent save of the same URL
     if (!isUniqueViolation(error)) throw error;
     const id = await findDuplicate(deps.db, deps.userId, resolved.canonicalUrl, resolved.source.id, resolved.sourceItemId);
     if (!id) throw error;
-    return { id, created: false };
+    return { id, created: false, commentChanged: false };
   });
 
   if (result.created) await enqueueFetch(deps, result.id);
+  else if (result.commentChanged) await refetchItems(deps, [result.id]);
   return {
     status: result.created ? 202 : 200,
     body: { item: await getItem(deps, result.id), duplicate: !result.created },
