@@ -5,9 +5,15 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+### Added
+
+- **Sort** is now the first tab. "Start sorting" walks through your unsorted saves one at a time: the suggested tags and folders are already selected, tap to drop or add more, then say what the item is for (To try, Keep or Done) and move on.
+- "Retry all failed" in the Failed list downloads every failed save again, and "Refresh suggestions" works out new suggestions for your whole library.
+
 ### Changed
 
-- New actions to fetch every failed save again and to refresh suggestions for the whole library, and suggestions are recomputed every night for items you have not organized yet.
+- Statuses are renamed so they make sense: Inbox is now **To sort**, Reference is **Keep**, and each status has a one-line explanation. Failed and removed lists explain what they mean.
+- Suggestions are recomputed every night for items you have not organized yet.
 - Suggestions are smarter: a hashtag or word that matches the name of one of your tags or folders is suggested right away, and posts by an author you have already filed are suggested into the same places.
 
 ## [1.5.0] - 2026-10-24

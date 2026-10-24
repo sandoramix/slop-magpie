@@ -237,6 +237,24 @@ export function useBulk() {
   });
 }
 
+/** Every failed save again, not just a selection. */
+export function useRefetchFailed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => request("POST", "/items/refetch-failed", { schema: BulkResponse }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/** New suggestions for the whole library; they appear as the worker gets to each item. */
+export function useRefreshSuggestions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => request("POST", "/items/refresh-suggestions", { schema: BulkResponse }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
 export function useCreateFolder() {
   const qc = useQueryClient();
   return useMutation({
