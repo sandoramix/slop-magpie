@@ -5,6 +5,9 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+### Changed
+
+- Suggestions are smarter: a hashtag or word that matches the name of one of your tags or folders is suggested right away, and posts by an author you have already filed are suggested into the same places.
 
 ## [1.5.0] - 2026-10-24
 ### Fixed

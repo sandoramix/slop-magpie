@@ -109,7 +109,7 @@ Instagram kills sessions and flags logins on purpose, so nothing here is "fixed 
 
 - **`session-check`** (every 6 h) runs a metadata-only instaloader request for the newest archived post. That keeps the session in use, renews a dead one through the rate-limited password login (if `INSTAGRAM_PASSWORD` is set), and records `ok`/`dead` in `SESSIONS_DIR/instagram.state`. `session.dead` and `session.recovered` go to the audit log; a dead session is also logged at `error`.
 - **Last-resort strategy `opengraph`** with a link-preview crawler User-Agent (`pageUserAgent`). Instagram serves caption, author and a preview image to crawlers without a login, so a save during an outage becomes a `link` item with a preview instead of a failure. Private or deleted posts return no tags and still fail.
-- **Re-fetch on recovery.** When a `dead` session turns `ok`, items from the last 30 days that failed or were kept as an OpenGraph-only `link` are fetched again (up to 100).
+- **Re-fetch on every good check.** After each successful check, items from the last 30 days that failed or were kept as an OpenGraph-only `link` are fetched again (up to 100 per check, at most 8 attempts per item so private or removed posts stop looping). Because it does not depend on seeing the session die, saves that failed between two checks are picked up too. You can also select items in the app and refetch them in bulk by hand.
 - **`tool-update`** (daily and once at start) installs the newest yt-dlp, gallery-dl and instaloader into `SESSIONS_DIR/pytools`, which shadows the versions baked into the image. The new set must start (`--version`) or it is rolled back. Extractor breakage from site changes is therefore fixed within a day without a rebuild.
 
 #### When the session dies
