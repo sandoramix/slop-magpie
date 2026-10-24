@@ -28,13 +28,13 @@ Dev setup for tests: `DATABASE_URL` (env or root `.env`) must point at a server 
 Organizing is the focus of the app: keywords, suggestions and tags first, everything reachable in a few taps.
 
 - [x] Suggestions from tag/folder **names** (cold start) and from the **same author's** earlier items (`categorize.ts`)
-- [ ] **Backfill for existing items**: re-run extract + categorize over the whole library (cron for unorganized items, plus an on-demand "refresh suggestions" bulk op)
+- [x] **Backfill for existing items**: re-run extract + categorize over the whole library (cron for unorganized items, plus an on-demand "refresh suggestions" bulk op)
 - [ ] Keyword quality: phrases, merge variants (`slow_cooker` / "slow cooker"), per-user stop terms
-- [ ] **Triage screen** as the app's home: one item at a time, accept / edit / reject suggested tags and folders, next
-- [ ] **Quick-tag sheet** right after sharing a link, before the fetch finishes
-- [ ] Bulk organize: apply or remove tags and folders on a selection, "apply to similar items"
-- [ ] **Bulk refetch of everything failed** (not capped at a 500-id selection): `POST /items/refetch-failed` + a button in the Inbox
-- [ ] **Instagram credentials from the app** (admin): upload a session file / cookies without SSH. Store them in the DB (new table, additive migration), worker writes them to `SESSIONS_DIR` / a private cookies copy when they are newer than the file, then runs `session-check` immediately. Show the session state (`ok`/`dead`, last check) in the admin screen.
+- [x] **Triage screen** as the app's home: one item at a time, accept / edit / reject suggested tags and folders, next
+- [x] **Quick-tag sheet** right after sharing a link, before the fetch finishes
+- [x] Bulk organize on a selection (tags, folders, suggestions, status) already existed; [ ] "apply to similar items" still open
+- [x] **Bulk refetch of everything failed** (not capped at a 500-id selection): `POST /items/refetch-failed` + a button in the Inbox
+- [x] **Instagram credentials from the app** (admin): upload a session file / cookies without SSH. Store them in the DB (new table, additive migration), worker writes them to `SESSIONS_DIR` / a private cookies copy when they are newer than the file, then runs `session-check` immediately. Show the session state (`ok`/`dead`, last check) in the admin screen.
 - [ ] Optional: shorter `session-check` interval while the state is `dead`
 
 ## M0 — Scaffold

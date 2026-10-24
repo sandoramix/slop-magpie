@@ -9,6 +9,7 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 - **Sort** is now the first tab. "Start sorting" walks through your unsorted saves one at a time: the suggested tags and folders are already selected, tap to drop or add more, then say what the item is for (To try, Keep or Done) and move on.
 - "Retry all failed" in the Failed list downloads every failed save again, and "Refresh suggestions" works out new suggestions for your whole library.
+- After sharing a link and choosing "Organize now", a quick sheet shows your most used tags and folders to tap, plus what the item is for, instead of opening the full item page.
 - Admins can replace the Instagram session or cookies from the app (Settings → Instagram login) and see whether the server's Instagram session still works, without logging in to the server.
 
 ### Changed
