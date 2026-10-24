@@ -72,6 +72,7 @@ Not part of the versioned API. `GET /invite` (no auth, static HTML) is the page 
 | PATCH | `/items/:id` | `title`, `notes`, `workflow`, `favorite`, `rating`, `custom` |
 | DELETE | `/items/:id` | deletes item + blobs |
 | POST | `/items/:id/refetch` | re-run pipeline (e.g. after failure) |
+| GET | `/items/:id/similar` | ids of unsorted items (no tag, no folder) sharing keywords with this one → `{ ids }` |
 | POST | `/items/refetch-failed` | re-run every failed item of the account → `{ affected }` (202) |
 | POST | `/items/refresh-suggestions` | re-extract keywords and suggestions for every ready item → `{ affected }` (202) |
 | GET | `/sources/:id/credentials` | admin: what login material is uploaded and the worker's session verdict (`ok` / `dead`) |

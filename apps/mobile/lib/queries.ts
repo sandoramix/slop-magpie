@@ -7,6 +7,7 @@ import {
   FoldersResponse,
   ItemDetail,
   ItemListResponse,
+  SimilarResponse,
   SmartFolder,
   SmartFoldersResponse,
   StatsResponse,
@@ -210,6 +211,11 @@ export function useSuggestionsAction(id: string, action: "accept" | "dismiss") {
       setItem(qc, item);
     },
   });
+}
+
+/** Unsorted items that look like this one (shared keywords), best match first. */
+export async function fetchSimilarIds(id: string): Promise<string[]> {
+  return (await request("GET", `/items/${id}/similar`, { schema: SimilarResponse })).ids;
 }
 
 export function useRefetchItem(id: string) {

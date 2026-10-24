@@ -32,7 +32,7 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 - [ ] Keyword quality: phrases, merge variants (`slow_cooker` / "slow cooker"), per-user stop terms
 - [x] **Triage screen** as the app's home: one item at a time, accept / edit / reject suggested tags and folders, next
 - [x] **Quick-tag sheet** right after sharing a link, before the fetch finishes
-- [x] Bulk organize on a selection (tags, folders, suggestions, status) already existed; [ ] "apply to similar items" still open
+- [x] Bulk organize on a selection (tags, folders, suggestions, status) already existed; [x] "apply to similar items" after filing one in the Sort flow
 - [x] **Bulk refetch of everything failed** (not capped at a 500-id selection): `POST /items/refetch-failed` + a button in the Inbox
 - [x] **Instagram credentials from the app** (admin): upload a session file / cookies without SSH. Store them in the DB (new table, additive migration), worker writes them to `SESSIONS_DIR` / a private cookies copy when they are newer than the file, then runs `session-check` immediately. Show the session state (`ok`/`dead`, last check) in the admin screen.
 - [ ] Optional: shorter `session-check` interval while the state is `dead`

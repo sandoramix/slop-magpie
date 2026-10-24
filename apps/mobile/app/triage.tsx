@@ -13,6 +13,8 @@ import { Text } from "@/components/ui/text";
 import {
   useCreateFolder,
   useCreateTag,
+  fetchSimilarIds,
+  useBulk,
   useFolders,
   useItem,
   useItems,
@@ -38,6 +40,7 @@ function Card({ item, onNext }: { item: ItemDetail; onNext: () => void }) {
   const setTags = useSetItemTags(item.id);
   const dismiss = useSuggestionsAction(item.id, "dismiss");
   const update = useUpdateItem(item.id);
+  const bulk = useBulk();
   const createFolder = useCreateFolder();
   const createTag = useCreateTag();
 
@@ -61,6 +64,27 @@ function Card({ item, onNext }: { item: ItemDetail; onNext: () => void }) {
     return next;
   };
 
+  /** Same tags and folders for the unsorted items that look alike, if the user wants it. */
+  const offerSimilar = async () => {
+    if (pickedFolders.size + pickedTags.size === 0) return;
+    const ids = await fetchSimilarIds(item.id).catch(() => [] as string[]);
+    if (ids.length === 0) return;
+    const yes = await new Promise<boolean>((resolve) => {
+      alert(
+        `${ids.length} similar item${ids.length === 1 ? "" : "s"}`,
+        "Unsorted saves with similar keywords. Give them the same tags and folders?",
+        [
+          { text: "No", style: "cancel", onPress: () => { resolve(false); } },
+          { text: "Apply to all", onPress: () => { resolve(true); } },
+        ],
+        { onDismiss: () => { resolve(false); } },
+      );
+    });
+    if (!yes) return;
+    for (const tagId of pickedTags) await bulk.mutateAsync({ ids, op: { op: "addTag", tagId } });
+    for (const folderId of pickedFolders) await bulk.mutateAsync({ ids, op: { op: "addFolder", folderId } });
+  };
+
   const answer = async (workflow: Workflow) => {
     setBusy(true);
     try {
@@ -68,6 +92,7 @@ function Card({ item, onNext }: { item: ItemDetail; onNext: () => void }) {
       if (pickedTags.size > 0) await setTags.mutateAsync([...new Set([...item.tags.map((t) => t.id), ...pickedTags])]);
       if (item.suggestions.folders.length + item.suggestions.tags.length > 0) await dismiss.mutateAsync({});
       await update.mutateAsync({ workflow });
+      await offerSimilar();
       onNext();
     } catch (e) {
       alert("Failed", e instanceof Error ? e.message : "Something went wrong");

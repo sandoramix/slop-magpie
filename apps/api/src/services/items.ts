@@ -32,7 +32,8 @@ import {
 } from "@magpie/shared/api";
 import { checkPublicUrl } from "@magpie/shared/net";
 import { resolveSource } from "@magpie/shared/sources";
-import { and, asc, count, desc, eq, inArray, notInArray, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, notExists, notInArray, or, type SQL, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { AuditEvent, ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
@@ -571,4 +572,33 @@ export async function bulk(deps: ServiceDeps, body: BulkBody, audit: Omit<AuditE
   }
   await db.insert(auditLog).values({ ...audit, action: "item.bulk", details: { op: body.op, count: existing.length } });
   return existing.length;
+}
+
+/**
+ * Items of the same account that have no tag and no folder yet and share keywords with this one, best match first.
+ * Powers "apply the same to similar items" after filing one.
+ */
+export async function similarUnsorted(deps: ServiceDeps, id: string): Promise<string[]> {
+  await assertItem(deps.db, deps.userId, id);
+  const a = alias(itemKeywords, "a");
+  const o = alias(itemKeywords, "o");
+  const score = sql`sum(least(${a.weight}, ${o.weight}))`;
+  const rows = await deps.db
+    .select({ id: o.itemId })
+    .from(a)
+    .innerJoin(o, and(eq(o.keyword, a.keyword), ne(o.itemId, a.itemId)))
+    .innerJoin(items, eq(items.id, o.itemId))
+    .where(
+      and(
+        eq(a.itemId, id),
+        eq(items.userId, deps.userId),
+        notExists(deps.db.select({ one: sql`1` }).from(itemTags).where(eq(itemTags.itemId, items.id))),
+        notExists(deps.db.select({ one: sql`1` }).from(itemFolders).where(eq(itemFolders.itemId, items.id))),
+      ),
+    )
+    .groupBy(o.itemId)
+    .having(sql`${score} >= 1`)
+    .orderBy(desc(score))
+    .limit(50);
+  return rows.map((r) => r.id);
 }

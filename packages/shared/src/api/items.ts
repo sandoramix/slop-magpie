@@ -251,3 +251,7 @@ export const ItemListResponse = z.object({
   nextCursor: z.string().nullable(),
 });
 export type ItemListResponse = z.infer<typeof ItemListResponse>;
+
+/** Ids of unsorted items that look like the one asked about. */
+export const SimilarResponse = z.object({ ids: z.array(z.uuid()) });
+export type SimilarResponse = z.infer<typeof SimilarResponse>;

@@ -8,6 +8,7 @@ import {
   ItemListQuery,
   SetItemFoldersBody,
   SetItemTagsBody,
+  type SimilarResponse,
   SuggestionsBody,
   UpdateItemBody,
 } from "@magpie/shared/api";
@@ -55,6 +56,9 @@ export const itemsRoutes = (deps: AppDeps) => {
       if ((await svc.refetchItems(scopeOf(deps, c), [id])) === 0) return errorResponse(c, 404, "not_found", "Item not found");
       return c.json(await svc.getItem(scopeOf(deps, c), id), 202);
     })
+    .get("/:id/similar", validate("param", IdParam), async (c) =>
+      c.json({ ids: await svc.similarUnsorted(scopeOf(deps, c), c.req.valid("param").id) } satisfies SimilarResponse, 200),
+    )
     .put("/:id/folders", validate("param", IdParam), validate("json", SetItemFoldersBody), async (c) =>
       c.json(await svc.setItemFolders(scopeOf(deps, c), c.req.valid("param").id, c.req.valid("json")), 200),
     )
