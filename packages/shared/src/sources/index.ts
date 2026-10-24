@@ -24,6 +24,8 @@ export interface ResolvedSource {
   source: SourceDef;
   canonicalUrl: string;
   sourceItemId: string | null;
+  /** Set when the link points at a comment on the post. */
+  commentId: string | null;
 }
 
 export function resolveSource(url: URL): ResolvedSource {
@@ -32,5 +34,6 @@ export function resolveSource(url: URL): ResolvedSource {
     source,
     canonicalUrl: source.normalize(url),
     sourceItemId: source.extractId?.(url) ?? null,
+    commentId: source.extractCommentId?.(url) ?? null,
   };
 }

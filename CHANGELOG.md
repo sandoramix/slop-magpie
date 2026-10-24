@@ -6,6 +6,15 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-24
+### Added
+
+- Sharing a link to an Instagram comment now saves the post together with that comment (its text, author, date and likes), shown on the item. Sharing a different comment of a post you already saved adds it to that item.
+
+### Changed
+
+- The quick filing sheet after sharing now shows the preview picture, title and description of what you saved, with the download progress (Link saved, Downloading, Preview ready), and updates by itself as the download finishes.
+
 ## [1.6.1] - 2026-10-24
 ### Added
 

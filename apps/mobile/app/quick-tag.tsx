@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { alert } from "@/lib/alert";
 import { Chip } from "@/components/chip";
+import { ImportPreview } from "@/components/import-preview";
 import { OptionPicker } from "@/components/option-picker";
 import { SafeAreaView } from "@/components/styled";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { useCreateFolder, useCreateTag, useFolders, useSetItemFolders, useSetItemTags, useTags, useUpdateItem } from "@/lib/queries";
+import { useCreateFolder, useCreateTag, useFolders, useItem, useSetItemFolders, useSetItemTags, useTags, useUpdateItem } from "@/lib/queries";
 import { WORKFLOW_META } from "@/lib/workflow";
 
 const PURPOSES: readonly Workflow[] = ["inbox", "to_try", "reference", "done"];
@@ -18,6 +19,7 @@ const SHOWN = 12;
 export default function QuickTagScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const item = useItem(id);
   const tags = useTags();
   const folders = useFolders();
   const setTags = useSetItemTags(id);
@@ -71,6 +73,7 @@ export default function QuickTagScreen() {
     <SafeAreaView edges={["bottom"]} className="flex-1 bg-background">
       <Stack.Screen options={{ title: "Saved. File it?" }} />
       <ScrollView contentContainerClassName="gap-4 p-4" keyboardShouldPersistTaps="handled">
+        {item.data ? <ImportPreview item={item.data} /> : null}
         <View className="gap-2">
           <Text className="text-xs font-semibold uppercase text-muted-foreground">Tags</Text>
           <View className="flex-row flex-wrap items-center gap-2">
@@ -98,7 +101,7 @@ export default function QuickTagScreen() {
           </View>
           <Text className="text-xs text-muted-foreground">{WORKFLOW_META[purpose].hint}</Text>
         </View>
-        <Text className="text-xs text-muted-foreground">The download is running in the background; suggestions appear when it finishes.</Text>
+        <Text className="text-xs text-muted-foreground">You can save now; the download continues in the background and suggestions appear when it finishes.</Text>
       </ScrollView>
       <View className="flex-row gap-2 border-t border-border bg-card p-3">
         <Button variant="ghost" className="flex-1" disabled={busy} onPress={leave}>

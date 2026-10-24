@@ -90,7 +90,7 @@ Not part of the versioned API. `GET /invite` (no auth, static HTML) is the page 
 List items return a compact shape (`ItemSummary`: `id`, `title`, `thumbUrl`, `source`, `kind`, `fetchStatus`, `favorite`, `savedAt`, `tagIds`, `workflow`, `availability`, `authorHandle`, `aspectRatio`, `mediaCount`, `suggestionCount`).
 
 Notes on the item routes:
-- `POST /items` answers `{ item, duplicate }`. On a duplicate, the given `folderIds`/`tagIds` are still linked to the existing item.
+- `POST /items` answers `{ item, duplicate }`. On a duplicate, the given `folderIds`/`tagIds` are still linked to the existing item. A link to a comment on a post (Instagram `/p/<code>/c/<id>/`, `?comment_id=`) saves the post; the item's `sharedComment` (`{ id, text, authorHandle, postedAt, likeCount }`, null otherwise) holds the comment once the worker has read it, and sharing a different comment of an already saved post replaces it and refetches the item.
 - `GET /items` also takes `hasSuggestions` and `smartFolderId` (the smart folder's saved filter is ANDed with the other params). `q` uses the query language in `packages/shared/src/query/parse.ts` (also `-` negation, `field:key=value`, `field:key>3`, `saved:2026-01..2026-03`, `saved:7d`). `sort=relevance` without free text falls back to `saved_desc`.
 - `PUT /items/:id/folders` / `tags` replace **all** assignments (manual and auto); ids already assigned keep their `assignedBy`, new ones are `manual`.
 - `POST /items/:id/suggestions/accept` and `/dismiss` take `{ folderIds?, tagIds? }`: both omitted = all suggestions, one list given = only those. Accepted suggestions become manual assignments.

@@ -49,6 +49,7 @@ import { useAccounts } from "@/stores/accounts";
 const NoContent = z.null();
 const PAGE_SIZE = 40;
 const POLL_MS = 4000;
+const THUMB_WAIT_MS = 5 * 60_000;
 
 /** Keyed by account and by the library an admin is acting in, so switching never shows stale data. */
 function useScope(): readonly [string, boolean] {
@@ -97,10 +98,14 @@ export function useItem(id: string) {
     queryKey: ["item", apiUrl, id],
     enabled,
     queryFn: () => request("GET", `/items/${id}`, { schema: ItemDetail }),
-    refetchInterval: (q) =>
-      q.state.data && (q.state.data.fetchStatus === "pending" || q.state.data.fetchStatus === "fetching")
-        ? POLL_MS
-        : false,
+    refetchInterval: (q) => {
+      const item = q.state.data;
+      if (!item) return false;
+      if (item.fetchStatus === "pending" || item.fetchStatus === "fetching") return POLL_MS;
+      // downloaded, but the thumbnail is still being made (videos): keep looking for a few minutes
+      const thumbPending = item.fetchStatus === "ready" && item.mediaCount > 0 && item.thumbUrl === null;
+      return thumbPending && Date.now() - Date.parse(item.savedAt) < THUMB_WAIT_MS ? POLL_MS : false;
+    },
   });
 }
 

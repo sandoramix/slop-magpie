@@ -4,7 +4,7 @@ import { contentTypeForKey } from "@magpie/storage";
 import { z } from "zod";
 import { ToolError } from "../tools/run.ts";
 import { classifyError, looksLikeAuthFailure } from "./errors.ts";
-import { type FetchedFile, type FetchResult, kindOf, type Strategy, type StrategyContext, type StrategyLogin } from "./types.ts";
+import { type FetchedComment, type FetchedFile, type FetchResult, kindOf, type Strategy, type StrategyContext, type StrategyLogin } from "./types.ts";
 
 // `instaloader -- -<shortcode>` downloads one post into a directory. It owns the Instagram session:
 // it loads the session file, and logs in with the password (stdin, never argv) only when that session is dead.
@@ -15,6 +15,16 @@ const Meta = z.looseObject({
     taken_at_timestamp: z.number().optional(),
     owner: z.looseObject({ username: z.string().optional(), full_name: z.string().nullish() }).optional(),
   }),
+});
+
+// one entry of `<shortcode>_comments.json`; replies sit in `answers`, which is walked separately
+const Comment = z.looseObject({
+  id: z.union([z.string(), z.number()]),
+  text: z.string().optional(),
+  created_at: z.number().optional(),
+  likes_count: z.number().optional(),
+  owner: z.looseObject({ username: z.string().optional() }).optional(),
+  answers: z.unknown().optional(),
 });
 
 const exists = (file: string) => access(file).then(() => true, () => false);
@@ -113,6 +123,43 @@ async function collect(outDir: string, shortcode: string): Promise<{ files: Fetc
   return { files, caption, meta: meta.success ? meta.data.node : undefined };
 }
 
+/** The comment with this id, looking through replies too. */
+export function findComment(raw: unknown, commentId: string): FetchedComment | undefined {
+  if (!Array.isArray(raw)) return undefined;
+  for (const entry of raw as unknown[]) {
+    const parsed = Comment.safeParse(entry);
+    if (!parsed.success) continue;
+    const c = parsed.data;
+    if (String(c.id) === commentId && c.text) {
+      return {
+        id: commentId,
+        text: c.text,
+        ...(c.owner?.username ? { authorHandle: c.owner.username } : {}),
+        ...(c.created_at ? { postedAt: new Date(c.created_at * 1000) } : {}),
+        ...(c.likes_count !== undefined ? { likeCount: c.likes_count } : {}),
+      };
+    }
+    const inReplies = findComment(c.answers, commentId);
+    if (inReplies) return inReplies;
+  }
+  return undefined;
+}
+
+/**
+ * Second, comments-only pass: instaloader downloads every comment of the post, which can be slow or rate limited on a
+ * popular one, so it must never cost the post itself. Any failure just leaves the comment unread.
+ */
+async function readComment(ctx: StrategyContext, login: StrategyLogin, outDir: string, shortcode: string, commentId: string): Promise<FetchedComment | undefined> {
+  try {
+    await runWithRelogin(ctx, login, outDir, shortcode, [...METADATA_ONLY, "--comments"], 5 * 60_000);
+    const raw: unknown = await readFile(path.join(outDir, `${shortcode}_comments.json`), "utf8").then((t) => JSON.parse(t) as unknown, () => null);
+    return findComment(raw, commentId);
+  } catch (error) {
+    ctx.log.warn({ err: error, commentId }, "instaloader could not read the shared comment");
+    return undefined;
+  }
+}
+
 export const instaloader: Strategy = {
   id: "instaloader",
 
@@ -127,6 +174,7 @@ export const instaloader: Strategy = {
     await runWithRelogin(ctx, login, outDir, shortcode, [], 10 * 60_000);
 
     const { files, caption, meta } = await collect(outDir, shortcode);
+    const comment = ctx.commentId ? await readComment(ctx, login, outDir, shortcode, ctx.commentId) : undefined;
     const handle = meta?.owner?.username;
     const name = meta?.owner?.full_name ?? undefined;
     const posted = meta?.taken_at_timestamp ? new Date(meta.taken_at_timestamp * 1000) : undefined;
@@ -135,6 +183,7 @@ export const instaloader: Strategy = {
       sourceItemId: shortcode,
       author: { ...(handle ? { handle } : {}), ...(name ? { name } : {}) },
       ...(caption ? { caption } : {}),
+      ...(comment ? { comment } : {}),
       ...(posted ? { postedAt: posted } : {}),
       files,
       rawMeta: { shortcode, files: files.length },

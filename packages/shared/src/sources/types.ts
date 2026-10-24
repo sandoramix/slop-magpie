@@ -9,4 +9,6 @@ export interface SourceDef {
   normalize(url: URL): string;
   /** Platform id (shortcode etc.) used for dedupe across URL variants. */
   extractId?(url: URL): string | null;
+  /** Id of the comment a shared link points at, when the link is to a comment on a post. */
+  extractCommentId?(url: URL): string | null;
 }
