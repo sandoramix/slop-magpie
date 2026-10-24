@@ -74,6 +74,8 @@ See `.env.example`. Validated at startup by t3-env — the container exits with 
 
 Optional: `INSTAGRAM_USERNAME`, `INSTAGRAM_PASSWORD`, `SESSIONS_DIR` (worker, default `./secrets/sessions`; compose sets `/run/secrets/sessions`), `LOG_LEVEL`, `LOG_FORMAT` (`pretty` default, `json` for log shippers), `MAX_VIDEO_MB`, `MAX_DOWNLOAD_MB`, `AUTO_ASSIGN_THRESHOLD`, `WORKER_TMP_DIR`, `WORKER_CONCURRENCY`, `CORS_ORIGINS`, `MEDIA_URL_TTL_SECONDS`.
 
+`ADMIN_WEB_UI` (api, default `true`): serves `https://<server>/admin`, a static page where the admin token is typed in to replace the Instagram session or cookies from any browser. Set `false` to remove it; the underlying `/api/v1/sources/instagram/credentials` routes stay admin-only either way. Use it over HTTPS only.
+
 `TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.
 
 Compose-only: `MEDIA_DIR` (default `/opt/magpie/media`), `COOKIES_HOST_DIR` (default `/opt/magpie/secrets/cookies`) and `SESSIONS_HOST_DIR` (default `/opt/magpie/secrets/sessions`); see step 2.

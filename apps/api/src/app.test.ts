@@ -79,6 +79,32 @@ describe("invite page", () => {
   });
 });
 
+describe("admin page", () => {
+  it("is static, stores nothing and is locked down by a hash-based CSP", async () => {
+    const { createHash } = await import("node:crypto");
+    const { app } = setup();
+    const res = await app.request("/admin");
+    expect(res.status).toBe(200);
+    const csp = res.headers.get("content-security-policy") ?? "";
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain("connect-src 'self'");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(csp).not.toContain("unsafe-inline");
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    const html = await res.text();
+    const script = /<script>([\s\S]*)<\/script>/.exec(html)?.[1] ?? "";
+    expect(csp).toContain(`script-src 'sha256-${createHash("sha256").update(script).digest("base64")}'`);
+    // the token lives in a variable only
+    for (const forbidden of ["localStorage", "sessionStorage", "document.cookie", "innerHTML", "eval("]) expect(script).not.toContain(forbidden);
+    expect(html).not.toMatch(/\son[a-z]+=/);
+  });
+
+  it("sends no token with the page itself and the API behind it stays admin-only", async () => {
+    const { app } = setup();
+    expect((await app.request("/api/v1/sources/instagram/credentials")).status).toBe(401);
+  });
+});
+
 describe("auth", () => {
   it("rejects missing and wrong tokens and audits them", async () => {
     const { app, audits } = setup();

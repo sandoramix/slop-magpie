@@ -45,6 +45,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-}
       MEDIA_URL_TTL_SECONDS: ${MEDIA_URL_TTL_SECONDS:-3600}
       TRUST_PROXY: ${TRUST_PROXY:-true}
+      ADMIN_WEB_UI: ${ADMIN_WEB_UI:-true}
     volumes:
       - ${MEDIA_DIR:-/opt/magpie/media}:/data/media
     tmpfs: [/tmp]

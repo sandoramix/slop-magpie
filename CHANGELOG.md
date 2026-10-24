@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.6.1] - 2026-10-24
+### Added
+
+- Admins can also replace the Instagram session or cookies from a browser on a PC: open `https://<your server>/admin`, type the admin token, and upload. The token is kept only in that tab, never stored, and forgotten after 10 idle minutes.
+
 ## [1.6.0] - 2026-10-24
 ### Added
 

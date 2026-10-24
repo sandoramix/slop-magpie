@@ -73,6 +73,8 @@ export interface AppDeps {
   mediaUrlTtlSeconds: number;
   /** `POST /items` per minute. */
   createItemLimit?: number;
+  /** Serve the admin page at `/admin` (default true). */
+  adminWebUi?: boolean;
 }
 
 /** Subset handed to services. */
