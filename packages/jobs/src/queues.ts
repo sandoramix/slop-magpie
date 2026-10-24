@@ -15,6 +15,7 @@ export const queues = {
   auditPrune: { name: "audit-prune", options: { retryLimit: 1 } },
   sourceCheck: { name: "source-check", options: { retryLimit: 1, expireInSeconds: 60 * 60 } },
   sweep: { name: "sweep", options: { retryLimit: 0 } },
+  recategorize: { name: "recategorize", options: { retryLimit: 0, expireInSeconds: 30 * 60 } },
   sessionCheck: { name: "session-check", options: { retryLimit: 0, expireInSeconds: 30 * 60 } },
   toolUpdate: { name: "tool-update", options: { retryLimit: 1, expireInSeconds: 30 * 60 } },
 } as const satisfies Record<string, { name: string; options: Omit<Queue, "name"> }>;

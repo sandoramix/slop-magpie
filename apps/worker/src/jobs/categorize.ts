@@ -1,6 +1,6 @@
 // v1 rule-based categorization (docs/worker-pipeline.md#categorize): learn keyword → folder/tag
 // from manual assignments and score the item's keywords against them.
-import { itemFolderSuggestions, itemFolders, itemKeywords, items, itemTagSuggestions, itemTags } from "@magpie/db";
+import { folders, itemFolderSuggestions, itemFolders, itemKeywords, items, itemTagSuggestions, itemTags, tags } from "@magpie/db";
 import { and, countDistinct, eq, exists, inArray, ne, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { WorkerContext } from "../context.ts";
@@ -43,7 +43,66 @@ export function scoreTargets(
   return scores;
 }
 
+/** Folds case and separators so the hashtag `#slow_cooker` matches a tag named "Slow cooker". */
+export const nameKey = (name: string) => name.normalize("NFC").toLowerCase().replace(/[\s_\-.#]+/g, "");
+
+/**
+ * Cold start: a keyword that equals the name of an existing tag or folder is a suggestion even with no history.
+ * Hashtags are deliberate, so they count more than words that merely occur in the caption.
+ */
+export function scoreNameMatches(keywords: readonly KeywordEvidence[], targets: readonly { id: string; name: string }[]): Map<string, number> {
+  const byKey = new Map<string, number>();
+  for (const k of keywords) {
+    const key = nameKey(k.keyword);
+    byKey.set(key, Math.max(byKey.get(key) ?? 0, k.weight));
+  }
+  const scores = new Map<string, number>();
+  for (const t of targets) {
+    const w = byKey.get(nameKey(t.name));
+    if (w !== undefined && nameKey(t.name).length >= 3) scores.set(t.id, Math.round(w * 0.7 * 1000) / 1000);
+  }
+  return scores;
+}
+
+/**
+ * Same author: share of the author's categorized items that went to the target, smoothed (+1) so one example
+ * gives 0.45 and it takes about eight consistent ones to reach auto-assign territory.
+ */
+export function scoreAuthor(categorized: number, perTarget: ReadonlyMap<string, number>): Map<string, number> {
+  const scores = new Map<string, number>();
+  for (const [target, n] of perTarget) scores.set(target, Math.round(((0.9 * n) / (categorized + 1)) * 1000) / 1000);
+  return scores;
+}
+
+/** Independent signals agree: 1 - ∏(1 - s). */
+export function combineScores(...signals: readonly ReadonlyMap<string, number>[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const signal of signals) {
+    for (const [id, s] of signal) out.set(id, 1 - (1 - (out.get(id) ?? 0)) * (1 - s));
+  }
+  for (const [id, s] of out) out.set(id, Math.round(s * 1000) / 1000);
+  return out;
+}
+
 type LinkTable = typeof itemFolders | typeof itemTags;
+
+/** Manual assignments of the owner's other items by the same author on the same source. */
+async function authorEvidence(ctx: WorkerContext, userId: string, itemId: string, source: string, handle: string | null, table: LinkTable, targetColumn: PgColumn) {
+  if (!handle) return new Map<string, number>();
+  const same = and(eq(items.userId, userId), eq(items.source, source), eq(items.authorHandle, handle), ne(items.id, itemId));
+  const [total] = await ctx.db
+    .select({ n: countDistinct(items.id) })
+    .from(items)
+    .innerJoin(table, and(eq(table.itemId, items.id), eq(table.assignedBy, "manual")))
+    .where(same);
+  const rows = await ctx.db
+    .select({ target: sql<string>`${targetColumn}`, n: countDistinct(items.id) })
+    .from(items)
+    .innerJoin(table, and(eq(table.itemId, items.id), eq(table.assignedBy, "manual")))
+    .where(same)
+    .groupBy(targetColumn);
+  return scoreAuthor(total?.n ?? 0, new Map(rows.map((r) => [r.target, r.n])));
+}
 
 /** Evidence comes only from the owner's own items: libraries never learn from each other. */
 async function evidence(ctx: WorkerContext, userId: string, itemId: string, words: string[], table: LinkTable, targetColumn: PgColumn) {
@@ -80,7 +139,10 @@ export interface CategorizeResult {
 
 export async function categorizeItem(ctx: WorkerContext, itemId: string): Promise<CategorizeResult> {
   const result: CategorizeResult = { autoFolders: 0, autoTags: 0, suggestions: 0 };
-  const [item] = await ctx.db.select({ id: items.id, userId: items.userId }).from(items).where(eq(items.id, itemId));
+  const [item] = await ctx.db
+    .select({ id: items.id, userId: items.userId, source: items.source, authorHandle: items.authorHandle })
+    .from(items)
+    .where(eq(items.id, itemId));
   if (!item) return result;
   const keywords = await ctx.db
     .select({ keyword: itemKeywords.keyword, weight: itemKeywords.weight })
@@ -94,8 +156,22 @@ export async function categorizeItem(ctx: WorkerContext, itemId: string): Promis
         evidence(ctx, item.userId, itemId, words, itemTags, itemTags.tagId),
       ])
     : [null, null];
-  const folderScores = folderEv ? scoreTargets(keywords, folderEv.df, folderEv.pairs) : new Map<string, number>();
-  const tagScores = tagEv ? scoreTargets(keywords, tagEv.df, tagEv.pairs) : new Map<string, number>();
+  const [folderNames, tagNames, authorFolders, authorTags] = await Promise.all([
+    ctx.db.select({ id: folders.id, name: folders.name }).from(folders).where(eq(folders.userId, item.userId)),
+    ctx.db.select({ id: tags.id, name: tags.name }).from(tags).where(eq(tags.userId, item.userId)),
+    authorEvidence(ctx, item.userId, itemId, item.source, item.authorHandle, itemFolders, itemFolders.folderId),
+    authorEvidence(ctx, item.userId, itemId, item.source, item.authorHandle, itemTags, itemTags.tagId),
+  ]);
+  const folderScores = combineScores(
+    folderEv ? scoreTargets(keywords, folderEv.df, folderEv.pairs) : new Map<string, number>(),
+    scoreNameMatches(keywords, folderNames),
+    authorFolders,
+  );
+  const tagScores = combineScores(
+    tagEv ? scoreTargets(keywords, tagEv.df, tagEv.pairs) : new Map<string, number>(),
+    scoreNameMatches(keywords, tagNames),
+    authorTags,
+  );
 
   const threshold = ctx.autoAssignThreshold;
   await ctx.db.transaction(async (tx) => {
@@ -107,15 +183,15 @@ export async function categorizeItem(ctx: WorkerContext, itemId: string): Promis
     const rank = (scores: Map<string, number>, have: Set<string>) =>
       [...scores].filter(([id, s]) => !have.has(id) && s >= MIN_SUGGESTION).sort((a, b) => b[1] - a[1]);
 
-    const folders = rank(folderScores, haveFolders);
-    const autoF = folders.filter(([, s]) => s >= threshold);
-    const suggestF = folders.filter(([, s]) => s < threshold).slice(0, MAX_SUGGESTIONS);
+    const rankedFolders = rank(folderScores, haveFolders);
+    const autoF = rankedFolders.filter(([, s]) => s >= threshold);
+    const suggestF = rankedFolders.filter(([, s]) => s < threshold).slice(0, MAX_SUGGESTIONS);
     if (autoF.length) await tx.insert(itemFolders).values(autoF.map(([folderId, confidence]) => ({ itemId, folderId, assignedBy: "auto" as const, confidence })));
     if (suggestF.length) await tx.insert(itemFolderSuggestions).values(suggestF.map(([folderId, confidence]) => ({ itemId, folderId, confidence })));
 
-    const tags = rank(tagScores, haveTags);
-    const autoT = tags.filter(([, s]) => s >= threshold);
-    const suggestT = tags.filter(([, s]) => s < threshold).slice(0, MAX_SUGGESTIONS);
+    const rankedTags = rank(tagScores, haveTags);
+    const autoT = rankedTags.filter(([, s]) => s >= threshold);
+    const suggestT = rankedTags.filter(([, s]) => s < threshold).slice(0, MAX_SUGGESTIONS);
     if (autoT.length) await tx.insert(itemTags).values(autoT.map(([tagId, confidence]) => ({ itemId, tagId, assignedBy: "auto" as const, confidence })));
     if (suggestT.length) await tx.insert(itemTagSuggestions).values(suggestT.map(([tagId, confidence]) => ({ itemId, tagId, confidence })));
 

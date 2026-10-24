@@ -72,6 +72,13 @@ Not part of the versioned API. `GET /invite` (no auth, static HTML) is the page 
 | PATCH | `/items/:id` | `title`, `notes`, `workflow`, `favorite`, `rating`, `custom` |
 | DELETE | `/items/:id` | deletes item + blobs |
 | POST | `/items/:id/refetch` | re-run pipeline (e.g. after failure) |
+| GET | `/items/:id/similar` | ids of unsorted items (no tag, no folder) sharing keywords with this one → `{ ids }` |
+| POST | `/items/refetch-failed` | re-run every failed item of the account → `{ affected }` (202) |
+| POST | `/items/refresh-suggestions` | re-extract keywords and suggestions for every ready item → `{ affected }` (202) |
+| GET | `/sources/:id/credentials` | admin: what login material is uploaded and the worker's session verdict (`ok` / `dead`) |
+| PUT | `/sources/:id/credentials/:kind` | admin: upload `session` (base64 of the instaloader session file) or `cookies` (cookies.txt); triggers a session check |
+| DELETE | `/sources/:id/credentials/:kind` | admin: remove uploaded `cookies` |
+| POST | `/sources/:id/credentials/check` | admin: run the session check now (202) |
 | PUT | `/items/:id/folders` | `{ folderIds }` — replaces manual assignments |
 | PUT | `/items/:id/tags` | `{ tagIds }` |
 | POST | `/items/:id/keywords` | `{ keyword }` manual |
@@ -87,7 +94,7 @@ Notes on the item routes:
 - `GET /items` also takes `hasSuggestions` and `smartFolderId` (the smart folder's saved filter is ANDed with the other params). `q` uses the query language in `packages/shared/src/query/parse.ts` (also `-` negation, `field:key=value`, `field:key>3`, `saved:2026-01..2026-03`, `saved:7d`). `sort=relevance` without free text falls back to `saved_desc`.
 - `PUT /items/:id/folders` / `tags` replace **all** assignments (manual and auto); ids already assigned keep their `assignedBy`, new ones are `manual`.
 - `POST /items/:id/suggestions/accept` and `/dismiss` take `{ folderIds?, tagIds? }`: both omitted = all suggestions, one list given = only those. Accepted suggestions become manual assignments.
-- `POST /items/bulk` ops: `addFolder`, `removeFolder`, `addTag`, `removeTag`, `setWorkflow`, `setFavorite`, `acceptSuggestions`, `refetch`, `delete` → `{ affected }`.
+- `POST /items/bulk` ops: `addFolder`, `removeFolder`, `addTag`, `removeTag`, `setWorkflow`, `setFavorite`, `acceptSuggestions`, `refetch`, `suggest` (re-extract and re-suggest), `delete` → `{ affected }`.
 
 ## Folders
 

@@ -9,7 +9,7 @@ export default function TabsLayout() {
   const colors = useColors();
   const router = useRouter();
   const stats = useStats();
-  const inbox = (stats.data?.byWorkflow.inbox ?? 0) + (stats.data?.withSuggestions ?? 0);
+  const inbox = stats.data?.byWorkflow.inbox ?? 0;
 
   return (
     <Tabs
@@ -33,16 +33,16 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
-        options={{ title: "Library", headerTitle: () => <AccountTitle fallback="Library" />, tabBarIcon: ({ color, size }) => <LayoutGrid color={color} size={size} /> }}
-      />
-      <Tabs.Screen
         name="inbox"
         options={{
-          title: "Inbox",
+          title: "Sort",
           tabBarIcon: ({ color, size }) => <Inbox color={color} size={size} />,
           ...(inbox > 0 ? { tabBarBadge: inbox > 99 ? "99+" : inbox } : {}),
         }}
+      />
+      <Tabs.Screen
+        name="index"
+        options={{ title: "Library", headerTitle: () => <AccountTitle fallback="Library" />, tabBarIcon: ({ color, size }) => <LayoutGrid color={color} size={size} /> }}
       />
       <Tabs.Screen
         name="folders"

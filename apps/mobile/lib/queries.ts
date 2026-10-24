@@ -1,11 +1,13 @@
 import {
   BulkResponse,
   CreateItemResponse,
+  CredentialsStatus,
   Folder,
   FieldsResponse,
   FoldersResponse,
   ItemDetail,
   ItemListResponse,
+  SimilarResponse,
   SmartFolder,
   SmartFoldersResponse,
   StatsResponse,
@@ -24,6 +26,7 @@ import {
   type CreateFolderBody,
   type CreateSmartFolderBody,
   type CreateTagBody,
+  type CredentialKind,
   type ItemFilter,
   type ItemSort,
   type SuggestionsBody,
@@ -210,6 +213,11 @@ export function useSuggestionsAction(id: string, action: "accept" | "dismiss") {
   });
 }
 
+/** Unsorted items that look like this one (shared keywords), best match first. */
+export async function fetchSimilarIds(id: string): Promise<string[]> {
+  return (await request("GET", `/items/${id}/similar`, { schema: SimilarResponse })).ids;
+}
+
 export function useRefetchItem(id: string) {
   const qc = useQueryClient();
   return useMutation({
@@ -233,6 +241,24 @@ export function useBulk() {
   return useMutation({
     mutationFn: (args: { ids: string[]; op: BulkOp }) =>
       request("POST", "/items/bulk", { body: { ids: args.ids, ...args.op }, schema: BulkResponse }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/** Every failed save again, not just a selection. */
+export function useRefetchFailed() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => request("POST", "/items/refetch-failed", { schema: BulkResponse }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/** New suggestions for the whole library; they appear as the worker gets to each item. */
+export function useRefreshSuggestions() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => request("POST", "/items/refresh-suggestions", { schema: BulkResponse }),
     onSuccess: () => qc.invalidateQueries(),
   });
 }
@@ -384,5 +410,42 @@ export function useUpdateDisplayName() {
 export function useSetPassword() {
   return useMutation({
     mutationFn: (password: string) => request("PUT", "/me/password", { body: { password }, schema: PasswordResponse }),
+  });
+}
+
+/** Login material for a source (admin only): what is uploaded and whether the server session still works. */
+export function useCredentials(source: string, enabled: boolean) {
+  const [scope, ready] = useScope();
+  return useQuery({
+    queryKey: ["credentials", scope, source],
+    enabled: enabled && ready,
+    queryFn: () => request("GET", `/sources/${source}/credentials`, { schema: CredentialsStatus }),
+    // the worker re-checks right after an upload; keep the verdict fresh while the screen is open
+    refetchInterval: 8000,
+  });
+}
+
+export function useSetCredential(source: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ kind, content }: { kind: CredentialKind; content: string }) =>
+      request("PUT", `/sources/${source}/credentials/${kind}`, { body: { content }, schema: CredentialsStatus }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["credentials"] }),
+  });
+}
+
+export function useDeleteCredential(source: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (kind: CredentialKind) => request("DELETE", `/sources/${source}/credentials/${kind}`, { schema: CredentialsStatus }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["credentials"] }),
+  });
+}
+
+export function useCheckSession(source: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => request("POST", `/sources/${source}/credentials/check`, { schema: CredentialsStatus }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["credentials"] }),
   });
 }

@@ -62,7 +62,7 @@ function ShareHandler() {
           onSuccess: ({ item }) => {
             resetShareIntent();
             if (mode === "organize") {
-              router.push({ pathname: "/item/[id]", params: { id: item.id } });
+              router.push({ pathname: "/quick-tag", params: { id: item.id } });
               return;
             }
             ToastAndroid.show("Saved to your Inbox", ToastAndroid.SHORT);
@@ -179,10 +179,13 @@ function Root() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="item/[id]" options={{ title: "" }} />
           <Stack.Screen name="list" options={{ title: "" }} />
+          <Stack.Screen name="triage" options={{ title: "Sort" }} />
+          <Stack.Screen name="quick-tag" options={{ title: "File it", presentation: "modal" }} />
           <Stack.Screen name="add-link" options={{ title: "Add link", presentation: "modal" }} />
           <Stack.Screen name="accounts" options={{ title: "Accounts", presentation: "modal" }} />
           <Stack.Screen name="account-form" options={{ title: "Account", presentation: "modal" }} />
           <Stack.Screen name="admin" options={{ title: "Users" }} />
+          <Stack.Screen name="credentials" options={{ title: "Instagram login" }} />
         </Stack.Protected>
         <Stack.Protected guard={!hasAccount}>
           <Stack.Screen name="welcome" options={{ headerShown: false }} />

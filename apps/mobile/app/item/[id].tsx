@@ -1,4 +1,4 @@
-import { buildFolderTree, flattenFolderTree, type ItemDetail, type Workflow } from "@magpie/shared/api";
+import { buildFolderTree, flattenFolderTree, type ItemDetail } from "@magpie/shared/api";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { ExternalLink, Heart, RefreshCw, Star, Trash2 } from "lucide-react-native";
 import { useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { MediaCarousel } from "@/components/media-carousel";
+import { WORKFLOW_META, WORKFLOW_ORDER } from "@/lib/workflow";
 import {
   useCreateFolder,
   useCreateTag,
@@ -27,13 +28,6 @@ import {
   useTags,
   useUpdateItem,
 } from "@/lib/queries";
-
-const WORKFLOWS: { value: Workflow; label: string }[] = [
-  { value: "inbox", label: "Inbox" },
-  { value: "to_try", label: "To try" },
-  { value: "done", label: "Done" },
-  { value: "reference", label: "Reference" },
-];
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -212,19 +206,20 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
           ))}
         </View>
 
-        <Section title="Status">
+        <Section title="What is it for?">
           <View className="flex-row flex-wrap gap-2">
-            {WORKFLOWS.map((w) => (
+            {WORKFLOW_ORDER.map((w) => (
               <Chip
-                key={w.value}
-                label={w.label}
-                active={item.workflow === w.value}
+                key={w}
+                label={WORKFLOW_META[w].label}
+                active={item.workflow === w}
                 onPress={() => {
-                  patch({ workflow: w.value });
+                  patch({ workflow: w });
                 }}
               />
             ))}
           </View>
+          <Text className="text-xs text-muted-foreground">{WORKFLOW_META[item.workflow].hint}</Text>
         </Section>
 
         {hasSuggestions && (

@@ -23,6 +23,20 @@ Next steps (in order):
 
 Dev setup for tests: `DATABASE_URL` (env or root `.env`) must point at a server where the role has `CREATEDB`; tests create and drop `magpie_test_*` databases and never touch the named database. Without it, integration tests are skipped. Quick local server: `docker run -d --name magpie-test-pg -e POSTGRES_PASSWORD=test -p 127.0.0.1:54329:5432 postgres:17-alpine` → `DATABASE_URL=postgres://postgres:test@127.0.0.1:54329/postgres`.
 
+## Next: organize fast (requested 2026-10-24)
+
+Organizing is the focus of the app: keywords, suggestions and tags first, everything reachable in a few taps.
+
+- [x] Suggestions from tag/folder **names** (cold start) and from the **same author's** earlier items (`categorize.ts`)
+- [x] **Backfill for existing items**: re-run extract + categorize over the whole library (cron for unorganized items, plus an on-demand "refresh suggestions" bulk op)
+- [ ] Keyword quality: phrases, merge variants (`slow_cooker` / "slow cooker"), per-user stop terms
+- [x] **Triage screen** as the app's home: one item at a time, accept / edit / reject suggested tags and folders, next
+- [x] **Quick-tag sheet** right after sharing a link, before the fetch finishes
+- [x] Bulk organize on a selection (tags, folders, suggestions, status) already existed; [x] "apply to similar items" after filing one in the Sort flow
+- [x] **Bulk refetch of everything failed** (not capped at a 500-id selection): `POST /items/refetch-failed` + a button in the Inbox
+- [x] **Instagram credentials from the app** (admin): upload a session file / cookies without SSH. Store them in the DB (new table, additive migration), worker writes them to `SESSIONS_DIR` / a private cookies copy when they are newer than the file, then runs `session-check` immediately. Show the session state (`ok`/`dead`, last check) in the admin screen.
+- [ ] Optional: shorter `session-check` interval while the state is `dead`
+
 ## M0 — Scaffold
 - [x] pnpm + turborepo monorepo, tsconfig base, eslint, vitest
 - [x] `packages/shared`: t3-env fragments, source registry (`instagram`, `generic`) + URL normalizer, SSRF-safe URL validation, API schemas

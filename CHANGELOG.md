@@ -6,6 +6,21 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-10-24
+### Added
+
+- **Sort** is now the first tab. "Start sorting" walks through your unsorted saves one at a time: the suggested tags and folders are already selected, tap to drop or add more, then say what the item is for (To try, Keep or Done) and move on.
+- "Retry all failed" in the Failed list downloads every failed save again, and "Refresh suggestions" works out new suggestions for your whole library.
+- While sorting, after you file an item the app offers to give the same tags and folders to unsorted saves that look similar.
+- After sharing a link and choosing "Organize now", a quick sheet shows your most used tags and folders to tap, plus what the item is for, instead of opening the full item page.
+- Admins can replace the Instagram session or cookies from the app (Settings → Instagram login) and see whether the server's Instagram session still works, without logging in to the server.
+
+### Changed
+
+- Statuses are renamed so they make sense: Inbox is now **To sort**, Reference is **Keep**, and each status has a one-line explanation. Failed and removed lists explain what they mean.
+- Suggestions are recomputed every night for items you have not organized yet.
+- Suggestions are smarter: a hashtag or word that matches the name of one of your tags or folders is suggested right away, and posts by an author you have already filed are suggested into the same places.
+
 ## [1.5.0] - 2026-10-24
 ### Fixed
 

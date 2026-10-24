@@ -121,14 +121,24 @@ export default function SettingsScreen() {
         <Text>Switch or add account</Text>
       </Button>
       {account?.isAdmin ? (
-        <Button
-          variant="outline"
-          onPress={() => {
-            router.push("/admin");
-          }}
-        >
-          <Text>Manage users</Text>
-        </Button>
+        <>
+          <Button
+            variant="outline"
+            onPress={() => {
+              router.push("/admin");
+            }}
+          >
+            <Text>Manage users</Text>
+          </Button>
+          <Button
+            variant="outline"
+            onPress={() => {
+              router.push("/credentials");
+            }}
+          >
+            <Text>Instagram login</Text>
+          </Button>
+        </>
       ) : null}
 
       {me.data ? (

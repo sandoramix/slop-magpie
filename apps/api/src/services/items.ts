@@ -32,7 +32,8 @@ import {
 } from "@magpie/shared/api";
 import { checkPublicUrl } from "@magpie/shared/net";
 import { resolveSource } from "@magpie/shared/sources";
-import { and, asc, count, desc, eq, inArray, notInArray, or, type SQL, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, ne, notExists, notInArray, or, type SQL, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { AuditEvent, ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
@@ -394,6 +395,41 @@ export async function refetchItems(deps: ServiceDeps, ids: readonly string[]): P
   return rows.length;
 }
 
+/** Upper bound for the "everything" actions; the worker handles them one at a time anyway. */
+const ALL_LIMIT = 5000;
+
+/** Fetches every failed item again, however many there are (a selection is capped at 500). */
+export async function refetchFailed(deps: ServiceDeps): Promise<number> {
+  const rows = await deps.db
+    .select({ id: items.id })
+    .from(items)
+    .where(and(eq(items.userId, deps.userId), eq(items.fetchStatus, "failed")))
+    .limit(ALL_LIMIT);
+  return refetchItems(deps, rows.map((r) => r.id));
+}
+
+/** `extract` rebuilds the keywords and queues `categorize`, so suggestions also reach items saved before they existed. */
+async function enqueueExtract(deps: ServiceDeps, ids: readonly string[]) {
+  for (const itemId of ids) {
+    try {
+      await deps.jobs.sendItemJob("extract", { itemId });
+    } catch (error) {
+      deps.log.error({ err: error, itemId }, "enqueue extract failed");
+    }
+  }
+}
+
+/** Suggestions for the whole library, e.g. after the categorizer improved or many tags were created. */
+export async function refreshSuggestions(deps: ServiceDeps): Promise<number> {
+  const rows = await deps.db
+    .select({ id: items.id })
+    .from(items)
+    .where(and(eq(items.userId, deps.userId), eq(items.fetchStatus, "ready")))
+    .limit(ALL_LIMIT);
+  await enqueueExtract(deps, rows.map((r) => r.id));
+  return rows.length;
+}
+
 export async function setItemFolders(deps: ServiceDeps, id: string, body: SetItemFoldersBody): Promise<ItemDetail> {
   await deps.db.transaction(async (tx) => {
     await assertItem(tx, deps.userId, id);
@@ -530,7 +566,39 @@ export async function bulk(deps: ServiceDeps, body: BulkBody, audit: Omit<AuditE
     case "acceptSuggestions":
       await db.transaction((tx) => acceptSuggestions(deps, existing, {}, tx));
       break;
+    case "suggest":
+      await enqueueExtract(deps, existing);
+      break;
   }
   await db.insert(auditLog).values({ ...audit, action: "item.bulk", details: { op: body.op, count: existing.length } });
   return existing.length;
+}
+
+/**
+ * Items of the same account that have no tag and no folder yet and share keywords with this one, best match first.
+ * Powers "apply the same to similar items" after filing one.
+ */
+export async function similarUnsorted(deps: ServiceDeps, id: string): Promise<string[]> {
+  await assertItem(deps.db, deps.userId, id);
+  const a = alias(itemKeywords, "a");
+  const o = alias(itemKeywords, "o");
+  const score = sql`sum(least(${a.weight}, ${o.weight}))`;
+  const rows = await deps.db
+    .select({ id: o.itemId })
+    .from(a)
+    .innerJoin(o, and(eq(o.keyword, a.keyword), ne(o.itemId, a.itemId)))
+    .innerJoin(items, eq(items.id, o.itemId))
+    .where(
+      and(
+        eq(a.itemId, id),
+        eq(items.userId, deps.userId),
+        notExists(deps.db.select({ one: sql`1` }).from(itemTags).where(eq(itemTags.itemId, items.id))),
+        notExists(deps.db.select({ one: sql`1` }).from(itemFolders).where(eq(itemFolders.itemId, items.id))),
+      ),
+    )
+    .groupBy(o.itemId)
+    .having(sql`${score} >= 1`)
+    .orderBy(desc(score))
+    .limit(50);
+  return rows.map((r) => r.id);
 }

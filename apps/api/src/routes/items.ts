@@ -8,6 +8,7 @@ import {
   ItemListQuery,
   SetItemFoldersBody,
   SetItemTagsBody,
+  type SimilarResponse,
   SuggestionsBody,
   UpdateItemBody,
 } from "@magpie/shared/api";
@@ -39,6 +40,8 @@ export const itemsRoutes = (deps: AppDeps) => {
       const affected = await svc.bulk(scopeOf(deps, c), c.req.valid("json"), requestMeta(c, deps.trustProxy));
       return c.json({ affected } satisfies BulkResponse, 200);
     })
+    .post("/refetch-failed", async (c) => c.json({ affected: await svc.refetchFailed(scopeOf(deps, c)) } satisfies BulkResponse, 202))
+    .post("/refresh-suggestions", async (c) => c.json({ affected: await svc.refreshSuggestions(scopeOf(deps, c)) } satisfies BulkResponse, 202))
     .get("/:id", validate("param", IdParam), async (c) => c.json(await svc.getItem(scopeOf(deps, c), c.req.valid("param").id), 200))
     .patch("/:id", validate("param", IdParam), validate("json", UpdateItemBody), async (c) =>
       c.json(await svc.updateItem(scopeOf(deps, c), c.req.valid("param").id, c.req.valid("json")), 200),
@@ -53,6 +56,9 @@ export const itemsRoutes = (deps: AppDeps) => {
       if ((await svc.refetchItems(scopeOf(deps, c), [id])) === 0) return errorResponse(c, 404, "not_found", "Item not found");
       return c.json(await svc.getItem(scopeOf(deps, c), id), 202);
     })
+    .get("/:id/similar", validate("param", IdParam), async (c) =>
+      c.json({ ids: await svc.similarUnsorted(scopeOf(deps, c), c.req.valid("param").id) } satisfies SimilarResponse, 200),
+    )
     .put("/:id/folders", validate("param", IdParam), validate("json", SetItemFoldersBody), async (c) =>
       c.json(await svc.setItemFolders(scopeOf(deps, c), c.req.valid("param").id, c.req.valid("json")), 200),
     )

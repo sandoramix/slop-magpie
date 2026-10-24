@@ -63,7 +63,7 @@ Lightweight metadata probe (first strategy of the item's source, no download) fo
 Re-enqueues lost work: `pending` items untouched for 10 min (3 h if they are waiting for a retry), `fetching` items untouched for 30 min (worker died), and `ready` items with media lacking a thumbnail.
 
 ### session-check (cron, every 6 h)
-Metadata-only instaloader request for the newest archived Instagram post; keeps the session warm, renews a dead one, stores `ok`/`dead` in `SESSIONS_DIR/instagram.state` and audits `session.dead` / `session.recovered`. On `dead` → `ok` it re-enqueues recent failed items and OpenGraph-only `link` items of that source. Details: [sources.md](sources.md#staying-alive-without-babysitting).
+Metadata-only instaloader request for the newest archived Instagram post; keeps the session warm, renews a dead one, stores `ok`/`dead` in `SESSIONS_DIR/instagram.state` and audits `session.dead` / `session.recovered`. After every good check it re-enqueues recent failed items and OpenGraph-only `link` items of that source (fewer than 8 attempts). Details: [sources.md](sources.md#staying-alive-without-babysitting).
 
 ### tool-update (cron, daily + once at start)
 Installs the newest yt-dlp, gallery-dl and instaloader into `SESSIONS_DIR/pytools` (shadowing the image's copies), verifies they start, rolls back otherwise.
