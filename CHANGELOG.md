@@ -6,6 +6,16 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-10-24
+### Fixed
+
+- Instagram saves no longer fail while the server's Instagram session is down: the post is kept with its caption, author and preview image, and the full media is fetched automatically once the session is back.
+
+### Changed
+
+- The server now checks its Instagram session every few hours, renews it when it can, and fetches again what was saved while it was down.
+- The download tools (yt-dlp, gallery-dl, instaloader) update themselves daily, so site changes are picked up without a new release.
+
 ## [1.4.4] - 2026-10-20
 ### Changed
 

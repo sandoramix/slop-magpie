@@ -60,6 +60,42 @@ async function run(ctx: StrategyContext, login: StrategyLogin, outDir: string, s
   });
 }
 
+/** Runs instaloader with the saved session; when that is dead, one rate-limited password login, then the same run again. */
+async function runWithRelogin(ctx: StrategyContext, login: StrategyLogin, outDir: string, shortcode: string, extra: readonly string[], timeoutMs: number) {
+  const hasSession = await exists(login.sessionFile);
+  let password = hasSession ? null : login.password();
+  if (!hasSession && password === null) throw new Error("instaloader: no session file and no login allowed (INSTAGRAM_PASSWORD unset, or the last login attempt was less than 15 minutes ago)");
+  try {
+    await run(ctx, login, outDir, shortcode, password, extra, timeoutMs);
+  } catch (error) {
+    // the thrown message keeps only the last stderr line ("EOFError"), which hides why the session was refused
+    if (error instanceof ToolError) ctx.log.warn({ hasSession, stderr: error.stderr.split("\n").slice(-8).join("\n") }, "instaloader stderr");
+    if (password !== null || !isAuthFailure(error)) throw error;
+    password = login.password();
+    if (password === null) throw error;
+    await run(ctx, login, outDir, shortcode, password, extra, timeoutMs);
+  }
+}
+
+const METADATA_ONLY = ["--no-pictures", "--no-videos", "--no-captions", "--no-metadata-json"] as const;
+
+/**
+ * Is the Instagram session usable? `ctx.url` is any post that is known to exist. May spend the rate-limited
+ * password login, so a dead session heals here instead of on the next user save.
+ */
+export async function checkSession(ctx: StrategyContext): Promise<"ok" | "dead" | "unknown"> {
+  const shortcode = shortcodeOf(ctx.url);
+  if (!ctx.login || !shortcode) return "unknown";
+  try {
+    await mkdir(path.dirname(ctx.login.sessionFile), { recursive: true, mode: 0o700 });
+    await runWithRelogin(ctx, ctx.login, path.join(ctx.tmpDir, "instaloader"), shortcode, METADATA_ONLY, 2 * 60_000);
+    return "ok";
+  } catch (error) {
+    if (isAuthFailure(error) || (error instanceof Error && /no session file/.test(error.message))) return "dead";
+    return "unknown";
+  }
+}
+
 async function collect(outDir: string, shortcode: string): Promise<{ files: FetchedFile[]; caption: string | undefined; meta: z.infer<typeof Meta>["node"] | undefined }> {
   const names = await readdir(outDir).catch(() => []);
   const media = new RegExp(`^${shortcode.replace(/[-_]/g, "\\$&")}(?:_(\\d+))?\\.[a-z0-9]+$`);
@@ -88,20 +124,7 @@ export const instaloader: Strategy = {
     await mkdir(path.dirname(login.sessionFile), { recursive: true, mode: 0o700 });
     const outDir = path.join(ctx.tmpDir, "instaloader");
 
-    const hasSession = await exists(login.sessionFile);
-    let password = hasSession ? null : login.password();
-    if (!hasSession && password === null) throw new Error("instaloader: no session file and no login allowed (INSTAGRAM_PASSWORD unset, or the last login attempt was less than 15 minutes ago)");
-    try {
-      await run(ctx, login, outDir, shortcode, password, [], 10 * 60_000);
-    } catch (error) {
-      // the thrown message keeps only the last stderr line ("EOFError"), which hides why the session was refused
-      if (error instanceof ToolError) ctx.log.warn({ hasSession, stderr: error.stderr.split("\n").slice(-8).join("\n") }, "instaloader stderr");
-      if (password !== null || !isAuthFailure(error)) throw error;
-      // the saved session died: one rate-limited login, then the same download again
-      password = login.password();
-      if (password === null) throw error;
-      await run(ctx, login, outDir, shortcode, password, [], 10 * 60_000);
-    }
+    await runWithRelogin(ctx, login, outDir, shortcode, [], 10 * 60_000);
 
     const { files, caption, meta } = await collect(outDir, shortcode);
     const handle = meta?.owner?.username;
@@ -123,7 +146,7 @@ export const instaloader: Strategy = {
     // never logs in: a probe must not spend a login attempt
     if (!ctx.login || !shortcode || !(await exists(ctx.login.sessionFile))) return "unknown";
     try {
-      await run(ctx, ctx.login, path.join(ctx.tmpDir, "instaloader"), shortcode, null, ["--no-pictures", "--no-videos", "--no-captions", "--no-metadata-json"], 2 * 60_000);
+      await run(ctx, ctx.login, path.join(ctx.tmpDir, "instaloader"), shortcode, null, METADATA_ONLY, 2 * 60_000);
       return "available";
     } catch (error) {
       return classifyError(error) === "gone" ? "gone" : "unknown";

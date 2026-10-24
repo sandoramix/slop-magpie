@@ -36,6 +36,13 @@ export interface RunResult {
   stderr: string;
 }
 
+let childEnv: NodeJS.ProcessEnv | undefined;
+
+/** Environment of every CLI started by `runTool` from now on; unset = inherit. */
+export function setToolEnv(env: NodeJS.ProcessEnv): void {
+  childEnv = env;
+}
+
 /** Runs a CLI without a shell. Rejects with ToolError on non-zero exit, timeout or oversize output. */
 export type Runner = (command: string, args: readonly string[], options?: RunOptions) => Promise<RunResult>;
 
@@ -43,6 +50,7 @@ export const runTool: Runner = (command, args, options = {}) =>
   new Promise((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
+      env: childEnv,
       stdio: [options.stdin ? "pipe" : "ignore", "pipe", "pipe"],
       signal: options.signal,
     });

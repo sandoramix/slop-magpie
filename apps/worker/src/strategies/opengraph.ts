@@ -8,7 +8,7 @@ const MAX_HTML_BYTES = 3 * 1024 * 1024;
 async function getPage(ctx: StrategyContext, method: "GET" | "HEAD" = "GET") {
   return safeFetch(ctx.guard, ctx.url, {
     method,
-    headers: { "User-Agent": USER_AGENT, Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5", ...ctx.options.headers },
+    headers: { "User-Agent": ctx.options.pageUserAgent ?? USER_AGENT, Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.5", ...ctx.options.headers },
     timeoutMs: 30_000,
   });
 }

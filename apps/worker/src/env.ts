@@ -1,3 +1,4 @@
+import path from "node:path";
 import { databaseEnv, loggingEnv, storageEnv } from "@magpie/shared/env";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
@@ -24,3 +25,13 @@ export const env = createEnv({
 });
 
 export type Env = typeof env;
+
+/** Environment for the CLIs we spawn, with the updated tools dir (src/tools/update.ts) first on their search paths. */
+export function toolEnv(toolsDir: string): NodeJS.ProcessEnv {
+  const prepend = (dir: string, current: string | undefined) => [dir, current].filter(Boolean).join(path.delimiter);
+  return {
+    ...process.env,
+    PYTHONPATH: prepend(toolsDir, process.env.PYTHONPATH),
+    PATH: prepend(path.join(toolsDir, "bin"), process.env.PATH),
+  };
+}
