@@ -9,6 +9,7 @@ import { blobDelete } from "./jobs/blob-delete.ts";
 import { categorizeItem } from "./jobs/categorize.ts";
 import { extractItem } from "./jobs/extract.ts";
 import { fetchItem } from "./jobs/fetch.ts";
+import { recategorize } from "./jobs/recategorize.ts";
 import { sessionCheck } from "./jobs/session-check.ts";
 import { sourceCheck } from "./jobs/source-check.ts";
 import { sweep } from "./jobs/sweep.ts";
@@ -107,6 +108,10 @@ await boss.work(queues.sweep.name, async () => {
   if (requeued.fetch || requeued.thumbnail) log.info(requeued, "sweep re-enqueued work");
 });
 
+await boss.work(queues.recategorize.name, async () => {
+  log.info({ queued: await recategorize(ctx) }, "recategorize done");
+});
+
 await boss.work(queues.sessionCheck.name, async () => {
   log.info(await sessionCheck(ctx), "session check done");
 });
@@ -117,6 +122,7 @@ await boss.work(queues.toolUpdate.name, async () => {
 });
 
 await boss.schedule(queues.auditPrune.name, "17 4 * * *");
+await boss.schedule(queues.recategorize.name, "37 3 * * *");
 await boss.schedule(queues.sessionCheck.name, "41 */6 * * *");
 await boss.schedule(queues.toolUpdate.name, "11 5 * * *");
 // also once per start: a redeploy then picks up releases without waiting for the schedule

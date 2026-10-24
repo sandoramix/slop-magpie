@@ -39,6 +39,8 @@ export const itemsRoutes = (deps: AppDeps) => {
       const affected = await svc.bulk(scopeOf(deps, c), c.req.valid("json"), requestMeta(c, deps.trustProxy));
       return c.json({ affected } satisfies BulkResponse, 200);
     })
+    .post("/refetch-failed", async (c) => c.json({ affected: await svc.refetchFailed(scopeOf(deps, c)) } satisfies BulkResponse, 202))
+    .post("/refresh-suggestions", async (c) => c.json({ affected: await svc.refreshSuggestions(scopeOf(deps, c)) } satisfies BulkResponse, 202))
     .get("/:id", validate("param", IdParam), async (c) => c.json(await svc.getItem(scopeOf(deps, c), c.req.valid("param").id), 200))
     .patch("/:id", validate("param", IdParam), validate("json", UpdateItemBody), async (c) =>
       c.json(await svc.updateItem(scopeOf(deps, c), c.req.valid("param").id, c.req.valid("json")), 200),

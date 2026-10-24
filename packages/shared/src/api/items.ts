@@ -156,6 +156,7 @@ export const BulkOp = z.discriminatedUnion("op", [
   z.object({ op: z.literal("setFavorite"), favorite: z.boolean() }),
   z.object({ op: z.literal("acceptSuggestions") }),
   z.object({ op: z.literal("refetch") }),
+  z.object({ op: z.literal("suggest") }),
   z.object({ op: z.literal("delete") }),
 ]);
 export type BulkOp = z.infer<typeof BulkOp>;

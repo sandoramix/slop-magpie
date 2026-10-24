@@ -7,6 +7,7 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 ## [Unreleased]
 ### Changed
 
+- New actions to fetch every failed save again and to refresh suggestions for the whole library, and suggestions are recomputed every night for items you have not organized yet.
 - Suggestions are smarter: a hashtag or word that matches the name of one of your tags or folders is suggested right away, and posts by an author you have already filed are suggested into the same places.
 
 ## [1.5.0] - 2026-10-24

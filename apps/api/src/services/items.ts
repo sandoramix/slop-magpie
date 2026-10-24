@@ -394,6 +394,41 @@ export async function refetchItems(deps: ServiceDeps, ids: readonly string[]): P
   return rows.length;
 }
 
+/** Upper bound for the "everything" actions; the worker handles them one at a time anyway. */
+const ALL_LIMIT = 5000;
+
+/** Fetches every failed item again, however many there are (a selection is capped at 500). */
+export async function refetchFailed(deps: ServiceDeps): Promise<number> {
+  const rows = await deps.db
+    .select({ id: items.id })
+    .from(items)
+    .where(and(eq(items.userId, deps.userId), eq(items.fetchStatus, "failed")))
+    .limit(ALL_LIMIT);
+  return refetchItems(deps, rows.map((r) => r.id));
+}
+
+/** `extract` rebuilds the keywords and queues `categorize`, so suggestions also reach items saved before they existed. */
+async function enqueueExtract(deps: ServiceDeps, ids: readonly string[]) {
+  for (const itemId of ids) {
+    try {
+      await deps.jobs.sendItemJob("extract", { itemId });
+    } catch (error) {
+      deps.log.error({ err: error, itemId }, "enqueue extract failed");
+    }
+  }
+}
+
+/** Suggestions for the whole library, e.g. after the categorizer improved or many tags were created. */
+export async function refreshSuggestions(deps: ServiceDeps): Promise<number> {
+  const rows = await deps.db
+    .select({ id: items.id })
+    .from(items)
+    .where(and(eq(items.userId, deps.userId), eq(items.fetchStatus, "ready")))
+    .limit(ALL_LIMIT);
+  await enqueueExtract(deps, rows.map((r) => r.id));
+  return rows.length;
+}
+
 export async function setItemFolders(deps: ServiceDeps, id: string, body: SetItemFoldersBody): Promise<ItemDetail> {
   await deps.db.transaction(async (tx) => {
     await assertItem(tx, deps.userId, id);
@@ -529,6 +564,9 @@ export async function bulk(deps: ServiceDeps, body: BulkBody, audit: Omit<AuditE
       break;
     case "acceptSuggestions":
       await db.transaction((tx) => acceptSuggestions(deps, existing, {}, tx));
+      break;
+    case "suggest":
+      await enqueueExtract(deps, existing);
       break;
   }
   await db.insert(auditLog).values({ ...audit, action: "item.bulk", details: { op: body.op, count: existing.length } });
