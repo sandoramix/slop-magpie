@@ -5,6 +5,8 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+
+## [1.6.0] - 2026-10-24
 ### Added
 
 - **Sort** is now the first tab. "Start sorting" walks through your unsorted saves one at a time: the suggested tags and folders are already selected, tap to drop or add more, then say what the item is for (To try, Keep or Done) and move on.
