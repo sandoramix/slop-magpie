@@ -151,7 +151,7 @@ export default function AddLinkScreen() {
               }}
             />
           </View>
-          <Input value={notes} onChangeText={setNotes} placeholder="Notes (optional, added to every link)" multiline className="h-20 py-2" textAlignVertical="top" />
+          <Input clearable value={notes} onChangeText={setNotes} placeholder="Notes (optional, added to every link)" multiline className="h-20 py-2" textAlignVertical="top" />
 
           <Button
             disabled={busy || urls.length === 0}

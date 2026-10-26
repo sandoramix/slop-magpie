@@ -93,6 +93,7 @@ export default function Library() {
       ) : null}
       <View className="gap-2 px-3 pb-1 pt-2">
         <Input
+          clearable
           value={text}
           onChangeText={setText}
           placeholder="Search…  tag:food  is:fav  from:@name"

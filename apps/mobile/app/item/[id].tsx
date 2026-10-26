@@ -162,7 +162,8 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
 
         <View className="flex-row items-center gap-1">
           <Input
-            className="flex-1"
+            clearable
+            containerClassName="flex-1 w-auto"
             value={title}
             onChangeText={setTitle}
             placeholder="Title"
