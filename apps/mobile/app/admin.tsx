@@ -312,7 +312,7 @@ export default function AdminScreen() {
           />
         </View>
         <View className="flex-row gap-2">
-          <Input className="flex-1" value={name} onChangeText={setName} placeholder="Username (fixed once created)" autoCapitalize="words" />
+          <Input clearable containerClassName="flex-1 w-auto" value={name} onChangeText={setName} placeholder="Username (fixed once created)" autoCapitalize="words" />
           <Button disabled={create.isPending || !name.trim()} onPress={add}>
             <Icon as={Plus} className="text-primary-foreground" />
             <Text>Add</Text>

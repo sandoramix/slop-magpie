@@ -12,9 +12,14 @@ export function Chip({ label, active = false, onPress }: Props) {
   return (
     <Pressable
       onPress={onPress}
-      className={cn("rounded-full border px-3 py-1.5", active ? "border-primary bg-primary" : "border-border bg-background")}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      className={cn(
+        "min-h-11 justify-center rounded-full border px-4 py-2 active:opacity-70",
+        active ? "border-primary bg-primary" : "border-border bg-card",
+      )}
     >
-      <Text className={cn("text-sm", active && "text-primary-foreground")}>{label}</Text>
+      <Text className={cn("text-base", active && "font-medium text-primary-foreground")}>{label}</Text>
     </Pressable>
   );
 }

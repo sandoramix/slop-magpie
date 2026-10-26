@@ -94,6 +94,7 @@ export function FieldEditor({ def, value, onChange }: Props) {
         </View>
       ) : (
         <Input
+          clearable
           value={draft}
           onChangeText={setDraft}
           onBlur={commit}
