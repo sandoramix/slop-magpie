@@ -153,11 +153,18 @@ describe("sources", () => {
     const { app } = setup();
     const res = await app.request("/api/v1/sources", { headers: auth });
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { sources: { id: string; itemCount: number }[] };
-    expect(body.sources.map((s) => [s.id, s.itemCount])).toEqual([
-      ["instagram", 3],
-      ["generic", 0],
-    ]);
+    const body = (await res.json()) as { sources: { id: string; itemCount: number; enabled: boolean }[] };
+    // every source with code is listed; only instagram and the generic fallback are on by default
+    expect(body.sources.map((s) => s.id)).toEqual(["instagram", "tiktok", "youtube", "pinterest", "x", "reddit", "facebook", "generic"]);
+    expect(body.sources.filter((s) => s.enabled).map((s) => s.id)).toEqual(["instagram", "generic"]);
+    expect(body.sources.find((s) => s.id === "instagram")?.itemCount).toBe(3);
+  });
+
+  it("reports the sources an operator switched on", async () => {
+    const { deps } = unitDeps({ enabledSources: ["instagram", "reddit"] });
+    const res = await createApp(deps).app.request("/api/v1/sources", { headers: auth });
+    const body = (await res.json()) as { sources: { id: string; enabled: boolean }[] };
+    expect(body.sources.filter((s) => s.enabled).map((s) => s.id)).toEqual(["instagram", "reddit", "generic"]);
   });
 });
 
