@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { ToolError, type Runner } from "../tools/run.ts";
-import { checkSession, findComment, instaloader } from "./instaloader.ts";
+import { checkSession, findComment, instaloader, parseCommentsJson } from "./instaloader.ts";
 import { DEFAULT_STRATEGY_OPTIONS, type StrategyContext } from "./types.ts";
 
 let dir: string;
@@ -152,6 +152,17 @@ describe("instaloader", () => {
       return { stdout: Buffer.alloc(0), stderr: "" };
     };
     const login = () => ({ username: "bot", sessionFile: path.join(dir, "s", "instagram.session"), password: () => "pw" });
+
+    it("matches real 17-digit comment ids that a plain JSON.parse would round", () => {
+      // 17969472731654437 is above 2^53; JSON.parse would turn it into 17969472731654436
+      const text =
+        '[{"id": 17969472731654437, "text": "nice one", "created_at": 1760000000, "likes_count": 5, "owner": {"id": 123, "username": "ann"},' +
+        ' "answers": [{"id": 17969472731654999, "text": "thanks", "owner": {"id": 456, "username": "bob"}}]}]';
+      expect(findComment(JSON.parse(text) as unknown, "17969472731654437")).toBeUndefined();
+      const parsed = parseCommentsJson(text);
+      expect(findComment(parsed, "17969472731654437")).toMatchObject({ text: "nice one", authorHandle: "ann", likeCount: 5 });
+      expect(findComment(parsed, "17969472731654999")).toMatchObject({ text: "thanks", authorHandle: "bob" });
+    });
 
     it("finds a comment and a reply by id", () => {
       expect(findComment(comments, "111")).toMatchObject({ text: "first", authorHandle: "a", likeCount: 2 });

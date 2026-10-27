@@ -123,6 +123,15 @@ async function collect(outDir: string, shortcode: string): Promise<{ files: Fetc
   return { files, caption, meta: meta.success ? meta.data.node : undefined };
 }
 
+/**
+ * Parses `<shortcode>_comments.json`. Instagram comment ids have 17 to 19 digits, more than a JavaScript number
+ * holds exactly, so a plain `JSON.parse` rounds them and the shared comment is never found. Every `"id"` number
+ * is turned into a string first.
+ */
+export function parseCommentsJson(text: string): unknown {
+  return JSON.parse(text.replace(/("id"\s*:\s*)(\d+)/g, '$1"$2"')) as unknown;
+}
+
 /** The comment with this id, looking through replies too. */
 export function findComment(raw: unknown, commentId: string): FetchedComment | undefined {
   if (!Array.isArray(raw)) return undefined;
@@ -152,8 +161,11 @@ export function findComment(raw: unknown, commentId: string): FetchedComment | u
 async function readComment(ctx: StrategyContext, login: StrategyLogin, outDir: string, shortcode: string, commentId: string): Promise<FetchedComment | undefined> {
   try {
     await runWithRelogin(ctx, login, outDir, shortcode, [...METADATA_ONLY, "--comments"], 5 * 60_000);
-    const raw: unknown = await readFile(path.join(outDir, `${shortcode}_comments.json`), "utf8").then((t) => JSON.parse(t) as unknown, () => null);
-    return findComment(raw, commentId);
+    const raw: unknown = await readFile(path.join(outDir, `${shortcode}_comments.json`), "utf8").then(parseCommentsJson, () => null);
+    const found = findComment(raw, commentId);
+    // say why the text stays empty: no file (instaloader wrote none), or the comment is not among those loaded
+    if (!found) ctx.log.warn({ commentId, loaded: Array.isArray(raw) ? raw.length : null }, "the shared comment is not in the comments instaloader loaded");
+    return found;
   } catch (error) {
     ctx.log.warn({ err: error, commentId }, "instaloader could not read the shared comment");
     return undefined;

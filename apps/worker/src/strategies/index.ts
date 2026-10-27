@@ -1,6 +1,7 @@
 import { direct } from "./direct.ts";
 import { fxtwitter } from "./fxtwitter.ts";
 import { galleryDl } from "./gallery-dl.ts";
+import { instagramEmbed } from "./instagram-embed.ts";
 import { instaloader } from "./instaloader.ts";
 import { oembed } from "./oembed.ts";
 import { opengraph } from "./opengraph.ts";
@@ -17,6 +18,7 @@ export const strategies: Readonly<Record<StrategyId, Strategy>> = {
   oembed,
   "reddit-json": redditJson,
   fxtwitter,
+  "instagram-embed": instagramEmbed,
 };
 
 export * from "./types.ts";
