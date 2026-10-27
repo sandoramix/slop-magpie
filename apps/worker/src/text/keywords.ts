@@ -63,7 +63,13 @@ export function extractTerms(text: string, max = 15): { keyword: string; weight:
   return sorted.map(([keyword, n]) => ({ keyword, weight: Math.round((0.3 + (0.4 * n) / top) * 100) / 100 }));
 }
 
-export function extractKeywords(input: { title?: string | null; caption?: string | null }): ExtractedKeyword[] {
+/** A keyword is ignored when it, or any word of a phrase, is on the person's stop list. */
+export function isIgnored(keyword: string, ignore: ReadonlySet<string>): boolean {
+  return ignore.size > 0 && (ignore.has(keyword) || keyword.split(" ").some((w) => ignore.has(w)));
+}
+
+export function extractKeywords(input: { title?: string | null; caption?: string | null }, options: { ignore?: ReadonlySet<string> } = {}): ExtractedKeyword[] {
+  const ignore = options.ignore ?? new Set<string>();
   const text = [input.title, input.caption].filter(Boolean).join("\n");
   const hashtags = extractHashtags(text);
   const tagSet = new Set(hashtags);
@@ -72,7 +78,7 @@ export function extractKeywords(input: { title?: string | null; caption?: string
     ...extractTerms(text)
       .filter((t) => !tagSet.has(t.keyword))
       .map((t) => ({ ...t, source: "caption" as const })),
-  ];
+  ].filter((k) => !isIgnored(k.keyword, ignore));
 }
 
 /** Display title from a caption: first line, trimmed to a word boundary. */

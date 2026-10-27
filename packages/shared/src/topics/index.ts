@@ -77,7 +77,7 @@ export function clusterTopics(inputs: readonly TopicInput[], options: TopicOptio
   const dims = first.embedding.length;
 
   let groups: TopicInput[][] = [];
-  let centres: number[][] = [];
+  const centres: number[][] = [];
   for (const item of usable) {
     const best = bestCluster(centres, item.embedding);
     if (best.index >= 0 && best.score >= threshold) {
@@ -98,7 +98,6 @@ export function clusterTopics(inputs: readonly TopicInput[], options: TopicOptio
     reassigned[best.index]?.push(item);
   }
   groups = reassigned.filter((g) => g.length > 0);
-  centres = groups.map((g) => centroid(g.map((m) => m.embedding), dims));
 
   return groups
     .filter((g) => g.length >= minSize)

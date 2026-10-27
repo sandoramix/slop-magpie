@@ -1,6 +1,7 @@
 import type { Database } from "@magpie/db";
 import type { JobSender } from "@magpie/jobs";
 import type { BlobStore } from "@magpie/storage";
+import type { Embedder } from "./embeddings/types.ts";
 import type { Logger } from "./logger.ts";
 import type { Guard } from "./net/ssrf.ts";
 import type { LoginCredentials } from "./sources/types.ts";
@@ -29,6 +30,8 @@ export interface WorkerContext {
   enabledSources: readonly string[];
   /** Strategies an operator switched off (DISABLED_STRATEGIES); skipped in every chain. */
   disabledStrategies: readonly StrategyId[];
+  /** Makes the meaning vector stored with each item (topic clusters); null when `EMBEDDER=off`. */
+  embedder: Embedder | null;
   /** Writes an audit entry; never throws. */
   audit: (action: string, details: Record<string, unknown>) => Promise<void>;
 }

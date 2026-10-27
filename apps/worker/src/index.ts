@@ -2,6 +2,7 @@ import { auditLog, createDb } from "@magpie/db";
 import { ensureQueues, ItemJobData, queues, senderFromBoss } from "@magpie/jobs";
 import { enabledSourcesWithout } from "@magpie/shared/sources";
 import { createBlobStore } from "@magpie/storage";
+import { createEmbedder } from "./embeddings/index.ts";
 import { PgBoss } from "pg-boss";
 import type { WorkerContext } from "./context.ts";
 import { env, toolEnv } from "./env.ts";
@@ -58,6 +59,7 @@ const ctx: WorkerContext = {
   autoAssignThreshold: env.AUTO_ASSIGN_THRESHOLD,
   enabledSources: enabledSourcesWithout(env.DISABLED_SOURCES),
   disabledStrategies: env.DISABLED_STRATEGIES,
+  embedder: await createEmbedder(env.EMBEDDER, log),
   async audit(action, details) {
     try {
       await db.insert(auditLog).values({ action, ip: null, userAgent: null, details });

@@ -28,6 +28,8 @@ export const env = createEnv({
     MAX_VIDEO_MB: z.coerce.number().positive().default(60),
     // hard cap per downloaded file
     MAX_DOWNLOAD_MB: z.coerce.number().positive().default(500),
+    // what turns an item into a vector for topic clusters: hash (no model, default), transformers (needs @huggingface/transformers) or off
+    EMBEDDER: z.enum(["off", "hash", "transformers"]).default("hash"),
     AUTO_ASSIGN_THRESHOLD: z.coerce.number().min(0).max(1).default(0.8),
   },
   runtimeEnv: process.env,
