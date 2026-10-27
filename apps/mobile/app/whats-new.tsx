@@ -1,4 +1,5 @@
 import { ScrollView, View } from "react-native";
+import { InlineMarkdown } from "@/components/inline-markdown";
 import { SafeAreaView } from "@/components/styled";
 import { Text } from "@/components/ui/text";
 import { changelog } from "@/lib/changelog";
@@ -18,9 +19,7 @@ export default function WhatsNew() {
             <View key={section.title} className="gap-1">
               <Text className="text-sm font-semibold text-muted-foreground">{section.title}</Text>
               {section.items.map((line) => (
-                <Text key={line} className="pl-2">
-                  {`• ${line}`}
-                </Text>
+                <InlineMarkdown key={line} className="pl-2" text={`• ${line}`} />
               ))}
             </View>
           ))}
