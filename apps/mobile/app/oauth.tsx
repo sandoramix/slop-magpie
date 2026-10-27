@@ -66,7 +66,7 @@ export default function OAuthReturn() {
     started.current = true;
     if (status === "linked") {
       void qc.invalidateQueries({ queryKey: ["identities"] });
-      router.replace("/(tabs)/settings");
+      router.replace("/settings");
       return;
     }
     if (status === "error") {

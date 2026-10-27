@@ -13,6 +13,7 @@ import { alert } from "@/lib/alert";
 import { startInstall } from "@/lib/install-update";
 import { useMe } from "@/lib/queries";
 import { useUpdateCheck } from "@/lib/updates";
+import { useSettings } from "@/stores/settings";
 
 /** Versions already offered in a dialog during this app launch. */
 const promptedVersions = new Set<string>();
@@ -41,6 +42,8 @@ export default function Library() {
   const [text, setText] = useState("");
   const [favorite, setFavorite] = useState(false);
   const [kind, setKind] = useState<ItemKind | null>(null);
+  const viewMode = useSettings((s) => s.viewMode);
+  const setViewMode = useSettings((s) => s.setViewMode);
   const update = useUpdateCheck();
   const available = update.data;
   const me = useMe();
@@ -104,6 +107,13 @@ export default function Library() {
           returnKeyType="search"
         />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+          <Chip
+            label={viewMode === "grid" ? "▦ Grid" : "☰ List"}
+            active
+            onPress={() => {
+              setViewMode(viewMode === "grid" ? "list" : "grid");
+            }}
+          />
           <Chip
             label="Favorites"
             active={favorite}
