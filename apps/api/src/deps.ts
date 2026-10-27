@@ -83,6 +83,8 @@ export interface AppDeps {
   registrationMode?: RegistrationMode;
   /** Social login (docs/security.md#social-login); absent or without credentials means no provider is offered. */
   oauth?: OAuthConfig;
+  /** Likes, saves, follows, reports and other social writes per account per minute. */
+  socialWriteLimit?: number;
   /** Social login steps per IP per hour. */
   oauthLimit?: number;
   /** Signups per IP per hour. */

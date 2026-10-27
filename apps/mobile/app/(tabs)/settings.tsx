@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import { Shield } from "lucide-react-native";
-import { accountLabel } from "@magpie/shared/api";
+import { accountLabel, ROOT_ADMIN_ID } from "@magpie/shared/api";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -8,6 +8,8 @@ import { alert } from "@/lib/alert";
 import { Chip } from "@/components/chip";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { DeleteAccountSection } from "@/components/delete-account";
+import { IdentitiesSection } from "@/components/identities-section";
 import { StorageMeter } from "@/components/storage-meter";
 import { UpdateCard } from "@/components/update-card";
 import { Input } from "@/components/ui/input";
@@ -138,6 +140,14 @@ export default function SettingsScreen() {
           >
             <Text>Instagram login</Text>
           </Button>
+          <Button
+            variant="outline"
+            onPress={() => {
+              router.push("/moderation");
+            }}
+          >
+            <Text>Reports and invite codes</Text>
+          </Button>
         </>
       ) : null}
 
@@ -158,6 +168,9 @@ export default function SettingsScreen() {
           </Button>
         </View>
       ) : null}
+
+      {me.data ? <IdentitiesSection /> : null}
+      {me.data ? <DeleteAccountSection username={me.data.name} isRoot={me.data.id === ROOT_ADMIN_ID} /> : null}
 
       <Text variant="large" className="mt-4">
         Sharing

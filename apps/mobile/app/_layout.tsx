@@ -119,7 +119,7 @@ function DeletedNotice() {
     const notice = take();
     if (!notice) return;
     qc.clear();
-    alert("Account deleted", `An administrator deleted your account "${notice.name}" on ${hostOf(notice.url)}. Its library is gone from the server, and the account was removed from this phone.`);
+    alert("Account deleted", `Your account "${notice.name}" on ${hostOf(notice.url)} was deleted, by you on another device or by an administrator. Its library is gone from the server, and the account was removed from this phone.`);
   }, [ready, pending, take, qc]);
 
   return null;
@@ -182,6 +182,7 @@ function Root() {
           <Stack.Screen name="profile/[name]" options={{ title: "" }} />
           <Stack.Screen name="feedback" options={{ title: "Feedback" }} />
           <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
+          <Stack.Screen name="blocked" options={{ title: "Blocked people" }} />
           <Stack.Screen name="saved" options={{ title: "Saved posts" }} />
           <Stack.Screen name="list" options={{ title: "" }} />
           <Stack.Screen name="triage" options={{ title: "Sort" }} />
@@ -190,6 +191,7 @@ function Root() {
           <Stack.Screen name="accounts" options={{ title: "Accounts", presentation: "modal" }} />
           <Stack.Screen name="account-form" options={{ title: "Account", presentation: "modal" }} />
           <Stack.Screen name="admin" options={{ title: "Users" }} />
+          <Stack.Screen name="moderation" options={{ title: "Moderation" }} />
           <Stack.Screen name="credentials" options={{ title: "Instagram login" }} />
         </Stack.Protected>
         <Stack.Protected guard={!hasAccount}>
@@ -197,6 +199,8 @@ function Root() {
         </Stack.Protected>
         {/* reachable with or without an account: it is how a new account arrives */}
         <Stack.Screen name="connect" options={{ title: "Add account", presentation: "modal" }} />
+        {/* the browser returns here after a social login, signed in or not */}
+        <Stack.Screen name="oauth" options={{ title: "Social login", headerShown: false }} />
         <Stack.Screen name="whats-new" options={{ title: "What's new", presentation: "modal" }} />
       </Stack>
     </ThemeProvider>

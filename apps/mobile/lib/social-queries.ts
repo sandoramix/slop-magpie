@@ -1,5 +1,12 @@
 import {
   DashboardFeedbackResponse,
+  BlockedResponse,
+  IdentitiesResponse,
+  InviteResponse,
+  OAuthStartResponse,
+  ReportListResponse,
+  type OAuthProvider,
+  type ResolveReportBody,
   DashboardProgress,
   FeedbackPromptsResponse,
   NotificationListResponse,
@@ -233,4 +240,71 @@ export function useUpdateBio() {
     mutationFn: (bio: string | null) => request("PUT", "/profiles/me", { body: { bio }, schema: NoContent }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
   });
+}
+
+// ── sign-in methods ─────────────────────────────────────────────────────
+
+export function useIdentities() {
+  const [scope, enabled] = useScope();
+  return useQuery({ queryKey: ["identities", scope], enabled, queryFn: () => request("GET", "/me/identities", { schema: IdentitiesResponse }) });
+}
+
+/** The page to open in the browser to link a provider to the signed-in account. */
+export async function fetchLinkUrl(provider: OAuthProvider): Promise<string> {
+  return (await request("POST", `/me/identities/${provider}/link`, { schema: OAuthStartResponse })).url;
+}
+
+export function useUnlinkIdentity() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (provider: OAuthProvider) => request("DELETE", `/me/identities/${provider}`, { schema: NoContent }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["identities"] }),
+  });
+}
+
+// ── moderation (admin) ──────────────────────────────────────────────────
+
+export function useReports(status: "open" | "actioned" | "dismissed", enabled: boolean) {
+  const [scope, on] = useScope();
+  return useQuery({
+    queryKey: ["reports", scope, status],
+    enabled: on && enabled,
+    queryFn: async () => (await request("GET", "/moderation/reports", { schema: ReportListResponse, query: { status, limit: 50 } })).reports,
+  });
+}
+
+export function useResolveReport() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string } & ResolveReportBody) => request("POST", `/moderation/reports/${args.id}`, { body: { action: args.action }, schema: NoContent }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reports"] }),
+  });
+}
+
+export function useCreateInvite() {
+  return useMutation({ mutationFn: () => request("POST", "/invites", { schema: InviteResponse }) });
+}
+
+// ── blocked people, leaving ─────────────────────────────────────────────
+
+export function useBlocked() {
+  const [scope, enabled] = useScope();
+  return useQuery({
+    queryKey: ["blocked", scope],
+    enabled,
+    queryFn: async () => (await request("GET", "/profiles/blocked", { schema: BlockedResponse })).people,
+  });
+}
+
+export function useUnblock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) => request("DELETE", `/profiles/${encodeURIComponent(name)}/block`, { schema: NoContent }),
+    onSuccess: () => qc.invalidateQueries(),
+  });
+}
+
+/** Deletes the signed-in account and everything in it; `confirm` is the username. */
+export function useDeleteMyAccount() {
+  return useMutation({ mutationFn: (confirm: string) => request("DELETE", "/me", { body: { confirm }, schema: NoContent }) });
 }

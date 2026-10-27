@@ -4,6 +4,7 @@ import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import { View } from "react-native";
 import { Chip } from "@/components/chip";
+import { SocialLogin } from "@/components/social-login";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
@@ -184,6 +185,7 @@ export function AccountForm({ account, onDone }: Props) {
         <Text>{busy ? "Checking…" : account ? "Test and save" : mode === "signup" ? "Create account" : "Connect"}</Text>
       </Button>
       {error ? <Text className="text-sm text-destructive">{error}</Text> : null}
+      {account ? null : <SocialLogin url={url} verb={mode === "signup" ? "Sign up" : "Continue"} />}
     </View>
   );
 }

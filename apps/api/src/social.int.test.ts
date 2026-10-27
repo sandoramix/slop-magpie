@@ -214,6 +214,23 @@ describe.skipIf(!serverUrl)("social layer (integration)", () => {
     env.deps.registrationMode = "invite";
   });
 
+  it("lets people delete their own account, which removes their posts for everyone", async () => {
+    const leaver = await json<CreateUserResponse>(env.request("/users", { method: "POST", json: { name: "leaver" } }), 201);
+    const id = await importReady(leaver.token, "https://example.com/leaving", "Goodbye pie");
+    await publish(leaver.token, id);
+    await json<PostDetail>(as(bob.token, `/posts/${id}/save`, { method: "PUT" }), 200);
+
+    // the username must be typed; the root admin cannot leave
+    expect((await as(leaver.token, "/me", { method: "DELETE", json: { confirm: "nope" } })).status).toBe(400);
+    expect((await env.request("/me", { method: "DELETE", json: { confirm: "admin" } })).status).toBe(400);
+    expect((await as(leaver.token, "/me", { method: "DELETE", json: { confirm: "Leaver" } })).status).toBe(204);
+
+    expect((await as(leaver.token, "/me")).status).toBe(401);
+    expect((await as(bob.token, `/posts/${id}`)).status).toBe(404);
+    const inbox = await json<NotificationListResponse>(as(bob.token, "/notifications"), 200);
+    expect(inbox.notifications.some((n) => n.type === "post_removed" && n.payload.title === "Goodbye pie")).toBe(true);
+  });
+
   it("reports reach the admin, who can hide an item or suspend an account", async () => {
     const id = await importReady(alice.token, "https://example.com/spam", "Totally legit");
     await publish(alice.token, id);

@@ -1,4 +1,17 @@
-import { ACT_AS_HEADER, ApiErrorBody, HealthResponse, LoginResponse, MeResponse, type ErrorCode, type ErrorReason } from "@magpie/shared/api";
+import {
+  ACT_AS_HEADER,
+  ApiErrorBody,
+  HealthResponse,
+  LoginResponse,
+  MeResponse,
+  OAuthExchangeResponse,
+  OAuthStartResponse,
+  RegistrationConfig,
+  type ErrorCode,
+  type ErrorReason,
+  type OAuthExchangeBody,
+  type OAuthProvider,
+} from "@magpie/shared/api";
 import type { z } from "zod";
 import { useAccounts } from "@/stores/accounts";
 
@@ -147,4 +160,48 @@ export async function signOutRemote(baseUrl: string, token: string): Promise<voi
   } catch {
     // offline: the session stays valid until it expires or the account is reset
   }
+}
+
+// ── before there is an account: what the server offers, and social login ──
+
+async function publicCall<S extends z.ZodType>(baseUrl: string, method: "GET" | "POST", path: string, schema: S, body?: unknown): Promise<z.infer<S>> {
+  const base = baseUrl.trim().replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base)) throw new ApiError(0, "bad_request", "The server URL must start with http:// or https://");
+  let res: Response;
+  try {
+    res = await fetch(`${base}/api/v1${path}`, {
+      method,
+      headers: { Accept: "application/json", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+  } catch {
+    throw new ApiError(0, "network", "Can't reach the server");
+  }
+  const json: unknown = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = ApiErrorBody.safeParse(json);
+    throw new ApiError(res.status, err.success ? err.data.error.code : "internal", err.success ? err.data.error.message : `Server error (${res.status})`);
+  }
+  const parsed = schema.safeParse(json);
+  if (!parsed.success) throw new ApiError(res.status, "invalid_response", "Unexpected response from server");
+  return parsed.data;
+}
+
+/** Signup mode and the social logins this server has switched on. Older servers answer 404: nothing is offered then. */
+export async function fetchAuthConfig(baseUrl: string): Promise<RegistrationConfig> {
+  try {
+    return await publicCall(baseUrl, "GET", "/auth/config", RegistrationConfig);
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return { mode: "invite", providers: [] };
+    throw e;
+  }
+}
+
+/** The page to open in the system browser for this provider. */
+export async function startOAuth(baseUrl: string, provider: OAuthProvider): Promise<string> {
+  return (await publicCall(baseUrl, "POST", `/auth/oauth/${provider}/start`, OAuthStartResponse)).url;
+}
+
+export function exchangeOAuth(baseUrl: string, body: OAuthExchangeBody): Promise<OAuthExchangeResponse> {
+  return publicCall(baseUrl, "POST", "/auth/oauth/exchange", OAuthExchangeResponse, body);
 }

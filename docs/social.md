@@ -19,7 +19,7 @@ The owner of an item controls its existence (D32).
 - Owner deletes a public item → its saves, likes and feedback are removed by the FK cascade. Before the delete, everyone who saved or liked it gets a `post_removed` notification (title + owner handle only; no media remains).
 - Owner switches a public item back to private → same cascade and a `post_unshared` notification. The app warns first with the number of savers.
 - Saver deletes a save → only that bookmark (and its folder/tag links) goes; the item is untouched.
-- Deleting an account deletes its items and therefore the saves of them in other libraries, with notifications.
+- Deleting an account (an admin, or the person themselves with `DELETE /me`) deletes its items and therefore the saves of them in other libraries, with notifications.
 
 ### Storage accounting
 

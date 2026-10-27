@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import { Bell, Bookmark, MessageSquareHeart, Settings, UserRound } from "lucide-react-native";
+import { Bell, Bookmark, MessageSquareHeart, Settings, UserRound, UserX } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { ActAsBanner } from "@/components/account-chrome";
@@ -159,6 +159,13 @@ export default function MeScreen() {
             }}
           />
         ) : null}
+        <LinkRow
+          icon={UserX}
+          label="Blocked people"
+          onPress={() => {
+            router.push("/blocked");
+          }}
+        />
         <LinkRow
           icon={Settings}
           label="Settings"

@@ -1,5 +1,6 @@
 import {
   CreateUserBody,
+  DeleteMeBody,
   IdParam,
   type IdentitiesResponse,
   type MeResponse,
@@ -44,6 +45,16 @@ export const meRoutes = (deps: AppDeps) =>
       await deps.audit({ action: "auth.password_set", ...requestMeta(c, deps.trustProxy), details: { id: principal.id } });
       const body: PasswordResponse = { token, me: svc.whoAmI({ ...principal, hasPassword: true, actingAs: null }) };
       return c.json(body, 200);
+    })
+    // people can leave: their items, saves, likes and feedback go with them (D32)
+    .delete("/", validate("json", DeleteMeBody), async (c) => {
+      const principal = c.get("principal");
+      if (principal.actingAs) return errorResponse(c, 400, "bad_request", "Stop acting as another account first");
+      if (c.req.valid("json").confirm.trim().toLowerCase() !== principal.name.toLowerCase()) {
+        return errorResponse(c, 400, "bad_request", "Type your username to confirm");
+      }
+      await svc.deleteUser(deps, principal.id, null, requestMeta(c, deps.trustProxy));
+      return c.body(null, 204);
     })
     // linked social logins (Google, GitHub, Discord); always the token owner's, even while acting as someone else
     .get("/identities", async (c) => c.json(await oauth.listIdentities(deps.db, c.get("principal").id) satisfies IdentitiesResponse, 200))

@@ -12,6 +12,8 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 - A **Me** tab with your progress (how much of your library is filed, streak, shares and saves) and all feedback, either given by you or received on your posts, filterable per post.
 - Notifications, shown on the Me tab: new followers, saves and feedback on your posts, and a notice when a post you saved is deleted or made private by its owner (it then disappears from your saved posts).
 - Posts show "More like this" from other people, and Popular ranks posts by saves and how many people said they worked.
+- Sign in or sign up with Google, GitHub or Discord, and link them to an existing account in Settings. The buttons are always visible; each one is greyed out until the server you use has it set up. Admins can see reports and create invite codes under Settings.
+- Delete your own account from Settings, and see or undo the people you blocked from the Me tab.
 - Report and block people. Servers can now allow sign-up from the app (with an invite code from the admin by default).
 
 ### Changed

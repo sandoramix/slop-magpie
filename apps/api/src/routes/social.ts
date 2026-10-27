@@ -18,7 +18,10 @@ import {
   UpdateSaveBody,
 } from "@magpie/shared/api";
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 import { z } from "zod";
+import { errorResponse } from "../http/errors.ts";
+import { createFailureLimiter } from "../middleware/rate-limit.ts";
 import type { AppDeps, AppEnv } from "../deps.ts";
 import { requestMeta } from "../http/request-meta.ts";
 import { scopeOf } from "../http/scope.ts";
@@ -32,8 +35,27 @@ import * as signup from "../services/signup.ts";
 import { adminOnly } from "./users.ts";
 
 /** Everything social, mounted at the API root. All of it is additive to v1 (D24). */
-export const socialRoutes = (deps: AppDeps) =>
-  new Hono<AppEnv>()
+/** Keeps one account from hammering likes, saves, follows and reports; only writes count. */
+const writeLimiter = (limit: number) => {
+  const limiter = createFailureLimiter({ max: limit, windowMs: 60_000 });
+  return createMiddleware<AppEnv>(async (c, next) => {
+    if (c.req.method !== "GET") {
+      const key = c.get("principal").id;
+      if (limiter.isBlocked(key)) return errorResponse(c, 429, "rate_limited", "Slow down a little");
+      limiter.recordFailure(key);
+    }
+    await next();
+  });
+};
+
+export const socialRoutes = (deps: AppDeps) => {
+  const limited = writeLimiter(deps.socialWriteLimit ?? 120);
+  return new Hono<AppEnv>()
+    // scoped by path: mounted at the API root, a "*" guard would also count unrelated routes
+    .use("/posts/*", limited)
+    .use("/profiles/*", limited)
+    .use("/reports", limited)
+    .use("/notifications/*", limited)
     // ── discovery ───────────────────────────────────────────────────────
     .get("/feed", validate("query", FeedQuery), async (c) => c.json(await posts.feed(scopeOf(deps, c), c.req.valid("query")), 200))
     .get("/explore", validate("query", ExploreQuery), async (c) => c.json(await posts.explore(scopeOf(deps, c), c.req.valid("query")), 200))
@@ -138,6 +160,7 @@ export const socialRoutes = (deps: AppDeps) =>
       await moderation.createReport(scopeOf(deps, c), c.req.valid("json"));
       return c.body(null, 204);
     });
+};
 
 /** Admin tools: invites and moderation. */
 export const moderationRoutes = (deps: AppDeps) =>

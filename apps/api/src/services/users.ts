@@ -201,11 +201,12 @@ export async function setPassword(db: Database, id: string, password: string, la
 export async function deleteUser(
   deps: Omit<ServiceDeps, "userId">,
   id: string,
-  actorId: string,
+  /** The admin doing it, or null when people delete their own account. */
+  actorId: string | null,
   audit: Omit<AuditEvent, "action" | "details">,
 ): Promise<void> {
   if (id === ADMIN_USER_ID) throw new ApiError(400, "bad_request", "The root admin account cannot be deleted");
-  if (id === actorId) throw new ApiError(400, "bad_request", "You cannot delete your own account");
+  if (actorId !== null && id === actorId) throw new ApiError(400, "bad_request", "You cannot delete your own account");
   const target = await getUser(deps.db, id);
   // items go through the normal path so their blobs are queued for deletion
   const owned = await deps.db.select({ id: items.id }).from(items).where(eq(items.userId, id));

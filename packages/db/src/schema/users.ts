@@ -1,10 +1,10 @@
 import { sql } from "drizzle-orm";
-import { DEFAULT_STORAGE_LIMIT_BYTES } from "@magpie/shared/api";
+import { DEFAULT_STORAGE_LIMIT_BYTES, ROOT_ADMIN_ID } from "@magpie/shared/api";
 import { bigint, boolean, index, jsonb, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, timestamptz } from "./columns.ts";
 
 /** The admin account owns the library that existed before accounts did; it signs in with API_TOKEN. */
-export const ADMIN_USER_ID = "00000000-0000-7000-8000-000000000001";
+export const ADMIN_USER_ID = ROOT_ADMIN_ID;
 
 export const users = pgTable(
   "users",
