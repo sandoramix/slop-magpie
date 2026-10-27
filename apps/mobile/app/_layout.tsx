@@ -178,6 +178,11 @@ function Root() {
         <Stack.Protected guard={hasAccount}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="item/[id]" options={{ title: "" }} />
+          <Stack.Screen name="post/[id]" options={{ title: "" }} />
+          <Stack.Screen name="profile/[name]" options={{ title: "" }} />
+          <Stack.Screen name="feedback" options={{ title: "Feedback" }} />
+          <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
+          <Stack.Screen name="saved" options={{ title: "Saved posts" }} />
           <Stack.Screen name="list" options={{ title: "" }} />
           <Stack.Screen name="triage" options={{ title: "Sort" }} />
           <Stack.Screen name="quick-tag" options={{ title: "File it", presentation: "modal" }} />

@@ -14,6 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { MediaCarousel } from "@/components/media-carousel";
 import { SharedCommentCard } from "@/components/shared-comment-card";
+import { SharePanel } from "@/components/share-panel";
+import { useSaverCount } from "@/lib/social-queries";
 import { WORKFLOW_META, WORKFLOW_ORDER } from "@/lib/workflow";
 import {
   useCreateFolder,
@@ -116,8 +118,15 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
     update.mutate(body, { onError: fail });
   };
 
+  const savers = useSaverCount(item.id, item.visibility === "public");
   const confirmDelete = () => {
-    alert("Delete this item?", "The item and its downloaded files are removed.", [
+    const n = savers.data ?? 0;
+    alert(
+      "Delete this item?",
+      n > 0
+        ? `It is shared and ${n} ${n === 1 ? "person has" : "people have"} saved it. It disappears for them too and they are told. The item and its downloaded files are removed.`
+        : "The item and its downloaded files are removed.",
+      [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -192,6 +201,7 @@ function Detail({ item, onDeleted }: { item: ItemDetail; onDeleted: () => void }
         </View>
 
         {item.caption ? <Text className="text-sm text-muted-foreground">{item.caption}</Text> : null}
+        <SharePanel item={item} />
         {item.sharedComment ? <SharedCommentCard comment={item.sharedComment} /> : null}
 
         <View className="flex-row gap-1">

@@ -5,6 +5,13 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+### Added
+
+- Share what you save: turn an item public and other people can like it, save it to their own folders and tags, and follow you. A new **Explore** tab shows posts from people you follow, new posts and popular ones, and lets you find people.
+- Quick feedback: a few days after you save someone's post the app asks "How did it go?" (worked, meh, didn't work, with optional reasons), or tap "I tried it" yourself. Every shared post shows how it worked out for others.
+- A **Me** tab with your progress (how much of your library is filed, streak, shares and saves) and all feedback, either given by you or received on your posts, filterable per post.
+- Notifications, shown on the Me tab: new followers, saves and feedback on your posts, and a notice when a post you saved is deleted or made private by its owner (it then disappears from your saved posts).
+- Report and block people. Servers can now allow sign-up from the app (with an invite code from the admin by default).
 
 ## [1.7.0] - 2026-10-24
 ### Added

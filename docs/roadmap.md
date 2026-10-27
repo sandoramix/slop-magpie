@@ -42,9 +42,9 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 Public posts, saves, follows, likes, quick feedback, a progress dashboard (requested 2026-10-27). Design in [social.md](social.md).
 
 - [x] 1. Docs, `visibility` column, shared enums
-- [x] 2. Publish, save (`item_saves`), delete cascade, follow, like, feed, explore, notifications (API; app UI pending)
-- [x] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation (API; app UI pending). Social login (Google, GitHub, Discord) prepared in [security.md](security.md#social-login-prepared-not-implemented), not built
-- [x] 4. (API) Feedback prompts + "I tried it", dashboard (progress, given/received feedback), per-item feedback card
+- [x] 2. Publish, save (`item_saves`), delete cascade, follow, like, feed, explore, notifications
+- [x] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation (reports, blocks and signup have app UI; the admin moderation queue is API only for now). Social login (Google, GitHub, Discord) prepared in [security.md](security.md#social-login-prepared-not-implemented), not built
+- [x] 4. Feedback prompts + "I tried it", dashboard (progress, given/received feedback), per-item feedback card
 - [ ] 5. Smarter organization: auto-file with undo, keyword merge/phrases, similar posts, feed ranking
 
 ## M0 — Scaffold

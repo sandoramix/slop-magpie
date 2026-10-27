@@ -52,7 +52,7 @@ const POLL_MS = 4000;
 const THUMB_WAIT_MS = 5 * 60_000;
 
 /** Keyed by account and by the library an admin is acting in, so switching never shows stale data. */
-function useScope(): readonly [string, boolean] {
+export function useScope(): readonly [string, boolean] {
   const activeId = useAccounts((s) => s.activeId);
   const actAs = useAccounts((s) => s.actAs?.id ?? "");
   const hasToken = useAccounts((s) => s.token !== null);

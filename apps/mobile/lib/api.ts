@@ -107,16 +107,25 @@ async function checkHealth(base: string): Promise<string> {
 }
 
 /** Username + password → a session token for this device (a normal bearer token from then on). */
-export async function loginWithPassword(baseUrl: string, username: string, password: string): Promise<LoginResponse> {
+export function loginWithPassword(baseUrl: string, username: string, password: string): Promise<LoginResponse> {
+  return authPost(baseUrl, "/auth/login", { username: username.trim(), password });
+}
+
+/** Creates an account (needs an invite code unless the server is open) and signs this device in. */
+export function signUp(baseUrl: string, username: string, password: string, inviteCode: string): Promise<LoginResponse> {
+  return authPost(baseUrl, "/auth/signup", { username: username.trim(), password, ...(inviteCode.trim() ? { inviteCode: inviteCode.trim() } : {}) });
+}
+
+async function authPost(baseUrl: string, path: string, body: unknown): Promise<LoginResponse> {
   const base = baseUrl.trim().replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(base)) throw new ApiError(0, "bad_request", "The server URL must start with http:// or https://");
   await checkHealth(base);
   let res: Response;
   try {
-    res = await fetch(`${base}/api/v1/auth/login`, {
+    res = await fetch(`${base}/api/v1${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ username: username.trim(), password }),
+      body: JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, "network", "Can't reach the server");
