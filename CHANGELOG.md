@@ -5,6 +5,8 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+
+## [2.2.0] - 2026-10-27
 ### Added
 
 - Followers and following lists: tap the counts on your profile card in Settings (or on anyone's profile) to see who follows whom. Every row has a one-tap Unfollow, Follow back or Follow button.
