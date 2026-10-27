@@ -8,14 +8,19 @@ export type ThemePreference = "system" | "light" | "dark";
 export const shareModes = ["ask", "organize", "later"] as const;
 export type ShareMode = (typeof shareModes)[number];
 
+export type ViewMode = "grid" | "list";
+
 type SettingsState = {
   theme: ThemePreference;
   columns: 1 | 2 | 3;
+  /** Items as a picture grid or as rows with the title and details beside a small picture. */
+  viewMode: ViewMode;
   shareMode: ShareMode;
   lastSeenVersion: string | null;
   setTheme: (theme: ThemePreference) => void;
   setShareMode: (mode: ShareMode) => void;
   setColumns: (columns: 1 | 2 | 3) => void;
+  setViewMode: (mode: ViewMode) => void;
   setLastSeenVersion: (version: string) => void;
 };
 
@@ -24,6 +29,7 @@ export const useSettings = create<SettingsState>()(
     (set) => ({
       theme: "system",
       columns: 2,
+      viewMode: "grid",
       shareMode: "organize",
       lastSeenVersion: null,
       setTheme: (theme) => {
@@ -34,6 +40,9 @@ export const useSettings = create<SettingsState>()(
       },
       setColumns: (columns) => {
         set({ columns });
+      },
+      setViewMode: (viewMode) => {
+        set({ viewMode });
       },
       setLastSeenVersion: (lastSeenVersion) => {
         set({ lastSeenVersion });

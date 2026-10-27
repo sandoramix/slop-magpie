@@ -5,11 +5,18 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+### Added
+
+- A notifications bell with the unread count in the header of every tab.
+- Items can be shown as a list (small picture, title, author, source and date) as well as a grid. Switch with the Grid/List chip on the Library tab, or under Appearance in Settings.
+
+### Changed
+
+- The tabs are Sort, Explore, Library, Folders and Settings. Settings now opens with your profile (name, items, shared, followers, bio, how much of your library is filed), then groups: Activity (notifications, feedback, saved posts, topics, filed for you, public profile, blocked people), Version and updates, Account, Sharing, Appearance, Administration (admins) and a Danger zone.
+
 ### Fixed
 
-- Settings opens again: it was a hidden tab that sent you back to Sort. It is a normal screen now, reached from the Me page.
-- The Me page shows the installed version, whether an update is available, a button to check, and What's new.
-
+- Settings opens again: it had become a hidden tab that sent you back to Sort.
 ## [2.0.1] - 2026-10-27
 ### Fixed
 

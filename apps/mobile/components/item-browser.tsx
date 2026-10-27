@@ -23,6 +23,7 @@ type Picking = "folder" | "tag" | null;
 /** Grid + pull to refresh + paging + multi-select with a bulk action bar. */
 export function ItemBrowser({ query, empty, header }: Props) {
   const columns = useSettings((s) => s.columns);
+  const viewMode = useSettings((s) => s.viewMode);
   const items = useItems(query);
   const folders = useFolders();
   const tags = useTags();
@@ -86,6 +87,7 @@ export function ItemBrowser({ query, empty, header }: Props) {
     <View className="flex-1">
       <ItemGrid
         items={flat}
+        mode={viewMode}
         columns={columns}
         selection={selection}
         onSelectionChange={setSelection}
