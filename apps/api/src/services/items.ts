@@ -40,6 +40,7 @@ import type { AuditEvent, ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
 import { decodeCursor, encodeCursor } from "./cursor.ts";
 import { isUniqueViolation } from "./pg-errors.ts";
+import { applyVisibility, retractPublic } from "./posts.ts";
 import { assertHasRoom } from "./storage.ts";
 import { itemConditions } from "./search.ts";
 
@@ -70,6 +71,7 @@ const summaryColumns = {
   savedAtText: sql<string>`${items.savedAt}::text`,
   workflow: items.workflow,
   availability: items.availability,
+  visibility: items.visibility,
   authorHandle: items.authorHandle,
   firstMedia: sql<unknown>`(select json_build_object('thumb', coalesce(m.thumb_key, case when m.type = 'image' then m.storage_key end), 'w', m.width, 'h', m.height) from media m where m.item_id = ${ITEM_ID} order by m.position limit 1)`,
   mediaCount: sql<number>`(select count(*)::int from media m where m.item_id = ${ITEM_ID})`,
@@ -87,6 +89,7 @@ interface SummaryRow {
   savedAt: Date;
   workflow: ItemSummary["workflow"];
   availability: ItemSummary["availability"];
+  visibility: ItemSummary["visibility"];
   authorHandle: string | null;
   firstMedia: unknown;
   mediaCount: number;
@@ -108,6 +111,7 @@ async function toSummary(deps: ServiceDeps, row: SummaryRow): Promise<ItemSummar
     tagIds: row.tagIds,
     workflow: row.workflow,
     availability: row.availability,
+    visibility: row.visibility,
     authorHandle: row.authorHandle,
     aspectRatio: first?.w && first.h ? first.w / first.h : null,
     mediaCount: row.mediaCount,
@@ -358,13 +362,14 @@ async function enqueueFetch(deps: ServiceDeps, itemId: string) {
 export async function updateItem(deps: ServiceDeps, id: string, body: UpdateItemBody): Promise<ItemDetail> {
   await deps.db.transaction(async (tx) => {
     const [current] = await tx
-      .select({ custom: items.custom })
+      .select({ custom: items.custom, visibility: items.visibility, fetchStatus: items.fetchStatus })
       .from(items)
       .where(and(eq(items.id, id), eq(items.userId, deps.userId)))
       .for("update");
     if (!current) throw notFound();
 
     const patch: Partial<typeof items.$inferInsert> = {};
+    if (body.visibility !== undefined) Object.assign(patch, await applyVisibility(tx, deps.userId, id, current, body.visibility));
     if (body.title !== undefined) patch.title = body.title === "" ? null : body.title;
     if (body.notes !== undefined) patch.notes = body.notes === "" ? null : body.notes;
     if (body.workflow !== undefined) patch.workflow = body.workflow;
@@ -386,6 +391,8 @@ export async function updateItem(deps: ServiceDeps, id: string, body: UpdateItem
 
 export async function deleteItems(deps: ServiceDeps, ids: readonly string[], audit: Omit<AuditEvent, "action" | "details">, action: string) {
   const deleted = await deps.db.transaction(async (tx) => {
+    // savers and likers hear about it before the cascade removes their rows (D32)
+    await retractPublic(tx, deps.userId, ids, "post_removed");
     const rows = await tx
       .delete(items)
       .where(and(eq(items.userId, deps.userId), inArray(items.id, [...ids])))

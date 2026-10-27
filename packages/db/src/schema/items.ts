@@ -10,6 +10,8 @@ export const items = pgTable(
     id: id(),
     userId: ownerId(),
     visibility: visibility().notNull().default("private"),
+    // when the item was last made public; orders feeds. Cleared when it goes private again
+    publishedAt: timestamptz(),
     // set by a moderator: the item stays with its owner but drops out of every public view
     hiddenAt: timestamptz(),
     sourceUrl: text().notNull(),
@@ -56,7 +58,8 @@ export const items = pgTable(
   (t) => [
     uniqueIndex("items_canonical_url_key").on(t.userId, t.canonicalUrl),
     uniqueIndex("items_source_item_key").on(t.userId, t.source, t.sourceItemId).where(sql`${t.sourceItemId} is not null`),
-    index("items_public_idx").on(t.savedAt.desc()).where(sql`${t.visibility} = 'public'`),
+    index("items_public_idx").on(t.publishedAt.desc(), t.id.desc()).where(sql`${t.visibility} = 'public'`),
+    index("items_owner_public_idx").on(t.userId, t.publishedAt.desc()).where(sql`${t.visibility} = 'public'`),
     index("items_source_idx").on(t.source),
     index("items_saved_at_idx").on(t.userId, t.savedAt.desc()),
     index("items_workflow_idx").on(t.workflow),

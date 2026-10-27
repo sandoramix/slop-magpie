@@ -22,6 +22,22 @@ Rules:
 - **Isolation:** every query is scoped by the owner (`deps.userId`); ids from another account answer 404 (or 400 when used as a folder/tag reference). Tested in `apps/api/src/accounts.int.test.ts`.
 - Mobile app: the server URL and one token per saved account (the generated token, or the session token after a password login), kept in `expo-secure-store`; never in the APK or MMKV.
 
+## Social login (prepared, not implemented)
+
+Google, GitHub and Discord are planned. The groundwork is in place so adding a provider touches no existing table:
+
+- `auth_identities` links `(provider, provider_user_id)` to an account (unique). The provider's id is the key, never the email.
+- `GET /auth/config` returns `{ mode, providers }`; `providers` lists only configured providers (empty today), so the app shows buttons only when the server supports them.
+- Passwords are already optional (`users.password_hash` nullable), so an account created through a provider simply has none.
+
+Rules for when the flow is built:
+
+- Mobile uses the authorization-code flow with PKCE through the system browser (`expo-auth-session`); the app sends the provider's code to `POST /auth/oauth/:provider`, the API exchanges it server-side (client secrets live only in API env vars, validated by t3-env, never in the app) and answers with a normal session token like `/auth/login`.
+- Never link a provider login to an existing account by email alone; linking is an explicit action by a signed-in user (`POST /me/identities`).
+- A first-time provider login is a signup: `REGISTRATION_MODE=invite` still requires an invite code (the app asks for it before starting the flow), and the person picks a username (`USERNAME_PATTERN`) since provider names collide.
+- Removing the last login method of an account is refused.
+- Rate limits, suspension and session handling are shared with password login.
+
 ## Admin web page
 
 `/admin` (`ADMIN_WEB_UI`, default on) is a static page for replacing the Instagram session or cookies from a browser. It adds no server-side session: the admin token is typed in, kept in a JS variable, sent as a bearer token to the admin-only `/api/v1/sources/:id/credentials` routes, and dropped on log out, after 10 idle minutes or on `pagehide`. Nothing is written to cookies or web storage, so there is nothing for CSRF to ride on, and wrong tokens hit the same failed-auth rate limit and audit entries as any API call. The page uses `textContent` only, a hash-based CSP (`default-src 'none'`, `connect-src 'self'`, no `unsafe-inline`), `frame-ancestors 'none'`, `no-store` and `no-referrer`. Uploaded material is never returned by the API, logged or audited (only that a change happened).

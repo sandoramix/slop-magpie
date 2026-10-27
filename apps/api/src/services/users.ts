@@ -7,7 +7,7 @@
 import { randomBytes } from "node:crypto";
 import { ADMIN_USER_ID, auditLog, type Database, deletedTokens, items, sessions, users } from "@magpie/db";
 import type { CreateUserResponse, MeResponse, Role, UpdateMeBody, User } from "@magpie/shared/api";
-import { and, count, eq, gt, isNotNull, lt } from "drizzle-orm";
+import { and, count, eq, gt, isNotNull, isNull, lt } from "drizzle-orm";
 import type { AccountLookup, AuditEvent, Authenticated, Principal, ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
 import { hashToken } from "../middleware/auth.ts";
@@ -28,20 +28,20 @@ export function createAccountLookup(db: Database): AccountLookup {
   return {
     async findByTokenHash(tokenHash): Promise<Authenticated | null> {
       // the generated token (temporary: gone once a password is set)
-      const [direct] = await db.select(accountColumns).from(users).where(eq(users.tokenHash, tokenHash));
+      const [direct] = await db.select(accountColumns).from(users).where(and(eq(users.tokenHash, tokenHash), isNull(users.suspendedAt)));
       if (direct) return direct;
 
       const [session] = await db
         .select({ ...accountColumns, sessionId: sessions.id })
         .from(sessions)
         .innerJoin(users, eq(users.id, sessions.userId))
-        .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, new Date())));
+        .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, new Date()), isNull(users.suspendedAt)));
       if (!session) return null;
       await touchSession(db, session.sessionId);
       return session;
     },
     async findById(id): Promise<Authenticated | null> {
-      const [row] = await db.select(accountColumns).from(users).where(eq(users.id, id));
+      const [row] = await db.select(accountColumns).from(users).where(and(eq(users.id, id), isNull(users.suspendedAt)));
       return row ?? null;
     },
     async isDeletedToken(tokenHash): Promise<boolean> {

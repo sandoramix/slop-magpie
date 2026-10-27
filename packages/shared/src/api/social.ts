@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FeedbackReason, FeedbackVerdict, ItemKind, ReportStatus, ReportTarget, Visibility } from "./enums.ts";
+import { FeedbackReason, FeedbackVerdict, ItemKind, ReportStatus, ReportTarget } from "./enums.ts";
 import { Name } from "./common.ts";
 import { MediaInfo } from "./items.ts";
 
@@ -39,7 +39,8 @@ export const PostSummary = z.object({
   aspectRatio: z.number().positive().nullable(),
   mediaCount: z.number().int().nonnegative(),
   owner: PersonRef,
-  publishedAt: z.iso.datetime(),
+  /** Null for a private item of the caller's own. */
+  publishedAt: z.iso.datetime().nullable(),
   likeCount: z.number().int().nonnegative(),
   saveCount: z.number().int().nonnegative(),
   feedback: FeedbackSummary,
@@ -78,8 +79,9 @@ export const ExploreQuery = z.object({
 });
 export type ExploreQuery = z.infer<typeof ExploreQuery>;
 
-export const SetVisibilityBody = z.object({ visibility: Visibility });
-export type SetVisibilityBody = z.infer<typeof SetVisibilityBody>;
+/** How many accounts saved the caller's post, for the warning before un-publishing or deleting it. */
+export const SaverCountResponse = z.object({ count: z.number().int().nonnegative() });
+export type SaverCountResponse = z.infer<typeof SaverCountResponse>;
 
 // ── saves ───────────────────────────────────────────────────────────────
 
@@ -133,6 +135,7 @@ export const ProfileParam = z.object({ name: z.string().min(1).max(100) });
 export type ProfileParam = z.infer<typeof ProfileParam>;
 
 export const PeopleSearchQuery = z.object({ q: z.string().trim().min(1).max(100) });
+export type PeopleSearchQuery = z.infer<typeof PeopleSearchQuery>;
 export const PeopleResponse = z.object({ people: z.array(Profile) });
 export type PeopleResponse = z.infer<typeof PeopleResponse>;
 
@@ -156,6 +159,7 @@ export const Notification = z.object({
 export type Notification = z.infer<typeof Notification>;
 
 export const NotificationListQuery = z.object({ unread: z.stringbool().optional(), ...cursorQuery });
+export type NotificationListQuery = z.infer<typeof NotificationListQuery>;
 export const NotificationListResponse = z.object({
   notifications: z.array(Notification),
   unreadCount: z.number().int().nonnegative(),
@@ -218,7 +222,7 @@ export const FeedbackEntry = z.object({
   verdict: FeedbackVerdict,
   reasons: z.array(FeedbackReason),
   updatedAt: z.iso.datetime(),
-  /** Who gave it; only on the "received" tab, and without names for privacy-neutral display by the app. */
+  /** Who gave it; only on the "received" tab. */
   by: PersonRef.nullable(),
 });
 export type FeedbackEntry = z.infer<typeof FeedbackEntry>;
@@ -232,7 +236,16 @@ export const registrationModes = ["invite", "open"] as const;
 export const RegistrationMode = z.enum(registrationModes);
 export type RegistrationMode = z.infer<typeof RegistrationMode>;
 
-export const RegistrationConfig = z.object({ mode: RegistrationMode });
+/** Social logins the app may offer. A provider is listed in `RegistrationConfig.providers` only when the server has it configured. */
+export const oauthProviders = ["google", "github", "discord"] as const;
+export const OAuthProvider = z.enum(oauthProviders);
+export type OAuthProvider = z.infer<typeof OAuthProvider>;
+
+export const RegistrationConfig = z.object({
+  mode: RegistrationMode,
+  /** Absent on servers that predate social login. */
+  providers: z.array(OAuthProvider).default([]),
+});
 export type RegistrationConfig = z.infer<typeof RegistrationConfig>;
 
 export const USERNAME_PATTERN = /^[A-Za-z0-9_.-]{3,32}$/;
@@ -271,6 +284,7 @@ export const Report = z.object({
 export type Report = z.infer<typeof Report>;
 
 export const ReportListQuery = z.object({ status: ReportStatus.default("open"), ...cursorQuery });
+export type ReportListQuery = z.infer<typeof ReportListQuery>;
 export const ReportListResponse = z.object({ reports: z.array(Report), nextCursor: z.string().nullable() });
 export type ReportListResponse = z.infer<typeof ReportListResponse>;
 

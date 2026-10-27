@@ -48,7 +48,7 @@ export const meRoutes = (deps: AppDeps) =>
       return c.body(null, 204);
     });
 
-const adminOnly = createMiddleware<AppEnv>(async (c, next) => {
+export const adminOnly = createMiddleware<AppEnv>(async (c, next) => {
   // the token owner decides, even while acting as someone else
   if (!c.get("principal").isAdmin) return errorResponse(c, 403, "forbidden", "Admin only");
   await next();

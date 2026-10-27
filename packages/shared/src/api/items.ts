@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AssignedBy, Availability, FetchStatus, ItemKind, KeywordSource, MediaType, Workflow } from "./enums.ts";
+import { AssignedBy, Availability, FetchStatus, ItemKind, KeywordSource, MediaType, Visibility, Workflow } from "./enums.ts";
 
 export const MAX_URL_LENGTH = 2048;
 
@@ -24,6 +24,8 @@ export const ItemSummary = z.object({
   tagIds: z.array(z.uuid()),
   workflow: Workflow,
   availability: Availability,
+  /** Public items can be seen and saved by other accounts (docs/social.md). Absent on servers that predate it. */
+  visibility: Visibility.default("private"),
   authorHandle: z.string().nullable(),
   /** width / height of the first media, for the masonry grid. */
   aspectRatio: z.number().positive().nullable(),
@@ -136,6 +138,7 @@ export const UpdateItemBody = z
     notes: z.string().max(10_000).nullable(),
     workflow: Workflow,
     favorite: z.boolean(),
+    visibility: Visibility,
     rating: z.number().int().min(1).max(5).nullable(),
     /** Partial: keys present are set (`null` removes), others are kept. Validated against field definitions. */
     custom: z.record(z.string(), z.unknown()),

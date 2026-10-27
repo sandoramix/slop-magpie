@@ -40,6 +40,27 @@ export const ownerId = () =>
     .references(() => users.id, { onDelete: "cascade" });
 
 /**
+ * A login method linked to an account: Google, GitHub or Discord (docs/security.md#social-login).
+ * The provider's own user id is the key, never the email, which can change or be unverified.
+ * An account may have several, and a password too; an account made through a provider has no password.
+ */
+export const authIdentities = pgTable(
+  "auth_identities",
+  {
+    id: id(),
+    userId: ownerId(),
+    // validated against `OAuthProvider` in packages/shared; text so a new provider needs no migration
+    provider: text().notNull(),
+    providerUserId: text().notNull(),
+    // as reported by the provider at the last login; informational, may be null or unverified
+    email: text(),
+    createdAt: createdAt(),
+    lastLoginAt: timestamptz(),
+  },
+  (t) => [uniqueIndex("auth_identities_provider_key").on(t.provider, t.providerUserId), index("auth_identities_user_idx").on(t.userId)],
+);
+
+/**
  * Hashes of the tokens a deleted account had (its generated token and its sessions), kept so a
  * phone that still holds one can be told "this account was deleted" instead of "bad token".
  * Holds no library data; old rows are purged.

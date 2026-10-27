@@ -43,11 +43,11 @@ export async function login(
   label: string | null,
 ): Promise<{ token: string; userId: string } | null> {
   const [row] = await db
-    .select({ id: users.id, passwordHash: users.passwordHash })
+    .select({ id: users.id, passwordHash: users.passwordHash, suspendedAt: users.suspendedAt })
     .from(users)
     .where(sql`lower(${users.name}) = ${username.toLowerCase()}`);
   const ok = await verifyPassword(password, row?.passwordHash ?? (await getDummyHash()));
-  if (!row?.passwordHash || !ok) return null;
+  if (!row?.passwordHash || !ok || row.suspendedAt) return null;
 
   const token = newSessionToken();
   await db.insert(sessions).values({

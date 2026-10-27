@@ -78,6 +78,13 @@
       "when": 1793092845008,
       "tag": "0010_brave_reavers",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793093250551,
+      "tag": "0011_awesome_shockwave",
+      "breakpoints": true
     }
   ]
 }

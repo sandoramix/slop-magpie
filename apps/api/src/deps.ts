@@ -1,5 +1,6 @@
 import type { Database } from "@magpie/db";
 import type { JobSender } from "@magpie/jobs";
+import type { OAuthProvider, RegistrationMode } from "@magpie/shared/api";
 import type { BlobStore } from "@magpie/storage";
 import type { Logger } from "./logger.ts";
 
@@ -75,6 +76,12 @@ export interface AppDeps {
   createItemLimit?: number;
   /** Serve the admin page at `/admin` (default true). */
   adminWebUi?: boolean;
+  /** Who may create an account (default `invite`). */
+  registrationMode?: RegistrationMode;
+  /** Social login providers that are configured; empty until the OAuth flow exists (docs/security.md#social-login). */
+  oauthProviders?: readonly OAuthProvider[];
+  /** Signups per IP per hour. */
+  signupLimit?: number;
 }
 
 /** Subset handed to services. */
