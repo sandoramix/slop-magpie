@@ -184,6 +184,17 @@ Admin only: `POST /invites` (single-use code, 14 days), `GET /moderation/reports
 
 Notification types: `post_removed`, `post_unshared`, `new_follower`, `post_saved`, `feedback_received`.
 
+### Organization extras
+
+| Method | Path | Notes |
+|---|---|---|
+| GET / POST | `/stop-terms` | the library's ignored keywords; adding one also deletes the matching automatic keywords |
+| DELETE | `/stop-terms/:term` | |
+| GET | `/topics` | `unfiled=true` keeps topics with unfiled items. `{topics:[{label,keywords,size,unfiledCount,itemIds}],analysed,total}` |
+| GET | `/auto-filed` | items the categorizer filed in the last 14 days and nobody confirmed |
+| POST | `/auto-filed/keep`, `/auto-filed/undo` | `{itemIds?}` (omitted = all). Keep turns the filing manual; undo removes it and remembers it |
+| GET | `/moderation/hidden`, `/moderation/suspended` | admin: what can be restored with `unhide` / `unsuspend` |
+
 ## Media
 
 | Method | Path | Notes |
