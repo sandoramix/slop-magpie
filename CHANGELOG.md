@@ -24,6 +24,18 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 - Keywords are smarter: `#SlowCooker`, `#slow_cooker` and "slow cooker" are now the same keyword, phrases that repeat in a caption are kept, and plurals merge with their singular. Use "Refresh suggestions" in the Sort tab once to apply this to items you already saved.
 
+## [1.8.0] - 2026-10-26
+### Changed
+
+- The tag and folder pickers are redesigned: a taller sheet with a fixed header, a scrollable list with checkboxes, and a footer with Done (showing how many you picked) and Create that stays reachable.
+- Search and text fields have a clear (X) button.
+- Buttons, text fields and chips are larger and rounder, with touch targets of at least 44 dp, so they are easier to hit and read.
+
+### Fixed
+
+- The tag and folder picker now lifts above the keyboard, so the list is visible while you search or add a tag.
+- The picker list scrolls, so you can reach and confirm every choice.
+
 ## [1.7.0] - 2026-10-24
 ### Added
 

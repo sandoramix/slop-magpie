@@ -102,6 +102,7 @@ export default function FoldersScreen() {
     >
       <View className="gap-2 px-4 pt-3">
         <Input
+          clearable
           value={name}
           onChangeText={setName}
           placeholder={parent ? `New folder in ${parent.name}` : "New folder or tag name"}
