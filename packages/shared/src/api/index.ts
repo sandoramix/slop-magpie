@@ -1,3 +1,4 @@
+export * from "./auto.ts";
 export * from "./common.ts";
 export * from "./enums.ts";
 export * from "./errors.ts";
@@ -6,6 +7,7 @@ export * from "./folders.ts";
 export * from "./health.ts";
 export * from "./items.ts";
 export * from "./smart-folders.ts";
+export * from "./social.ts";
 export * from "./sources.ts";
 export * from "./stats.ts";
 export * from "./tags.ts";

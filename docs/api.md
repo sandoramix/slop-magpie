@@ -139,6 +139,62 @@ Notes on the item routes:
 |---|---|---|
 | GET | `/stats` | totals, favorites, gone, items with suggestions, counts by workflow and fetch status |
 
+## Social
+
+All additive to v1 (new routes and optional fields only, D24). Concepts in [social.md](social.md). Everything is scoped to the caller's library; an admin acting as someone uses that account's identity.
+
+| Method | Path | Notes |
+|---|---|---|
+| PATCH | `/items/:id` | `visibility: "public" \| "private"` publishes or un-publishes (only a finished item can be published, else `409`). Un-publishing removes everyone's saves, likes and verdicts and notifies them |
+| DELETE | `/items/:id` | on a public item also notifies savers and likers (`post_removed`) and removes their saves |
+| GET | `/feed` | public posts of people you follow, newest first. `cursor`, `limit` |
+| GET | `/explore` | other people's public posts. `sort=recent\|popular`, `q`, `source`, `cursor`, `limit` |
+| GET | `/posts/:id` | public post (or your own item) with media, aggregate feedback, your verdict, your save |
+| GET | `/posts/:id/similar` | up to 12 other public posts sharing keywords with this one |
+| GET | `/posts/:id/savers` | how many accounts saved your post (`{count}`), for the warning before removing it |
+| PUT / DELETE | `/posts/:id/like` | like or unlike; answers the post |
+| PUT / DELETE | `/posts/:id/save` | bookmark or remove the bookmark |
+| PATCH | `/posts/:id/save` | `note`, `folderIds`, `tagIds` of your own folders and tags |
+| GET | `/saves` | your bookmarks. `folderId`, `tagId`, `unfiled`, `q`, `cursor`, `limit` |
+| PUT / DELETE | `/posts/:id/feedback` | `{verdict: worked\|meh\|failed, reasons[]}`; one per person, changeable. Reasons are only returned to the post's owner |
+| POST | `/posts/:id/feedback/snooze` | "not yet": no prompt for 7 days |
+| PUT / DELETE | `/posts/:id/tried` | "I tried it"; the prompt follows immediately |
+| GET | `/feedback/prompts` | up to 3 posts waiting for a verdict (saved 3+ days ago, or marked tried) |
+| GET | `/dashboard/progress` | counts and shares for the "Me" dashboard |
+| GET | `/dashboard/feedback` | `tab=given\|received`, `verdict`, `itemId`, `cursor`, `limit` |
+| GET | `/profiles/search?q=` | find people |
+| GET | `/profiles/:name`, `/profiles/:name/posts` | profile with counts; their public posts |
+| PUT / DELETE | `/profiles/:name/follow` | follow or unfollow |
+| PUT / DELETE | `/profiles/:name/block` | block (also ends follows) or unblock |
+| GET | `/profiles/blocked` | people you blocked |
+| PUT | `/profiles/me` | `{bio}` |
+| GET | `/notifications` | `unread`, `cursor`, `limit`; answer includes `unreadCount` |
+| POST | `/notifications/read` | `{ids?}`; no ids marks everything read |
+| POST | `/reports` | `{target: item\|user, targetId, reason}` |
+| GET | `/auth/config` | public: `{mode, providers}` for the signup screen |
+| POST | `/auth/oauth/:provider/start` | public: `{url}` to open in the browser (`google`, `github`, `discord`); `404` when the provider is not configured |
+| GET | `/auth/oauth/:provider/callback` | public: the provider's redirect target; answers `302` to `magpie://oauth?status=ticket\|error&...` |
+| POST | `/auth/oauth/exchange` | public: `{ticket, username?, inviteCode?}` → `{status:"ok",token,me}` or `{status:"signup_required",suggestedUsername,inviteRequired}` |
+| DELETE | `/me` | `{confirm: <username>}`: deletes your account and everything in it; posts you shared disappear for their savers, who are told. The root admin cannot |
+| GET | `/me/identities` | linked social logins and whether a password is set |
+| POST / DELETE | `/me/identities/:provider/link`, `/me/identities/:provider` | link (returns `{url}`) or remove a login method; the last way in is refused |
+| POST | `/auth/signup` | public: `{username, password, inviteCode?}` → session like `/auth/login`. Invite needed unless `REGISTRATION_MODE=open` |
+
+Admin only: `POST /invites` (single-use code, 14 days), `GET /moderation/reports?status=`, `POST /moderation/reports/:id` (`hide` / `suspend` / `dismiss`), `POST /moderation/items/:id/hide|unhide`, `POST /moderation/users/:id/suspend|unsuspend`.
+
+Notification types: `post_removed`, `post_unshared`, `new_follower`, `post_saved`, `feedback_received`.
+
+### Organization extras
+
+| Method | Path | Notes |
+|---|---|---|
+| GET / POST | `/stop-terms` | the library's ignored keywords; adding one also deletes the matching automatic keywords |
+| DELETE | `/stop-terms/:term` | |
+| GET | `/topics` | `unfiled=true` keeps topics with unfiled items. `{topics:[{label,keywords,size,unfiledCount,itemIds}],analysed,total}` |
+| GET | `/auto-filed` | items the categorizer filed in the last 14 days and nobody confirmed |
+| POST | `/auto-filed/keep`, `/auto-filed/undo` | `{itemIds?}` (omitted = all). Keep turns the filing manual; undo removes it and remembers it |
+| GET | `/moderation/hidden`, `/moderation/suspended` | admin: what can be restored with `unhide` / `unsuspend` |
+
 ## Media
 
 | Method | Path | Notes |

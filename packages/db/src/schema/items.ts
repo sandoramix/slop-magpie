@@ -1,14 +1,19 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, index, integer, jsonb, pgTable, smallint, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, index, integer, jsonb, pgTable, real, smallint, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, timestamptz, tsvector } from "./columns.ts";
 import { ownerId } from "./users.ts";
-import { availability, fetchStatus, itemKind, mediaType, workflow } from "./enums.ts";
+import { availability, fetchStatus, itemKind, mediaType, visibility, workflow } from "./enums.ts";
 
 export const items = pgTable(
   "items",
   {
     id: id(),
     userId: ownerId(),
+    visibility: visibility().notNull().default("private"),
+    // when the item was last made public; orders feeds. Cleared when it goes private again
+    publishedAt: timestamptz(),
+    // set by a moderator: the item stays with its owner but drops out of every public view
+    hiddenAt: timestamptz(),
     sourceUrl: text().notNull(),
     canonicalUrl: text().notNull(),
     // registry id, validated in app code; not a pg enum so new sources need no migration
@@ -35,6 +40,8 @@ export const items = pgTable(
     rating: smallint(),
     custom: jsonb().$type<Record<string, unknown>>().notNull().default({}),
     rawMeta: jsonb().$type<unknown>(),
+    // meaning vector from the worker's embedder (docs/worker-pipeline.md#embeddings); plain float array, no extension needed
+    embedding: real().array(),
     transcript: text(),
     ocrText: text(),
     searchTsv: tsvector().generatedAlwaysAs(
@@ -53,6 +60,8 @@ export const items = pgTable(
   (t) => [
     uniqueIndex("items_canonical_url_key").on(t.userId, t.canonicalUrl),
     uniqueIndex("items_source_item_key").on(t.userId, t.source, t.sourceItemId).where(sql`${t.sourceItemId} is not null`),
+    index("items_public_idx").on(t.publishedAt.desc(), t.id.desc()).where(sql`${t.visibility} = 'public'`),
+    index("items_owner_public_idx").on(t.userId, t.publishedAt.desc()).where(sql`${t.visibility} = 'public'`),
     index("items_source_idx").on(t.source),
     index("items_saved_at_idx").on(t.userId, t.savedAt.desc()),
     index("items_workflow_idx").on(t.workflow),

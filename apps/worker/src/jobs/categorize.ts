@@ -1,6 +1,17 @@
 // v1 rule-based categorization (docs/worker-pipeline.md#categorize): learn keyword → folder/tag
 // from manual assignments and score the item's keywords against them.
-import { folders, itemFolderSuggestions, itemFolders, itemKeywords, items, itemTagSuggestions, itemTags, tags } from "@magpie/db";
+import {
+  folders,
+  itemFolderRejections,
+  itemFolderSuggestions,
+  itemFolders,
+  itemKeywords,
+  items,
+  itemTagRejections,
+  itemTagSuggestions,
+  itemTags,
+  tags,
+} from "@magpie/db";
 import { and, countDistinct, eq, exists, inArray, ne, sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { WorkerContext } from "../context.ts";
@@ -175,8 +186,15 @@ export async function categorizeItem(ctx: WorkerContext, itemId: string): Promis
 
   const threshold = ctx.autoAssignThreshold;
   await ctx.db.transaction(async (tx) => {
-    const haveFolders = new Set((await tx.select({ id: itemFolders.folderId }).from(itemFolders).where(eq(itemFolders.itemId, itemId))).map((r) => r.id));
-    const haveTags = new Set((await tx.select({ id: itemTags.tagId }).from(itemTags).where(eq(itemTags.itemId, itemId))).map((r) => r.id));
+    // places the item is already in, plus places the owner undid before: neither is proposed (again)
+    const haveFolders = new Set([
+      ...(await tx.select({ id: itemFolders.folderId }).from(itemFolders).where(eq(itemFolders.itemId, itemId))).map((r) => r.id),
+      ...(await tx.select({ id: itemFolderRejections.folderId }).from(itemFolderRejections).where(eq(itemFolderRejections.itemId, itemId))).map((r) => r.id),
+    ]);
+    const haveTags = new Set([
+      ...(await tx.select({ id: itemTags.tagId }).from(itemTags).where(eq(itemTags.itemId, itemId))).map((r) => r.id),
+      ...(await tx.select({ id: itemTagRejections.tagId }).from(itemTagRejections).where(eq(itemTagRejections.itemId, itemId))).map((r) => r.id),
+    ]);
     await tx.delete(itemFolderSuggestions).where(eq(itemFolderSuggestions.itemId, itemId));
     await tx.delete(itemTagSuggestions).where(eq(itemTagSuggestions.itemId, itemId));
 

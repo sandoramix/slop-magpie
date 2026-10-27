@@ -76,6 +76,14 @@ Optional: `INSTAGRAM_USERNAME`, `INSTAGRAM_PASSWORD`, `SESSIONS_DIR` (worker, de
 
 `ADMIN_WEB_UI` (api, default `true`): serves `https://<server>/admin`, a static page where the admin token is typed in to replace the Instagram session or cookies from any browser. Set `false` to remove it; the underlying `/api/v1/sources/instagram/credentials` routes stay admin-only either way. Use it over HTTPS only.
 
+`EMBEDDER` (worker, `hash` | `transformers` | `off`, default `hash`): how items become vectors for topic clusters; see [worker-pipeline.md](worker-pipeline.md#embeddings-and-topics).
+
+`DISABLED_SOURCES` (api and worker, default empty): comma list of sites to switch off (`instagram,tiktok,youtube,pinterest,x,reddit,facebook`). Everything is on by default; a disabled site saves as `generic`. Give both services the same value. `DISABLED_STRATEGIES` (worker, default empty): strategies to skip everywhere (`instaloader,yt-dlp,gallery-dl,opengraph,direct,oembed,reddit-json,fxtwitter`). See [sources.md](sources.md#disabling-a-source-or-a-strategy).
+
+`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` (api, optional): switch on social login per provider; setting only one half leaves it off. Register `<PUBLIC_BASE_URL>/api/v1/auth/oauth/<provider>/callback` as the redirect URI. See [security.md](security.md#social-login).
+
+`REGISTRATION_MODE` (api, `invite` | `open`, default `invite`): who may create an account with `POST /auth/signup`. `invite` needs a single-use code from `POST /invites` (admin); `open` needs none. Signups are limited to 5 per IP per hour. Switch to `open` only after reading the moderation notes in [social.md](social.md).
+
 `TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.
 
 Compose-only: `MEDIA_DIR` (default `/opt/magpie/media`), `COOKIES_HOST_DIR` (default `/opt/magpie/secrets/cookies`) and `SESSIONS_HOST_DIR` (default `/opt/magpie/secrets/sessions`); see step 2.

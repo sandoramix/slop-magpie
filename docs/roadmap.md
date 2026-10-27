@@ -29,13 +29,25 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 
 - [x] Suggestions from tag/folder **names** (cold start) and from the **same author's** earlier items (`categorize.ts`)
 - [x] **Backfill for existing items**: re-run extract + categorize over the whole library (cron for unorganized items, plus an on-demand "refresh suggestions" bulk op)
-- [ ] Keyword quality: phrases, merge variants (`slow_cooker` / "slow cooker"), per-user stop terms
+- [x] Keyword quality: repeated two-word phrases, spelling variants merged (`slow_cooker` / `#SlowCooker` / "slow cooker"), singular and plural merged. [x] per-user stop terms (Settings > Ignored keywords). Run "Refresh suggestions" once to re-extract old items
 - [x] **Triage screen** as the app's home: one item at a time, accept / edit / reject suggested tags and folders, next
 - [x] **Quick-tag sheet** right after sharing a link, before the fetch finishes
 - [x] Bulk organize on a selection (tags, folders, suggestions, status) already existed; [x] "apply to similar items" after filing one in the Sort flow
 - [x] **Bulk refetch of everything failed** (not capped at a 500-id selection): `POST /items/refetch-failed` + a button in the Inbox
 - [x] **Instagram credentials from the app** (admin): upload a session file / cookies without SSH. Store them in the DB (new table, additive migration), worker writes them to `SESSIONS_DIR` / a private cookies copy when they are newer than the file, then runs `session-check` immediately. Show the session state (`ok`/`dead`, last check) in the admin screen.
 - [ ] Optional: shorter `session-check` interval while the state is `dead`
+
+## Social layer
+
+Status 2026-10-27: all five phases are on `dev`. Social login is off until a provider's client id and secret are set. Every source and strategy is on; `DISABLED_SOURCES` and `DISABLED_STRATEGIES` switch things off. Registration is `invite` by default. Nothing here has run against a real Postgres, real provider apps or the real sites yet: the integration tests (`apps/api/src/*.int.test.ts`) need a `DATABASE_URL` with `CREATEDB`.
+
+Public posts, saves, follows, likes, quick feedback, a progress dashboard (requested 2026-10-27). Design in [social.md](social.md).
+
+- [x] 1. Docs, `visibility` column, shared enums
+- [x] 2. Publish, save (`item_saves`), delete cascade, follow, like, feed, explore, notifications
+- [x] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation (reports, blocks and signup have app UI; the admin moderation queue is API only for now). Social login (Google, GitHub, Discord) is built and off until a provider's credentials are set ([security.md](security.md#social-login))
+- [x] 4. Feedback prompts + "I tried it", dashboard (progress, given/received feedback), per-item feedback card
+- [x] 5. Smarter organization: keyword phrases and variant merge, "More like this" on posts (`GET /posts/:id/similar`), popularity ranking that counts saves and "worked" answers. Already existed: auto-assign above the confidence threshold, Sort screen, apply-to-similar. Also done: review/undo for auto-filed items (`/auto-filed`, remembered so it is not proposed again), embedding-based topic clusters (`/topics`; `EMBEDDER=hash` by default, transformers.js ready), per-user ignored keywords (`/stop-terms`)
 
 ## M0 — Scaffold
 - [x] pnpm + turborepo monorepo, tsconfig base, eslint, vitest
@@ -80,7 +92,7 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 - [x] Refetch (API, single + bulk), sweep cron for lost jobs; [x] failed-items view (app)
 
 ## Later
-- [ ] More sources: `tiktok`, `youtube`, `pinterest`, `x`, `reddit`, `facebook`
+- [x] More sources: `tiktok`, `youtube`, `pinterest`, `x`, `reddit`, `facebook` are implemented, tested and on by default; `DISABLED_SOURCES` switches one off ([sources.md](sources.md#disabling-a-source)). Not yet run against the real sites
 - [ ] Web client (Expo web) + iOS Shortcut for sharing
 - [ ] Transcripts (whisper.cpp), OCR (tesseract), embeddings (transformers.js + pgvector), semantic search
 - [ ] S3 driver + migration to Backblaze B2

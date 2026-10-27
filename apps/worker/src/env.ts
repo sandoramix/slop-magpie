@@ -1,5 +1,6 @@
 import path from "node:path";
-import { databaseEnv, loggingEnv, storageEnv } from "@magpie/shared/env";
+import { databaseEnv, loggingEnv, sourcesEnv, storageEnv } from "@magpie/shared/env";
+import { strategyIds } from "./strategies/types.ts";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
@@ -7,7 +8,16 @@ export const env = createEnv({
   server: {
     ...databaseEnv,
     ...loggingEnv,
+    ...sourcesEnv,
     ...storageEnv,
+    // strategies to skip everywhere, e.g. `fxtwitter` to keep tweets off a third-party relay. All are on by default
+    DISABLED_STRATEGIES: z
+      .string()
+      .default("")
+      .transform((s) => {
+        const wanted = s.split(",").map((x) => x.trim().toLowerCase());
+        return strategyIds.filter((id) => wanted.includes(id));
+      }),
     COOKIES_DIR: z.string().min(1),
     SESSIONS_DIR: z.string().min(1).default("./secrets/sessions"),
     // optional: log in automatically and renew the session instead of uploading instagram.txt
@@ -18,6 +28,8 @@ export const env = createEnv({
     MAX_VIDEO_MB: z.coerce.number().positive().default(60),
     // hard cap per downloaded file
     MAX_DOWNLOAD_MB: z.coerce.number().positive().default(500),
+    // what turns an item into a vector for topic clusters: hash (no model, default), transformers (needs @huggingface/transformers) or off
+    EMBEDDER: z.enum(["off", "hash", "transformers"]).default("hash"),
     AUTO_ASSIGN_THRESHOLD: z.coerce.number().min(0).max(1).default(0.8),
   },
   runtimeEnv: process.env,

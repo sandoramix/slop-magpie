@@ -14,6 +14,8 @@ import { itemsRoutes } from "./routes/items.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { fieldsRoutes, foldersRoutes, smartFoldersRoutes, statsRoutes, tagsRoutes } from "./routes/organize.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { organizeExtrasRoutes } from "./routes/organize-extras.ts";
+import { moderationRoutes, socialRoutes } from "./routes/social.ts";
 import { sourcesRoutes } from "./routes/sources.ts";
 import { meRoutes, usersRoutes } from "./routes/users.ts";
 
@@ -24,6 +26,10 @@ export function createApp(deps: AppDeps) {
   const limiter = createFailureLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
   // password logins count separately so a locked-out login does not lock out valid bearer tokens
   const loginLimiter = createFailureLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
+  // counts every signup attempt per IP, successful or not
+  const signupLimiter = createFailureLimiter({ max: deps.signupLimit ?? 5, windowMs: 60 * 60 * 1000 });
+  // every social login start, callback and exchange counts, per IP
+  const oauthLimiter = createFailureLimiter({ max: deps.oauthLimit ?? 60, windowMs: 60 * 60 * 1000 });
 
   const api = new Hono()
     // public: no bearer token
@@ -31,7 +37,7 @@ export function createApp(deps: AppDeps) {
     // authorized by the URL signature instead
     .route("/media", mediaRoutes(deps))
     // public too: it is how a password turns into a token
-    .route("/auth", authRoutes(deps, loginLimiter))
+    .route("/auth", authRoutes(deps, loginLimiter, signupLimiter, oauthLimiter))
     // everything below needs the token, including unknown paths (401 before 404)
     .use("*", bearerAuth({ token: deps.apiToken, accounts: deps.accounts, limiter, trustProxy: deps.trustProxy, audit: deps.audit }))
     .route("/me", meRoutes(deps))
@@ -42,7 +48,10 @@ export function createApp(deps: AppDeps) {
     .route("/tags", tagsRoutes(deps))
     .route("/fields", fieldsRoutes(deps))
     .route("/smart-folders", smartFoldersRoutes(deps))
-    .route("/stats", statsRoutes(deps));
+    .route("/stats", statsRoutes(deps))
+    .route("/", organizeExtrasRoutes(deps))
+    .route("/", socialRoutes(deps))
+    .route("/", moderationRoutes(deps));
 
   const app = new Hono();
 

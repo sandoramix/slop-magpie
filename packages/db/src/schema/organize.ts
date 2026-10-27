@@ -152,3 +152,43 @@ export const itemTagSuggestions = pgTable(
   },
   (t) => [primaryKey({ columns: [t.itemId, t.tagId] })],
 );
+
+// Auto-filed assignments the person undid. `categorize` never files the item there again.
+export const itemFolderRejections = pgTable(
+  "item_folder_rejections",
+  {
+    itemId: uuid()
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    folderId: uuid()
+      .notNull()
+      .references(() => folders.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.folderId] })],
+);
+
+export const itemTagRejections = pgTable(
+  "item_tag_rejections",
+  {
+    itemId: uuid()
+      .notNull()
+      .references(() => items.id, { onDelete: "cascade" }),
+    tagId: uuid()
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.tagId] })],
+);
+
+/** Keywords one person never wants extracted ("recipe", "reels"). Canonical spelling, see `canonicalKeyword`. */
+export const stopTerms = pgTable(
+  "stop_terms",
+  {
+    userId: ownerId(),
+    term: text().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.term] })],
+);

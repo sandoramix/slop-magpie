@@ -1,4 +1,5 @@
-import { databaseEnv, loggingEnv, storageEnv } from "@magpie/shared/env";
+import { registrationModes } from "@magpie/shared/api";
+import { databaseEnv, loggingEnv, sourcesEnv, storageEnv } from "@magpie/shared/env";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
@@ -6,6 +7,7 @@ export const env = createEnv({
   server: {
     ...databaseEnv,
     ...loggingEnv,
+    ...sourcesEnv,
     ...storageEnv,
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     API_TOKEN: z.string().min(32, "use `openssl rand -base64 48`"),
@@ -18,6 +20,15 @@ export const env = createEnv({
     TRUST_PROXY: z.stringbool().default(false),
     // the /admin page for replacing the Instagram login from a browser; the token is typed in, never stored
     ADMIN_WEB_UI: z.stringbool().default(true),
+    // social login: a provider is offered only when both its id and secret are set (docs/security.md#social-login)
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    GITHUB_CLIENT_ID: z.string().min(1).optional(),
+    GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+    DISCORD_CLIENT_ID: z.string().min(1).optional(),
+    DISCORD_CLIENT_SECRET: z.string().min(1).optional(),
+    // `invite`: signup needs a code from an admin. `open`: anyone can create an account (docs/social.md)
+    REGISTRATION_MODE: z.enum(registrationModes).default("invite"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

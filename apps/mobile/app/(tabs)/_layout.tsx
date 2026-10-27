@@ -1,15 +1,17 @@
 import { Tabs, useRouter } from "expo-router";
-import { FolderTree, Inbox, LayoutGrid, Plus, Settings } from "lucide-react-native";
+import { Compass, FolderTree, Inbox, LayoutGrid, Plus, UserRound } from "lucide-react-native";
 import { Pressable } from "react-native";
 import { AccountTitle } from "@/components/account-chrome";
 import { useColors } from "@/lib/theme";
 import { useStats } from "@/lib/queries";
+import { useNotifications } from "@/lib/social-queries";
 
 export default function TabsLayout() {
   const colors = useColors();
   const router = useRouter();
   const stats = useStats();
   const inbox = stats.data?.byWorkflow.inbox ?? 0;
+  const unread = useNotifications().data?.unreadCount ?? 0;
 
   return (
     <Tabs
@@ -49,9 +51,19 @@ export default function TabsLayout() {
         options={{ title: "Folders", tabBarIcon: ({ color, size }) => <FolderTree color={color} size={size} /> }}
       />
       <Tabs.Screen
-        name="settings"
-        options={{ title: "Settings", tabBarIcon: ({ color, size }) => <Settings color={color} size={size} /> }}
+        name="explore"
+        options={{ title: "Explore", tabBarIcon: ({ color, size }) => <Compass color={color} size={size} /> }}
       />
+      <Tabs.Screen
+        name="me"
+        options={{
+          title: "Me",
+          tabBarIcon: ({ color, size }) => <UserRound color={color} size={size} />,
+          ...(unread > 0 ? { tabBarBadge: unread > 99 ? "99+" : unread } : {}),
+        }}
+      />
+      {/* reached from Me; kept as a tab route so it keeps the tab bar */}
+      <Tabs.Screen name="settings" options={{ title: "Settings", href: null }} />
     </Tabs>
   );
 }

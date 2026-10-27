@@ -25,6 +25,7 @@ export const instagram: SourceDef = {
   match: (url) => hostMatches(url, HOSTS),
   extractId: (url) => POST_PATH.exec(url.pathname)?.[1] ?? null,
   extractCommentId: commentIdOf,
+  needsExpansion: (url) => url.pathname.startsWith("/share/") || ["instagr.am", "www.instagr.am"].includes(url.hostname.toLowerCase()),
   normalize(url) {
     const shortcode = POST_PATH.exec(url.pathname)?.[1];
     if (shortcode) return `https://www.instagram.com/p/${shortcode}`;

@@ -9,6 +9,7 @@ export function scopeOf(deps: AppDeps, c: Context<AppEnv>): ServiceDeps {
     jobs: deps.jobs,
     log: deps.log,
     mediaUrlTtlSeconds: deps.mediaUrlTtlSeconds,
+    ...(deps.enabledSources ? { enabledSources: deps.enabledSources } : {}),
     userId: c.get("principal").libraryId,
   };
 }

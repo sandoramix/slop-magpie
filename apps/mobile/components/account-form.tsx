@@ -1,13 +1,14 @@
-import { accountLabel, type MeResponse } from "@magpie/shared/api";
+import { accountLabel, MIN_PASSWORD_LENGTH, type MeResponse } from "@magpie/shared/api";
 import { useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import { useState } from "react";
 import { View } from "react-native";
 import { Chip } from "@/components/chip";
+import { SocialLogin } from "@/components/social-login";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
-import { checkServer, loginWithPassword } from "@/lib/api";
+import { checkServer, loginWithPassword, signUp } from "@/lib/api";
 import { parseInvite } from "@/lib/invite";
 import { env } from "@/src/env";
 import { type Account, useAccounts } from "@/stores/accounts";
@@ -18,7 +19,7 @@ type Props = {
   onDone: () => void;
 };
 
-type Mode = "token" | "password";
+type Mode = "token" | "password" | "signup";
 
 const hostOnly = (url: string) => url.replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
 
@@ -35,6 +36,7 @@ export function AccountForm({ account, onDone }: Props) {
   const [token, setToken] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,6 +61,9 @@ export function AccountForm({ account, onDone }: Props) {
       if (mode === "token") {
         const { me } = await checkServer(url, token.trim());
         await finish(me, token.trim());
+      } else if (mode === "signup") {
+        const created = await signUp(url, username, password, inviteCode);
+        await finish(created.me, created.token);
       } else {
         const login = await loginWithPassword(url, username, password);
         await finish(login.me, login.token);
@@ -83,7 +88,9 @@ export function AccountForm({ account, onDone }: Props) {
     setError(null);
   };
 
-  const ready = url.trim() !== "" && (mode === "token" ? token.trim() !== "" : username.trim() !== "" && password !== "");
+  const ready =
+    url.trim() !== "" &&
+    (mode === "token" ? token.trim() !== "" : username.trim() !== "" && (mode === "signup" ? password.length >= MIN_PASSWORD_LENGTH : password !== ""));
 
   return (
     <View className="gap-3">
@@ -104,6 +111,16 @@ export function AccountForm({ account, onDone }: Props) {
             setError(null);
           }}
         />
+        {account ? null : (
+          <Chip
+            label="Sign up"
+            active={mode === "signup"}
+            onPress={() => {
+              setMode("signup");
+              setError(null);
+            }}
+          />
+        )}
       </View>
       {account ? null : (
         <Button
@@ -141,7 +158,22 @@ export function AccountForm({ account, onDone }: Props) {
       ) : (
         <>
           <Input value={username} onChangeText={setUsername} placeholder="Username" autoCapitalize="none" autoCorrect={false} />
-          <Input value={password} onChangeText={setPassword} placeholder="Password" autoCapitalize="none" autoCorrect={false} secureTextEntry />
+          <Input
+            value={password}
+            onChangeText={setPassword}
+            placeholder={mode === "signup" ? `Password (at least ${MIN_PASSWORD_LENGTH} characters)` : "Password"}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+          />
+          {mode === "signup" && (
+            <>
+              <Input value={inviteCode} onChangeText={setInviteCode} placeholder="Invite code (if the server asks for one)" autoCapitalize="none" autoCorrect={false} />
+              <Text className="text-xs text-muted-foreground">
+                Letters, digits, dots, dashes and underscores. Your username is public and cannot change later.
+              </Text>
+            </>
+          )}
         </>
       )}
       <Button
@@ -150,9 +182,10 @@ export function AccountForm({ account, onDone }: Props) {
           void connect();
         }}
       >
-        <Text>{busy ? "Checking…" : account ? "Test and save" : "Connect"}</Text>
+        <Text>{busy ? "Checking…" : account ? "Test and save" : mode === "signup" ? "Create account" : "Connect"}</Text>
       </Button>
       {error ? <Text className="text-sm text-destructive">{error}</Text> : null}
+      {account ? null : <SocialLogin url={url} verb={mode === "signup" ? "Sign up" : "Continue"} />}
     </View>
   );
 }

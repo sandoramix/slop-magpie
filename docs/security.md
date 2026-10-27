@@ -22,6 +22,30 @@ Rules:
 - **Isolation:** every query is scoped by the owner (`deps.userId`); ids from another account answer 404 (or 400 when used as a folder/tag reference). Tested in `apps/api/src/accounts.int.test.ts`.
 - Mobile app: the server URL and one token per saved account (the generated token, or the session token after a password login), kept in `expo-secure-store`; never in the APK or MMKV.
 
+## Social login
+
+Google, GitHub and Discord are implemented and **off until configured**: a provider is offered only when both its client id and secret are set (`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `GITHUB_...`, `DISCORD_...` on the API). `GET /auth/config` lists the configured ones in `providers`; the app always shows the three buttons and enables only those.
+
+Setup per provider: create an OAuth app and register this redirect URI (it is `PUBLIC_BASE_URL` plus a fixed path):
+
+```
+https://<your server>/api/v1/auth/oauth/<google|github|discord>/callback
+```
+
+Flow (authorization code + PKCE, code exchanged on the server so client secrets never reach the phone):
+
+1. App calls `POST /auth/oauth/:provider/start` and opens the returned URL in the system browser. The API stores a single-use `state` (hash only) with the PKCE verifier, valid 10 minutes.
+2. The provider redirects the browser to the API callback. The API consumes the state, exchanges the code with its client secret, reads the profile, and stores a single-use `ticket` (hash only, 3 minutes).
+3. The API redirects to `magpie://oauth?status=ticket&ticket=...`. The ticket holds a verified identity, no credentials.
+4. The app calls `POST /auth/oauth/exchange` with the ticket. A known identity gets a session like `/auth/login`. A new one first gets `signup_required` (with a suggested username and whether an invite is needed); the app asks again with `username` (and the invite code in `invite` mode), which creates the account with no password and links the identity.
+
+Rules the code follows:
+
+- The key of a link is the provider's user id (`auth_identities`), never the email. Nothing is ever linked to an existing account by email; linking is an explicit action by a signed-in user (`POST /me/identities/:provider/link`), and a provider account already linked to someone else is refused.
+- `REGISTRATION_MODE=invite` applies to first-time social logins too. Suspended accounts cannot sign in this way either.
+- Removing the last way into an account (no password, no temporary token, no other identity) is refused (`DELETE /me/identities/:provider`).
+- Every start, callback and exchange counts against a per-IP limit (60 per hour by default); callback errors redirect back into the app with a short message and reveal nothing about accounts.
+- Provider URLs are fixed constants, so these calls are not subject to the SSRF guard; they time out after 15 s.
 ## Admin web page
 
 `/admin` (`ADMIN_WEB_UI`, default on) is a static page for replacing the Instagram session or cookies from a browser. It adds no server-side session: the admin token is typed in, kept in a JS variable, sent as a bearer token to the admin-only `/api/v1/sources/:id/credentials` routes, and dropped on log out, after 10 idle minutes or on `pagehide`. Nothing is written to cookies or web storage, so there is nothing for CSRF to ride on, and wrong tokens hit the same failed-auth rate limit and audit entries as any API call. The page uses `textContent` only, a hash-based CSP (`default-src 'none'`, `connect-src 'self'`, no `unsafe-inline`), `frame-ancestors 'none'`, `no-store` and `no-referrer`. Uploaded material is never returned by the API, logged or audited (only that a change happened).

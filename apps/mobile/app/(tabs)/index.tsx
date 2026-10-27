@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { ActAsBanner } from "@/components/account-chrome";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
+import { AutoFiledBanner } from "@/components/auto-filed-banner";
 import { Chip } from "@/components/chip";
 import { ItemBrowser } from "@/components/item-browser";
 import { UpdateCard } from "@/components/update-card";
@@ -91,6 +92,7 @@ export default function Library() {
       {available ? (
         <UpdateCard update={available} className="mx-3 mt-2" />
       ) : null}
+      <AutoFiledBanner />
       <View className="gap-2 px-3 pb-1 pt-2">
         <Input
           clearable

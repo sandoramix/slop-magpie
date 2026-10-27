@@ -1,7 +1,9 @@
 import type { Database } from "@magpie/db";
 import type { JobSender } from "@magpie/jobs";
+import type { RegistrationMode } from "@magpie/shared/api";
 import type { BlobStore } from "@magpie/storage";
 import type { Logger } from "./logger.ts";
+import type { OAuthConfig } from "./services/oauth.ts";
 
 export interface AuditEvent {
   action: string;
@@ -75,10 +77,22 @@ export interface AppDeps {
   createItemLimit?: number;
   /** Serve the admin page at `/admin` (default true). */
   adminWebUi?: boolean;
+  /** Source ids with their own handling (default: instagram); the rest save as generic. */
+  enabledSources?: readonly string[];
+  /** Who may create an account (default `invite`). */
+  registrationMode?: RegistrationMode;
+  /** Social login (docs/security.md#social-login); absent or without credentials means no provider is offered. */
+  oauth?: OAuthConfig;
+  /** Likes, saves, follows, reports and other social writes per account per minute. */
+  socialWriteLimit?: number;
+  /** Social login steps per IP per hour. */
+  oauthLimit?: number;
+  /** Signups per IP per hour. */
+  signupLimit?: number;
 }
 
 /** Subset handed to services. */
-export type ServiceDeps = Pick<AppDeps, "db" | "store" | "jobs" | "log" | "mediaUrlTtlSeconds"> & {
+export type ServiceDeps = Pick<AppDeps, "db" | "store" | "jobs" | "log" | "mediaUrlTtlSeconds" | "enabledSources"> & {
   /** Owner of the library being read or written; every query is scoped to it. */
   userId: string;
 };

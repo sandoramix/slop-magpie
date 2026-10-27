@@ -4,6 +4,7 @@ import { Sparkles } from "lucide-react-native";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { ActAsBanner } from "@/components/account-chrome";
+import { AutoFiledBanner } from "@/components/auto-filed-banner";
 import { Chip } from "@/components/chip";
 import { ItemBrowser } from "@/components/item-browser";
 import { Button } from "@/components/ui/button";
@@ -70,6 +71,7 @@ export default function InboxScreen() {
 
   const header = (
     <View className="gap-3 px-3 pb-2">
+      <AutoFiledBanner />
       <View className="gap-2 rounded-xl border border-border bg-card p-4">
         <Text className="text-2xl font-bold">{toSort > 0 ? `${toSort} to sort` : "All sorted"}</Text>
         <Text className="text-sm text-muted-foreground">
@@ -99,6 +101,14 @@ export default function InboxScreen() {
             <Text>Refresh suggestions</Text>
           </Button>
         </View>
+        <Button
+          variant="ghost"
+          onPress={() => {
+            router.push("/topics");
+          }}
+        >
+          <Text>Find topics in my library</Text>
+        </Button>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2" className="grow-0">
         {(Object.keys(VIEWS) as View_[]).map((key) => (

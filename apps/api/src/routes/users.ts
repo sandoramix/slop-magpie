@@ -1,8 +1,12 @@
 import {
   CreateUserBody,
+  DeleteMeBody,
   IdParam,
+  type IdentitiesResponse,
   type MeResponse,
+  type OAuthStartResponse,
   type PasswordResponse,
+  ProviderParam,
   SetPasswordBody,
   UpdateMeBody,
   UpdateUserBody,
@@ -16,6 +20,7 @@ import { errorResponse } from "../http/errors.ts";
 import { requestMeta } from "../http/request-meta.ts";
 import { validate } from "../http/validate.ts";
 import * as credentials from "../services/credentials.ts";
+import * as oauth from "../services/oauth.ts";
 import { getStorage } from "../services/storage.ts";
 import * as svc from "../services/users.ts";
 
@@ -41,6 +46,27 @@ export const meRoutes = (deps: AppDeps) =>
       const body: PasswordResponse = { token, me: svc.whoAmI({ ...principal, hasPassword: true, actingAs: null }) };
       return c.json(body, 200);
     })
+    // people can leave: their items, saves, likes and feedback go with them (D32)
+    .delete("/", validate("json", DeleteMeBody), async (c) => {
+      const principal = c.get("principal");
+      if (principal.actingAs) return errorResponse(c, 400, "bad_request", "Stop acting as another account first");
+      if (c.req.valid("json").confirm.trim().toLowerCase() !== principal.name.toLowerCase()) {
+        return errorResponse(c, 400, "bad_request", "Type your username to confirm");
+      }
+      await svc.deleteUser(deps, principal.id, null, requestMeta(c, deps.trustProxy));
+      return c.body(null, 204);
+    })
+    // linked social logins (Google, GitHub, Discord); always the token owner's, even while acting as someone else
+    .get("/identities", async (c) => c.json(await oauth.listIdentities(deps.db, c.get("principal").id) satisfies IdentitiesResponse, 200))
+    .post("/identities/:provider/link", validate("param", ProviderParam), async (c) => {
+      if (!deps.oauth) return errorResponse(c, 404, "not_found", "That login method is not available on this server");
+      const url = await oauth.start(deps.db, deps.oauth, c.req.valid("param").provider, "link", c.get("principal").id);
+      return c.json({ url } satisfies OAuthStartResponse, 200);
+    })
+    .delete("/identities/:provider", validate("param", ProviderParam), async (c) => {
+      await oauth.unlink(deps.db, c.get("principal").id, c.req.valid("param").provider);
+      return c.body(null, 204);
+    })
     // signs this device out (a session token is revoked; the temporary token has nothing to revoke)
     .post("/logout", async (c) => {
       const { sessionTokenHash } = c.get("principal");
@@ -48,7 +74,7 @@ export const meRoutes = (deps: AppDeps) =>
       return c.body(null, 204);
     });
 
-const adminOnly = createMiddleware<AppEnv>(async (c, next) => {
+export const adminOnly = createMiddleware<AppEnv>(async (c, next) => {
   // the token owner decides, even while acting as someone else
   if (!c.get("principal").isAdmin) return errorResponse(c, 403, "forbidden", "Admin only");
   await next();

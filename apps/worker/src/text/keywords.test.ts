@@ -3,7 +3,24 @@ import { extractHashtags, extractKeywords, extractTerms, titleFromCaption } from
 
 describe("keywords", () => {
   it("extracts hashtags", () => {
-    expect(extractHashtags("Pasta! #Carbonara #ricetta_veloce and #carbonara again, not a#b or &#39;")).toEqual(["carbonara", "ricetta_veloce"]);
+    expect(extractHashtags("Pasta! #Carbonara #ricetta_veloce and #carbonara again, not a#b or &#39;")).toEqual(["carbonara", "ricetta veloce"]);
+  });
+
+  it("gives hashtag spelling variants one keyword", () => {
+    expect(extractHashtags("#SlowCooker #slow_cooker #slowcooker2")).toEqual(["slow cooker", "slowcooker2"]);
+  });
+
+  it("keeps phrases that repeat and merges plurals", () => {
+    const words = extractTerms("Slow cooker chili. This slow cooker recipe beats any recipes online, recipe after recipe.").map((t) => t.keyword);
+    expect(words).toContain("slow cooker");
+    expect(words).toContain("recipe");
+    expect(words).not.toContain("recipes");
+  });
+
+  it("does not build phrases across punctuation or stopwords", () => {
+    const words = extractTerms("pasta. cooker. pasta. cooker").map((t) => t.keyword);
+    expect(words).not.toContain("pasta cooker");
+    expect(words).not.toContain("cooker pasta");
   });
 
   it("extracts weighted terms without stopwords", () => {

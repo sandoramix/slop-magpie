@@ -4,6 +4,9 @@ import { Name } from "./common.ts";
 /** Header an admin sends to read or write inside another account's library. */
 export const ACT_AS_HEADER = "X-Magpie-Act-As";
 
+/** The built-in admin account (the one behind API_TOKEN): its role is fixed and it cannot be deleted. */
+export const ROOT_ADMIN_ID = "00000000-0000-7000-8000-000000000001";
+
 /** Default per-account storage limit: 50 GB (1 GB = 1024^3 bytes, like the sizes the app shows). */
 export const DEFAULT_STORAGE_LIMIT_BYTES = 50 * 1024 ** 3;
 
@@ -53,6 +56,10 @@ export type UpdateUserBody = z.infer<typeof UpdateUserBody>;
 /** `PATCH /me`: only the display name can change; the username is fixed. */
 export const UpdateMeBody = z.object({ displayName: Name.max(100).nullable() });
 export type UpdateMeBody = z.infer<typeof UpdateMeBody>;
+
+/** `DELETE /me`: typing the username is the confirmation. */
+export const DeleteMeBody = z.object({ confirm: z.string().min(1).max(100) });
+export type DeleteMeBody = z.infer<typeof DeleteMeBody>;
 
 /** The token is shown once; only its hash is stored. */
 /** `PUT /me/password`: `token` is null when the caller's current token stays valid (the root admin's API_TOKEN). */

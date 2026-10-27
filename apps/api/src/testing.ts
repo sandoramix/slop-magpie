@@ -73,7 +73,7 @@ export interface IntegrationEnv {
 }
 
 /** Fresh migrated database + temp media dir. */
-export async function integrationEnv(serverUrl: string): Promise<IntegrationEnv> {
+export async function integrationEnv(serverUrl: string, overrides: Partial<AppDeps> = {}): Promise<IntegrationEnv> {
   const testDb = await createTestDatabase(serverUrl);
   const database = createDb(testDb.url, { max: 3 });
   const mediaRoot = await mkdtemp(path.join(tmpdir(), "magpie-media-"));
@@ -86,6 +86,7 @@ export async function integrationEnv(serverUrl: string): Promise<IntegrationEnv>
     countItemsBySource: () => Promise.resolve(new Map()),
     audit: () => Promise.resolve(),
     log: pino({ level: "error" }),
+    ...overrides,
   });
   const { app } = createApp(deps);
   return {

@@ -9,7 +9,9 @@
     "./net": "./src/net/index.ts",
     "./env": "./src/env/index.ts",
     "./changelog": "./src/changelog.ts",
-    "./query": "./src/query/index.ts"
+    "./query": "./src/query/index.ts",
+    "./text": "./src/text/index.ts",
+    "./topics": "./src/topics/index.ts"
   },
   "scripts": {
     "typecheck": "tsc",
