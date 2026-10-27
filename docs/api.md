@@ -150,6 +150,7 @@ All additive to v1 (new routes and optional fields only, D24). Concepts in [soci
 | GET | `/feed` | public posts of people you follow, newest first. `cursor`, `limit` |
 | GET | `/explore` | other people's public posts. `sort=recent\|popular`, `q`, `source`, `cursor`, `limit` |
 | GET | `/posts/:id` | public post (or your own item) with media, aggregate feedback, your verdict, your save |
+| GET | `/posts/:id/similar` | up to 12 other public posts sharing keywords with this one |
 | GET | `/posts/:id/savers` | how many accounts saved your post (`{count}`), for the warning before removing it |
 | PUT / DELETE | `/posts/:id/like` | like or unlike; answers the post |
 | PUT / DELETE | `/posts/:id/save` | bookmark or remove the bookmark |

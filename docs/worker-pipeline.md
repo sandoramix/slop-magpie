@@ -45,8 +45,8 @@ Typical errors and handling:
 
 ### extract
 Builds `item_keywords`:
-- `hashtag`: hashtags from caption (normalized, `#` stripped).
-- `caption`: top terms from caption (stopwords IT+EN removed).
+- `hashtag`: hashtags from caption in one canonical spelling (`canonicalKeyword` in `packages/shared/src/text`): lower case, `#` stripped, underscores and camel case become spaces, so `#SlowCooker`, `#slow_cooker` and a hand-typed "slow cooker" are the same keyword.
+- `caption`: top terms from caption (stopwords IT+EN removed). Two-word phrases that repeat in the caption are terms too, and a plural counts as its singular when both appear.
 - `transcript` / `ocr`: same, once v2 steps exist.
 
 ### categorize

@@ -7,6 +7,7 @@ import {
   itemLikes,
   itemSaves,
   items,
+  itemKeywords,
   itemTried,
   media,
   saveFolders,
@@ -29,6 +30,7 @@ import {
   type Visibility,
 } from "@magpie/shared/api";
 import { and, asc, desc, eq, inArray, isNull, ne, or, type SQL, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
@@ -158,7 +160,12 @@ export async function explore(deps: ServiceDeps, query: ExploreQuery): Promise<P
 
   const cursor = query.cursor ? decodeCursor(query.cursor) : null;
   const offset = cursor?.k === "off" ? cursor.o : 0;
-  const score = sql`((select count(*) from item_likes l where l.item_id = ${ITEM_ID}) + 2 * (select count(*) from item_saves s where s.item_id = ${ITEM_ID}))`;
+  // a save says more than a like, and people who tried it vouch more than anyone: worked +3, didn't work -2
+  const score = sql`(
+    (select count(*) from item_likes l where l.item_id = ${ITEM_ID})
+    + 2 * (select count(*) from item_saves s where s.item_id = ${ITEM_ID})
+    + 3 * (select count(*) from item_feedback f where f.item_id = ${ITEM_ID} and f.verdict = 'worked')
+    - 2 * (select count(*) from item_feedback f where f.item_id = ${ITEM_ID} and f.verdict = 'failed'))`;
   const rows = await selectPosts(deps)
     .where(where)
     .orderBy(desc(score), desc(items.publishedAt), desc(items.id))
@@ -178,6 +185,25 @@ export async function postsByIds(deps: ServiceDeps, ids: readonly string[]): Pro
   const byId = new Map(rows.map((r) => [r.id, r]));
   const ordered = ids.flatMap((id) => byId.get(id) ?? []);
   return Promise.all(ordered.map((r) => toPost(deps, r)));
+}
+
+/** Other people's visible posts that share keywords with this one, best match first. */
+export async function similarPosts(deps: ServiceDeps, id: string): Promise<PostSummary[]> {
+  await assertVisible(deps.db, deps.userId, id);
+  const a = alias(itemKeywords, "a");
+  const o = alias(itemKeywords, "o");
+  const score = sql`sum(least(${a.weight}, ${o.weight}))`;
+  const rows = await deps.db
+    .select({ id: o.itemId })
+    .from(a)
+    .innerJoin(o, and(eq(o.keyword, a.keyword), ne(o.itemId, a.itemId)))
+    .innerJoin(items, eq(items.id, o.itemId))
+    .where(and(eq(a.itemId, id), ne(items.userId, deps.userId), visibleTo(deps.userId)))
+    .groupBy(o.itemId)
+    .having(sql`${score} >= 1`)
+    .orderBy(desc(score))
+    .limit(12);
+  return postsByIds(deps, rows.map((r) => r.id));
 }
 
 /** One account's public posts. The caller decides whether the account may be seen. */

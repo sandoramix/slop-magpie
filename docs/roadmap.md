@@ -29,7 +29,7 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 
 - [x] Suggestions from tag/folder **names** (cold start) and from the **same author's** earlier items (`categorize.ts`)
 - [x] **Backfill for existing items**: re-run extract + categorize over the whole library (cron for unorganized items, plus an on-demand "refresh suggestions" bulk op)
-- [ ] Keyword quality: phrases, merge variants (`slow_cooker` / "slow cooker"), per-user stop terms
+- [x] Keyword quality: repeated two-word phrases, spelling variants merged (`slow_cooker` / `#SlowCooker` / "slow cooker"), singular and plural merged. [ ] per-user stop terms. Run "Refresh suggestions" once to re-extract old items
 - [x] **Triage screen** as the app's home: one item at a time, accept / edit / reject suggested tags and folders, next
 - [x] **Quick-tag sheet** right after sharing a link, before the fetch finishes
 - [x] Bulk organize on a selection (tags, folders, suggestions, status) already existed; [x] "apply to similar items" after filing one in the Sort flow
@@ -45,7 +45,7 @@ Public posts, saves, follows, likes, quick feedback, a progress dashboard (reque
 - [x] 2. Publish, save (`item_saves`), delete cascade, follow, like, feed, explore, notifications
 - [x] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation (reports, blocks and signup have app UI; the admin moderation queue is API only for now). Social login (Google, GitHub, Discord) prepared in [security.md](security.md#social-login-prepared-not-implemented), not built
 - [x] 4. Feedback prompts + "I tried it", dashboard (progress, given/received feedback), per-item feedback card
-- [ ] 5. Smarter organization: auto-file with undo, keyword merge/phrases, similar posts, feed ranking
+- [x] 5. Smarter organization: keyword phrases and variant merge, "More like this" on posts (`GET /posts/:id/similar`), popularity ranking that counts saves and "worked" answers. Already existed: auto-assign above the confidence threshold, Sort screen, apply-to-similar. Not done: an undo toast for auto-filed items, embeddings (pgvector) for topic clusters
 
 ## M0 — Scaffold
 - [x] pnpm + turborepo monorepo, tsconfig base, eslint, vitest

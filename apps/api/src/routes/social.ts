@@ -7,6 +7,7 @@ import {
   MarkReadBody,
   NotificationListQuery,
   PeopleSearchQuery,
+  type PostListResponse,
   ProfileParam,
   ReportListQuery,
   ResolveReportBody,
@@ -40,6 +41,9 @@ export const socialRoutes = (deps: AppDeps) =>
 
     // ── one post ────────────────────────────────────────────────────────
     .get("/posts/:id", validate("param", IdParam), async (c) => c.json(await posts.getPost(scopeOf(deps, c), c.req.valid("param").id), 200))
+    .get("/posts/:id/similar", validate("param", IdParam), async (c) =>
+      c.json({ posts: await posts.similarPosts(scopeOf(deps, c), c.req.valid("param").id), nextCursor: null } satisfies PostListResponse, 200),
+    )
     .get("/posts/:id/savers", validate("param", IdParam), async (c) =>
       c.json({ count: await posts.saverCount(scopeOf(deps, c), c.req.valid("param").id) } satisfies SaverCountResponse, 200),
     )

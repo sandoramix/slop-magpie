@@ -49,6 +49,15 @@ export function usePost(id: string) {
   return useQuery({ queryKey: ["post", scope, id], enabled, queryFn: () => request("GET", `/posts/${id}`, { schema: PostDetail }) });
 }
 
+export function useSimilarPosts(id: string) {
+  const [scope, enabled] = useScope();
+  return useQuery({
+    queryKey: ["posts", scope, "similar", id],
+    enabled,
+    queryFn: async () => (await request("GET", `/posts/${id}/similar`, { schema: PostListResponse })).posts,
+  });
+}
+
 export function useSavedPosts(filter: { folderId?: string; tagId?: string; unfiled?: boolean; q?: string }) {
   const [scope, enabled] = useScope();
   return useInfiniteQuery({

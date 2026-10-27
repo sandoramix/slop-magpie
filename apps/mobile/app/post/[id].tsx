@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { alert } from "@/lib/alert";
 import { useCreateFolder, useCreateTag, useFolders, useTags } from "@/lib/queries";
-import { useBlock, usePost, usePostActions, useReport } from "@/lib/social-queries";
+import { useBlock, usePost, usePostActions, useReport, useSimilarPosts } from "@/lib/social-queries";
 
 export default function PostScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -51,6 +51,7 @@ function Detail({ post }: { post: PostDetail }) {
   const actions = usePostActions(post.id);
   const report = useReport();
   const block = useBlock(post.owner.name);
+  const similar = useSimilarPosts(post.id);
   const folders = useFolders();
   const tags = useTags();
   const createFolder = useCreateFolder();
@@ -182,6 +183,32 @@ function Detail({ post }: { post: PostDetail }) {
           )}
 
           <FeedbackCard post={post} />
+
+          {(similar.data ?? []).length > 0 && (
+            <View className="gap-2">
+              <Text className="text-xs font-semibold uppercase text-muted-foreground">More like this</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2" className="grow-0">
+                {(similar.data ?? []).map((p) => (
+                  <Pressable
+                    key={p.id}
+                    onPress={() => {
+                      router.push({ pathname: "/post/[id]", params: { id: p.id } });
+                    }}
+                    className="w-28 gap-1"
+                  >
+                    {p.thumbUrl ? (
+                      <Image source={{ uri: p.thumbUrl }} className="h-28 w-28 rounded-lg bg-muted" contentFit="cover" />
+                    ) : (
+                      <View className="h-28 w-28 rounded-lg bg-muted" />
+                    )}
+                    <Text className="text-xs" numberOfLines={2}>
+                      {p.title ?? `@${p.owner.name}`}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {!post.mine && (
             <View className="flex-row gap-2">

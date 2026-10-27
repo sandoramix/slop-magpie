@@ -33,6 +33,7 @@ import {
 } from "@magpie/shared/api";
 import { checkPublicUrl } from "@magpie/shared/net";
 import { resolveSource } from "@magpie/shared/sources";
+import { canonicalKeyword } from "@magpie/shared/text";
 import { and, asc, count, desc, eq, inArray, ne, notExists, notInArray, or, type SQL, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
@@ -487,9 +488,8 @@ async function assertItem(db: Db, userId: string, id: string) {
   if (!row) throw notFound();
 }
 
-export function normalizeKeyword(keyword: string): string {
-  return keyword.trim().replace(/^#+/, "").toLowerCase().replace(/\s+/g, " ");
-}
+/** Same spelling the worker stores, so a keyword typed by hand matches the extracted one. */
+export const normalizeKeyword = canonicalKeyword;
 
 export async function addKeyword(deps: ServiceDeps, id: string, keyword: string): Promise<ItemDetail> {
   const normalized = normalizeKeyword(keyword);

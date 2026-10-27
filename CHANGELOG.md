@@ -11,7 +11,12 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 - Quick feedback: a few days after you save someone's post the app asks "How did it go?" (worked, meh, didn't work, with optional reasons), or tap "I tried it" yourself. Every shared post shows how it worked out for others.
 - A **Me** tab with your progress (how much of your library is filed, streak, shares and saves) and all feedback, either given by you or received on your posts, filterable per post.
 - Notifications, shown on the Me tab: new followers, saves and feedback on your posts, and a notice when a post you saved is deleted or made private by its owner (it then disappears from your saved posts).
+- Posts show "More like this" from other people, and Popular ranks posts by saves and how many people said they worked.
 - Report and block people. Servers can now allow sign-up from the app (with an invite code from the admin by default).
+
+### Changed
+
+- Keywords are smarter: `#SlowCooker`, `#slow_cooker` and "slow cooker" are now the same keyword, phrases that repeat in a caption are kept, and plurals merge with their singular. Use "Refresh suggestions" in the Sort tab once to apply this to items you already saved.
 
 ## [1.7.0] - 2026-10-24
 ### Added
