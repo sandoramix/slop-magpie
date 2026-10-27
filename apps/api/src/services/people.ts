@@ -2,7 +2,7 @@
 // that blocked the viewer does not exist as far as the viewer can tell.
 import { blocks, type Database, follows, users } from "@magpie/db";
 import type { BlockedResponse, PeopleResponse, PersonRef, Profile, UpdateProfileBody } from "@magpie/shared/api";
-import { and, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import type { ServiceDeps } from "../deps.ts";
 import { ApiError } from "../http/errors.ts";
 import { notifyMany } from "./notifications.ts";
@@ -127,4 +127,22 @@ export async function setBlock(deps: ServiceDeps, name: string, block: boolean):
         ),
       );
   });
+}
+
+/** Who follows this person, or whom they follow, newest follow first. Blocked and suspended accounts are left out. */
+export async function listFollows(deps: ServiceDeps, name: string, kind: "followers" | "following"): Promise<PeopleResponse> {
+  const targetId = await resolveName(deps.db, deps.userId, name);
+  const rows =
+    kind === "followers"
+      ? await selectProfiles(deps.db, deps.userId)
+          .innerJoin(follows, and(eq(follows.followerId, users.id), eq(follows.followeeId, targetId)))
+          .where(reachable(deps.userId))
+          .orderBy(desc(follows.createdAt))
+          .limit(200)
+      : await selectProfiles(deps.db, deps.userId)
+          .innerJoin(follows, and(eq(follows.followeeId, users.id), eq(follows.followerId, targetId)))
+          .where(reachable(deps.userId))
+          .orderBy(desc(follows.createdAt))
+          .limit(200);
+  return { people: rows.map((r) => toProfile(deps.userId, r)) };
 }

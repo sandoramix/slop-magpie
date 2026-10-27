@@ -141,6 +141,28 @@ describe.skipIf(!serverUrl)("social layer (integration)", () => {
     expect((await as(bob.token, "/profiles/carol")).status).toBe(404);
   });
 
+  it("lists followers and following, and unfollowing updates both lists", async () => {
+    const dana = await json<CreateUserResponse>(env.request("/users", { method: "POST", json: { name: "dana" } }), 201);
+    const erin = await json<CreateUserResponse>(env.request("/users", { method: "POST", json: { name: "erin2" } }), 201);
+    await json<Profile>(as(dana.token, "/profiles/erin2/follow", { method: "PUT" }), 200);
+    await json<Profile>(as(erin.token, "/profiles/dana/follow", { method: "PUT" }), 200);
+
+    const followers = await json<{ people: Profile[] }>(as(erin.token, "/profiles/erin2/followers"), 200);
+    expect(followers.people.map((p) => p.name)).toEqual(["dana"]);
+    // erin follows dana back, so the row says so
+    expect(followers.people[0]?.followedByMe).toBe(true);
+    const following = await json<{ people: Profile[] }>(as(erin.token, "/profiles/erin2/following"), 200);
+    expect(following.people.map((p) => p.name)).toEqual(["dana"]);
+
+    // anyone can look at another person's lists
+    expect((await json<{ people: Profile[] }>(as(bob.token, "/profiles/dana/following"), 200)).people.map((p) => p.name)).toEqual(["erin2"]);
+
+    await json<Profile>(as(erin.token, "/profiles/dana/follow", { method: "DELETE" }), 200);
+    expect((await json<{ people: Profile[] }>(as(erin.token, "/profiles/erin2/following"), 200)).people).toHaveLength(0);
+    expect((await json<{ people: Profile[] }>(as(dana.token, "/profiles/dana/followers"), 200)).people).toHaveLength(0);
+    expect((await as(erin.token, "/profiles/nobody/followers")).status).toBe(404);
+  });
+
   it("collects quick feedback, prompts for it once, and feeds the dashboard", async () => {
     const id = await importReady(alice.token, "https://example.com/brownies", "Brownies");
     await publish(alice.token, id);

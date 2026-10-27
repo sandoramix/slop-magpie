@@ -135,6 +135,8 @@ export const socialRoutes = (deps: AppDeps) => {
       const { cursor, limit } = c.req.valid("query");
       return c.json(await posts.postsOf(scope, ownerId, cursor, limit), 200);
     })
+    .get("/profiles/:name/followers", validate("param", ProfileParam), async (c) => c.json(await people.listFollows(scopeOf(deps, c), c.req.valid("param").name, "followers"), 200))
+    .get("/profiles/:name/following", validate("param", ProfileParam), async (c) => c.json(await people.listFollows(scopeOf(deps, c), c.req.valid("param").name, "following"), 200))
     .put("/profiles/:name/follow", validate("param", ProfileParam), async (c) => c.json(await people.setFollow(scopeOf(deps, c), c.req.valid("param").name, true), 200))
     .delete("/profiles/:name/follow", validate("param", ProfileParam), async (c) => c.json(await people.setFollow(scopeOf(deps, c), c.req.valid("param").name, false), 200))
     .put("/profiles/:name/block", validate("param", ProfileParam), async (c) => {
