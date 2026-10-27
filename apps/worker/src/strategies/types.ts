@@ -2,7 +2,7 @@ import type { Logger } from "../logger.ts";
 import type { Guard } from "../net/ssrf.ts";
 import type { Runner } from "../tools/run.ts";
 
-export const strategyIds = ["instaloader", "yt-dlp", "gallery-dl", "opengraph", "direct", "oembed", "reddit-json", "fxtwitter"] as const;
+export const strategyIds = ["instaloader", "yt-dlp", "gallery-dl", "opengraph", "direct", "oembed", "reddit-json", "fxtwitter", "instagram-embed"] as const;
 export type StrategyId = (typeof strategyIds)[number];
 
 export interface FetchedFile {

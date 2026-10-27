@@ -6,6 +6,20 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [2.0.1] - 2026-10-27
+### Fixed
+
+- Sharing a link to an Instagram comment now saves the comment text. Instagram's long comment ids were being rounded when read, so the comment was never found.
+- Instagram carousels keep all their pictures at full size even when the server's Instagram login has expired. The app used to fall back to a single cropped preview image; it now reads the public embed page first.
+- App updates: the downloaded file is kept and reused. Backing out of the installer, locking the screen or switching to another app no longer means downloading it again; an interrupted download continues where it stopped, and a finished one shows "Tap to install" (with a "Delete download" option).
+- What's new now shows bold text, code, italics and links as formatted text instead of the raw `**` and backtick marks.
+### Fixed
+
+- Sharing a link to an Instagram comment now saves the comment text. Instagram's long comment ids were being rounded when read, so the comment was never found.
+- Instagram carousels keep all their pictures at full size even when the server's Instagram login has expired. The app used to fall back to a single cropped preview image; it now reads the public embed page first.
+- App updates: the downloaded file is kept and reused. Backing out of the installer, locking the screen or switching to another app no longer means downloading it again; an interrupted download continues where it stopped, and a finished one shows "Tap to install" (with a "Delete download" option).
+- What's new now shows bold text, code, italics and links as formatted text instead of the raw `**` and backtick marks.
+
 ## [2.0.0] - 2026-10-27
 ### Added
 
