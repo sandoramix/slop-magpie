@@ -1,5 +1,6 @@
 import { auditLog, createDb } from "@magpie/db";
 import { ensureQueues, ItemJobData, queues, senderFromBoss } from "@magpie/jobs";
+import { enabledSourcesWithout } from "@magpie/shared/sources";
 import { createBlobStore } from "@magpie/storage";
 import { PgBoss } from "pg-boss";
 import type { WorkerContext } from "./context.ts";
@@ -55,7 +56,8 @@ const ctx: WorkerContext = {
   maxVideoBytes: env.MAX_VIDEO_MB * MB,
   maxDownloadBytes: env.MAX_DOWNLOAD_MB * MB,
   autoAssignThreshold: env.AUTO_ASSIGN_THRESHOLD,
-  enabledSources: env.ENABLED_SOURCES,
+  enabledSources: enabledSourcesWithout(env.DISABLED_SOURCES),
+  disabledStrategies: env.DISABLED_STRATEGIES,
   async audit(action, details) {
     try {
       await db.insert(auditLog).values({ action, ip: null, userAgent: null, details });

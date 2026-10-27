@@ -1,7 +1,7 @@
 // Env var shapes shared between apps. Each app spreads the fragments it needs into
 // `createEnv({ server: { ...databaseEnv, ... } })` in its own src/env.ts.
 import { z } from "zod";
-import { DEFAULT_ENABLED_SOURCES, parseEnabledSources } from "../sources/index.ts";
+import { parseSourceIds } from "../sources/index.ts";
 
 export const databaseEnv = {
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
@@ -14,14 +14,11 @@ export const loggingEnv = {
 };
 
 /**
- * Which sites get their own source (docs/sources.md#enabling-a-source). The code for all of them exists;
- * the others save as `generic`. api and worker must be given the same list.
+ * Sites switched off (docs/sources.md#disabling-a-source). Every source is on by default; a listed one saves as
+ * `generic` instead. api and worker must be given the same list. Unknown ids are ignored.
  */
 export const sourcesEnv = {
-  ENABLED_SOURCES: z
-    .string()
-    .default(DEFAULT_ENABLED_SOURCES.join(","))
-    .transform(parseEnabledSources),
+  DISABLED_SOURCES: z.string().default("").transform(parseSourceIds),
 };
 
 export const storageEnv = {

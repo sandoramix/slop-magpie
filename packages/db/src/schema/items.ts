@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { bigint, boolean, check, index, integer, jsonb, pgTable, smallint, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, check, index, integer, jsonb, pgTable, real, smallint, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, timestamptz, tsvector } from "./columns.ts";
 import { ownerId } from "./users.ts";
 import { availability, fetchStatus, itemKind, mediaType, visibility, workflow } from "./enums.ts";
@@ -40,6 +40,8 @@ export const items = pgTable(
     rating: smallint(),
     custom: jsonb().$type<Record<string, unknown>>().notNull().default({}),
     rawMeta: jsonb().$type<unknown>(),
+    // meaning vector from the worker's embedder (docs/worker-pipeline.md#embeddings); plain float array, no extension needed
+    embedding: real().array(),
     transcript: text(),
     ocrText: text(),
     searchTsv: tsvector().generatedAlwaysAs(

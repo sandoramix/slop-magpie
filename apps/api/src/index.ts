@@ -4,6 +4,7 @@ import { createPgBossSender } from "@magpie/jobs";
 import { createBlobStore } from "@magpie/storage";
 import { count, eq } from "drizzle-orm";
 import type { OAuthProvider } from "@magpie/shared/api";
+import { enabledSourcesWithout } from "@magpie/shared/sources";
 import { createApp } from "./app.ts";
 import type { AppDeps } from "./deps.ts";
 import { env } from "./env.ts";
@@ -33,7 +34,7 @@ const deps: AppDeps = {
   trustProxy: env.TRUST_PROXY,
   adminWebUi: env.ADMIN_WEB_UI,
   registrationMode: env.REGISTRATION_MODE,
-  enabledSources: env.ENABLED_SOURCES,
+  enabledSources: enabledSourcesWithout(env.DISABLED_SOURCES),
   oauth: {
     publicBaseUrl: env.PUBLIC_BASE_URL,
     credentials: {

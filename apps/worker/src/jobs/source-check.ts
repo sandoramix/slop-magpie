@@ -30,7 +30,7 @@ export async function sourceCheck(ctx: WorkerContext, options: { batch?: number;
     try {
       await syncCredentials(ctx, row.source);
       const fetcher = getFetcher(row.source);
-      const first = strategyOrder(fetcher, row.canonicalUrl)[0] ?? "opengraph";
+      const first = strategyOrder(fetcher, row.canonicalUrl).find((id) => !ctx.disabledStrategies.includes(id)) ?? "opengraph";
       const cookiesFile = await cookiesFor(ctx, row.source, tmpDir);
       const status = await ctx.strategies[first].probe({
         url: row.canonicalUrl,

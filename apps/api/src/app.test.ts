@@ -154,9 +154,9 @@ describe("sources", () => {
     const res = await app.request("/api/v1/sources", { headers: auth });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { sources: { id: string; itemCount: number; enabled: boolean }[] };
-    // every source with code is listed; only instagram and the generic fallback are on by default
+    // every source is listed and on unless an operator disabled it
     expect(body.sources.map((s) => s.id)).toEqual(["instagram", "tiktok", "youtube", "pinterest", "x", "reddit", "facebook", "generic"]);
-    expect(body.sources.filter((s) => s.enabled).map((s) => s.id)).toEqual(["instagram", "generic"]);
+    expect(body.sources.every((s) => s.enabled)).toBe(true);
     expect(body.sources.find((s) => s.id === "instagram")?.itemCount).toBe(3);
   });
 

@@ -202,7 +202,10 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
   try {
     await syncCredentials(ctx, source);
     const fetcher = getFetcher(source);
-    const order = strategyOrder(fetcher, url).map((id) => ctx.strategies[id]);
+    const order = strategyOrder(fetcher, url)
+      .filter((id) => !ctx.disabledStrategies.includes(id))
+      .map((id) => ctx.strategies[id]);
+    if (order.length === 0) return await fail("fatal", "Every download method for this site is switched off (DISABLED_STRATEGIES)", []);
     // the link the user shared (also after a /share/ expansion) names the comment, if any
     const commentId = commentIdOf(url, ctx.enabledSources) ?? commentIdOf(item.sourceUrl, ctx.enabledSources) ?? storedCommentId(item.sharedComment);
     const outcome = await runChain(order, {

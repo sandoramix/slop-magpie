@@ -1,5 +1,6 @@
 import path from "node:path";
 import { databaseEnv, loggingEnv, sourcesEnv, storageEnv } from "@magpie/shared/env";
+import { strategyIds } from "./strategies/types.ts";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
@@ -9,6 +10,14 @@ export const env = createEnv({
     ...loggingEnv,
     ...sourcesEnv,
     ...storageEnv,
+    // strategies to skip everywhere, e.g. `fxtwitter` to keep tweets off a third-party relay. All are on by default
+    DISABLED_STRATEGIES: z
+      .string()
+      .default("")
+      .transform((s) => {
+        const wanted = s.split(",").map((x) => x.trim().toLowerCase());
+        return strategyIds.filter((id) => wanted.includes(id));
+      }),
     COOKIES_DIR: z.string().min(1),
     SESSIONS_DIR: z.string().min(1).default("./secrets/sessions"),
     // optional: log in automatically and renew the session instead of uploading instagram.txt

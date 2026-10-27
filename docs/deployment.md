@@ -76,7 +76,7 @@ Optional: `INSTAGRAM_USERNAME`, `INSTAGRAM_PASSWORD`, `SESSIONS_DIR` (worker, de
 
 `ADMIN_WEB_UI` (api, default `true`): serves `https://<server>/admin`, a static page where the admin token is typed in to replace the Instagram session or cookies from any browser. Set `false` to remove it; the underlying `/api/v1/sources/instagram/credentials` routes stay admin-only either way. Use it over HTTPS only.
 
-`ENABLED_SOURCES` (api and worker, default `instagram`): comma list of sites with their own handling. Every site has working code (`instagram,tiktok,youtube,pinterest,x,reddit,facebook`) but only the listed ones are used; the rest save as `generic`. Give both services the same value. See [sources.md](sources.md#enabling-a-source).
+`DISABLED_SOURCES` (api and worker, default empty): comma list of sites to switch off (`instagram,tiktok,youtube,pinterest,x,reddit,facebook`). Everything is on by default; a disabled site saves as `generic`. Give both services the same value. `DISABLED_STRATEGIES` (worker, default empty): strategies to skip everywhere (`instaloader,yt-dlp,gallery-dl,opengraph,direct,oembed,reddit-json,fxtwitter`). See [sources.md](sources.md#disabling-a-source-or-a-strategy).
 
 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`, `DISCORD_CLIENT_ID` / `DISCORD_CLIENT_SECRET` (api, optional): switch on social login per provider; setting only one half leaves it off. Register `<PUBLIC_BASE_URL>/api/v1/auth/oauth/<provider>/callback` as the redirect URI. See [security.md](security.md#social-login).
 

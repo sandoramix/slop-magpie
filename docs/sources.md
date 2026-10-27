@@ -90,18 +90,18 @@ This means most sites work out of the box; a dedicated source is only needed for
 | `reddit` | gallery-dl → yt-dlp | |
 | `facebook` | yt-dlp | reels/videos; often needs cookies |
 | `generic` | direct → yt-dlp → gallery-dl → opengraph | fallback |
-### Enabling a source
+### Disabling a source or a strategy
 
-The code for every source above exists and is tested, but only `instagram` is switched on by default. A source that is off behaves like any unknown site: its links save as `generic` (yt-dlp, gallery-dl, opengraph), which usually still works but dedupes and normalizes less precisely and uses no per-site strategy order.
-
-Set `ENABLED_SOURCES` (comma list of ids, default `instagram`) to the same value for **api and worker**, then restart both:
+Everything is **on by default**. Every source above and every strategy has working code and is used. Two blacklists switch things off; there is no whitelist.
 
 ```
-ENABLED_SOURCES=instagram,tiktok,youtube,pinterest,x,reddit,facebook
+DISABLED_SOURCES=facebook,x          # api AND worker, same value
+DISABLED_STRATEGIES=fxtwitter        # worker only
 ```
 
-Unknown ids are ignored. Items saved earlier as `generic` keep that source until refetched; saving the URL again does not change them. `GET /sources` reports each source with `enabled`, so the app can show which are active.
-
+- A **disabled source** behaves like any unknown site: its links save as `generic` (yt-dlp, gallery-dl, opengraph), which dedupes and normalizes less precisely and uses no per-site strategy order. Items already saved keep their source until refetched. `GET /sources` reports each source with `enabled`.
+- A **disabled strategy** is skipped in every chain. A site whose chain becomes empty fails with a clear message instead of retrying. `fxtwitter` is the one to consider: it sends the URL of each saved post on X to a third-party relay.
+- Unknown ids are ignored. Restart api and worker after changing either.
 Per-source notes:
 
 | id | Notes |

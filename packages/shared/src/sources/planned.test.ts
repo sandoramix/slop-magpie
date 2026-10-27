@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { needsExpansion, parseEnabledSources, resolveSource } from "./index.ts";
+import { enabledSourcesWithout, needsExpansion, parseSourceIds, resolveSource } from "./index.ts";
 import { facebook } from "./facebook.ts";
 import { pinterest } from "./pinterest.ts";
 import { reddit } from "./reddit.ts";
@@ -122,18 +122,25 @@ describe("facebook", () => {
   });
 });
 
-describe("enabling sources", () => {
+describe("disabling sources", () => {
   const tiktokUrl = new URL("https://www.tiktok.com/@a/video/7301234567890123456");
 
-  it("only matches the sources that are enabled; the rest save as generic", () => {
-    expect(resolveSource(tiktokUrl).source.id).toBe("generic");
-    expect(resolveSource(tiktokUrl, ["instagram", "tiktok"]).source.id).toBe("tiktok");
-    expect(resolveSource(new URL("https://www.instagram.com/p/C9xYz12AbCd/"), []).source.id).toBe("generic");
+  it("matches every source by default", () => {
+    expect(resolveSource(tiktokUrl).source.id).toBe("tiktok");
+    expect(resolveSource(new URL("https://www.instagram.com/p/C9xYz12AbCd/")).source.id).toBe("instagram");
+    expect(resolveSource(new URL("https://example.com/")).source.id).toBe("generic");
+  });
+
+  it("saves a disabled source as generic", () => {
+    expect(resolveSource(tiktokUrl, enabledSourcesWithout(["tiktok"])).source.id).toBe("generic");
+    expect(resolveSource(new URL("https://www.instagram.com/p/C9xYz12AbCd/"), enabledSourcesWithout(["tiktok"])).source.id).toBe("instagram");
+    expect(resolveSource(tiktokUrl, []).source.id).toBe("generic");
   });
 
   it("parses the env list, ignoring unknown and generic ids", () => {
-    expect(parseEnabledSources("tiktok, YouTube,myspace,generic")).toEqual(["tiktok", "youtube"]);
-    expect(parseEnabledSources("")).toEqual([]);
+    expect(parseSourceIds("tiktok, YouTube,myspace,generic")).toEqual(["tiktok", "youtube"]);
+    expect(parseSourceIds("")).toEqual([]);
+    expect(enabledSourcesWithout(parseSourceIds("x,reddit"))).toEqual(["instagram", "tiktok", "youtube", "pinterest", "facebook"]);
   });
 
   it("knows which links need following", () => {

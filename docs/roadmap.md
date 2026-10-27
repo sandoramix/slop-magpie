@@ -39,7 +39,7 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 
 ## Social layer
 
-Status 2026-10-27: all five phases are on `dev`. Switched off until configured: social login (set a provider's client id and secret) and every source except Instagram (`ENABLED_SOURCES`). Registration is `invite` by default. Nothing here has run against a real Postgres, real provider apps or the real sites yet: the integration tests (`apps/api/src/*.int.test.ts`) need a `DATABASE_URL` with `CREATEDB`.
+Status 2026-10-27: all five phases are on `dev`. Social login is off until a provider's client id and secret are set. Every source and strategy is on; `DISABLED_SOURCES` and `DISABLED_STRATEGIES` switch things off. Registration is `invite` by default. Nothing here has run against a real Postgres, real provider apps or the real sites yet: the integration tests (`apps/api/src/*.int.test.ts`) need a `DATABASE_URL` with `CREATEDB`.
 
 Public posts, saves, follows, likes, quick feedback, a progress dashboard (requested 2026-10-27). Design in [social.md](social.md).
 
@@ -92,7 +92,7 @@ Public posts, saves, follows, likes, quick feedback, a progress dashboard (reque
 - [x] Refetch (API, single + bulk), sweep cron for lost jobs; [x] failed-items view (app)
 
 ## Later
-- [x] More sources: `tiktok`, `youtube`, `pinterest`, `x`, `reddit`, `facebook` are implemented and tested but off; switch on with `ENABLED_SOURCES` ([sources.md](sources.md#enabling-a-source)). Not yet run against the real sites
+- [x] More sources: `tiktok`, `youtube`, `pinterest`, `x`, `reddit`, `facebook` are implemented, tested and on by default; `DISABLED_SOURCES` switches one off ([sources.md](sources.md#disabling-a-source)). Not yet run against the real sites
 - [ ] Web client (Expo web) + iOS Shortcut for sharing
 - [ ] Transcripts (whisper.cpp), OCR (tesseract), embeddings (transformers.js + pgvector), semantic search
 - [ ] S3 driver + migration to Backblaze B2
