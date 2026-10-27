@@ -55,6 +55,7 @@ const ctx: WorkerContext = {
   maxVideoBytes: env.MAX_VIDEO_MB * MB,
   maxDownloadBytes: env.MAX_DOWNLOAD_MB * MB,
   autoAssignThreshold: env.AUTO_ASSIGN_THRESHOLD,
+  enabledSources: env.ENABLED_SOURCES,
   async audit(action, details) {
     try {
       await db.insert(auditLog).values({ action, ip: null, userAgent: null, details });

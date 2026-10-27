@@ -1,5 +1,5 @@
 import { registrationModes } from "@magpie/shared/api";
-import { databaseEnv, loggingEnv, storageEnv } from "@magpie/shared/env";
+import { databaseEnv, loggingEnv, sourcesEnv, storageEnv } from "@magpie/shared/env";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
@@ -7,6 +7,7 @@ export const env = createEnv({
   server: {
     ...databaseEnv,
     ...loggingEnv,
+    ...sourcesEnv,
     ...storageEnv,
     PORT: z.coerce.number().int().min(1).max(65535).default(3000),
     API_TOKEN: z.string().min(32, "use `openssl rand -base64 48`"),

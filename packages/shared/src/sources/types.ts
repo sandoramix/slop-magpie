@@ -11,4 +11,6 @@ export interface SourceDef {
   extractId?(url: URL): string | null;
   /** Id of the comment a shared link points at, when the link is to a comment on a post. */
   extractCommentId?(url: URL): string | null;
+  /** Shortener or opaque share link whose real post is only known after following redirects (done by the worker). */
+  needsExpansion?(url: URL): boolean;
 }

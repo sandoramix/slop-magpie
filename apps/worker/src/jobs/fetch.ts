@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, stat } from "node:fs/promises";
 import path from "node:path";
 import { items, itemFolders, itemTags, media, users } from "@magpie/db";
 import { SharedComment } from "@magpie/shared/api";
-import { resolveSource } from "@magpie/shared/sources";
+import { needsExpansion, resolveSource } from "@magpie/shared/sources";
 import { extensionForContentType, itemKeys } from "@magpie/storage";
 import { and, eq, ne, or, sql } from "drizzle-orm";
 import type { WorkerContext } from "../context.ts";
@@ -35,15 +35,14 @@ export type FetchOutcome = "ready" | "merged" | "failed" | "retry" | "skipped";
 // hosts whose links are only redirects to the real post
 const SHORT_LINK_HOSTS = new Set(["t.co", "bit.ly", "tinyurl.com", "pin.it", "vm.tiktok.com", "vt.tiktok.com", "youtu.be", "fb.watch", "redd.it", "goo.gl", "ow.ly", "buff.ly", "lnkd.in", "instagr.am"]);
 
-function needsExpansion(url: URL, sourceId: string): boolean {
-  if (SHORT_LINK_HOSTS.has(url.hostname.toLowerCase())) return true;
-  // Instagram /share/... links carry an opaque id and redirect to the post
-  return sourceId === "instagram" && url.pathname.startsWith("/share/");
+/** Shorteners and opaque share links (a source knows its own, e.g. Instagram /share/) redirect to the real post. */
+function mustExpand(url: URL): boolean {
+  return SHORT_LINK_HOSTS.has(url.hostname.toLowerCase()) || needsExpansion(url);
 }
 
-function commentIdOf(url: string): string | null {
+function commentIdOf(url: string, enabled: readonly string[]): string | null {
   try {
-    return resolveSource(new URL(url)).commentId;
+    return resolveSource(new URL(url), enabled).commentId;
   } catch {
     return null;
   }
@@ -158,10 +157,10 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
   let source = item.source;
   try {
     const parsed = new URL(url);
-    if (needsExpansion(parsed, source)) {
+    if (mustExpand(parsed)) {
       const expanded = await expandUrl(ctx.guard, url);
       url = expanded.url.href;
-      const resolved = resolveSource(expanded.url);
+      const resolved = resolveSource(expanded.url, ctx.enabledSources);
       source = resolved.source.id;
       const duplicate = await ctx.db
         .select({ id: items.id, fetchStatus: items.fetchStatus })
@@ -205,7 +204,7 @@ export async function fetchItem(ctx: WorkerContext, job: FetchJobInfo): Promise<
     const fetcher = getFetcher(source);
     const order = strategyOrder(fetcher, url).map((id) => ctx.strategies[id]);
     // the link the user shared (also after a /share/ expansion) names the comment, if any
-    const commentId = commentIdOf(url) ?? commentIdOf(item.sourceUrl) ?? storedCommentId(item.sharedComment);
+    const commentId = commentIdOf(url, ctx.enabledSources) ?? commentIdOf(item.sourceUrl, ctx.enabledSources) ?? storedCommentId(item.sharedComment);
     const outcome = await runChain(order, {
       url,
       ...(commentId ? { commentId } : {}),

@@ -59,6 +59,9 @@ interface FetchResult {
 | `gallery-dl` | `gallery-dl -j` + download | image posts/galleries/carousels (Instagram posts, Pinterest, Reddit galleries, Tumblr, X images, DeviantArt, ...) |
 | `opengraph` | HTTP GET + parse `og:*` / `twitter:*` / oEmbed / JSON-LD | any web page: title, description, preview image, sometimes `og:video` |
 | `direct` | HTTP GET of the URL itself | direct links to `.mp4`, `.jpg`, `.png`, `.webp`, `.gif` |
+| `oembed` | the site's oEmbed endpoint (YouTube, TikTok, X, Reddit, Pinterest, Vimeo) | title, author and thumbnail without a login; never video, so it is a `link` fallback |
+| `reddit-json` | `<post>.json` with raw_json | Reddit text, image and gallery posts and the shared comment; leaves videos to yt-dlp |
+| `fxtwitter` | the public FxTwitter API | posts on X when gallery-dl and yt-dlp are blocked. A third party sees which posts you save, so it comes last |
 
 Strategy chain semantics:
 - Try strategies in order; first one that yields **at least one media file** wins.
@@ -75,7 +78,7 @@ direct (if URL looks like a media file) → yt-dlp (generic extractor) → galle
 
 This means most sites work out of the box; a dedicated source is only needed for better normalization/dedupe, cookies, or a different strategy order.
 
-## Built-in sources (planned)
+## Built-in sources
 
 | id | Strategies | Notes |
 |---|---|---|
@@ -87,6 +90,28 @@ This means most sites work out of the box; a dedicated source is only needed for
 | `reddit` | gallery-dl → yt-dlp | |
 | `facebook` | yt-dlp | reels/videos; often needs cookies |
 | `generic` | direct → yt-dlp → gallery-dl → opengraph | fallback |
+### Enabling a source
+
+The code for every source above exists and is tested, but only `instagram` is switched on by default. A source that is off behaves like any unknown site: its links save as `generic` (yt-dlp, gallery-dl, opengraph), which usually still works but dedupes and normalizes less precisely and uses no per-site strategy order.
+
+Set `ENABLED_SOURCES` (comma list of ids, default `instagram`) to the same value for **api and worker**, then restart both:
+
+```
+ENABLED_SOURCES=instagram,tiktok,youtube,pinterest,x,reddit,facebook
+```
+
+Unknown ids are ignored. Items saved earlier as `generic` keep that source until refetched; saving the URL again does not change them. `GET /sources` reports each source with `enabled`, so the app can show which are active.
+
+Per-source notes:
+
+| id | Notes |
+|---|---|
+| `tiktok` | `vm.`/`vt.` links and `/t/<code>` are followed first; photo posts (`/photo/<id>`) are served by gallery-dl |
+| `youtube` | Shorts, `youtu.be` and `/watch` of one video are one item (`watch?v=<id>`); `maxItems` is 1 so `&list=` never pulls a playlist |
+| `pinterest` | country domains (`pinterest.co.uk`, `it.pinterest.com`, ...) and `pin.it` are recognized |
+| `x` | `twitter.com`, `x.com` and the embed hosts people paste (`fxtwitter.com`, `vxtwitter.com`, ...) are one post. FxTwitter is a third-party relay, used last |
+| `reddit` | `old.`, `np.`, `m.` and `redd.it/<id>` normalize to `www.reddit.com`; a link to a comment keeps that comment (read by `reddit-json`); `/r/<sub>/s/<code>` share links are followed |
+| `facebook` | reels, `/watch?v=`, `/videos/<id>`, `fb.watch` and `/share/...` links; videos usually need a cookies file (`COOKIES_DIR/facebook.txt`) |
 
 Start with `instagram` + `generic`; add others as needed.
 

@@ -298,7 +298,7 @@ export async function createItem(deps: ServiceDeps, body: CreateItemBody): Promi
   const check = checkPublicUrl(body.url);
   if (!check.ok) throw new ApiError(422, "unsupported_url", `URL not accepted (${check.reason})`);
   await assertHasRoom(deps.db, deps.userId);
-  const resolved = resolveSource(check.url);
+  const resolved = resolveSource(check.url, deps.enabledSources);
   const folderIds = body.folderIds ?? [];
   const tagIds = body.tagIds ?? [];
 

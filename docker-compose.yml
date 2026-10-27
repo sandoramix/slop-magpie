@@ -47,6 +47,7 @@ services:
       TRUST_PROXY: ${TRUST_PROXY:-true}
       ADMIN_WEB_UI: ${ADMIN_WEB_UI:-true}
       REGISTRATION_MODE: ${REGISTRATION_MODE:-invite}
+      ENABLED_SOURCES: ${ENABLED_SOURCES:-instagram}
     volumes:
       - ${MEDIA_DIR:-/opt/magpie/media}:/data/media
     tmpfs: [/tmp]
@@ -68,6 +69,7 @@ services:
       INSTAGRAM_PASSWORD: ${INSTAGRAM_PASSWORD:-}
       WORKER_TMP_DIR: /tmp/magpie
       WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-1}
+      ENABLED_SOURCES: ${ENABLED_SOURCES:-instagram}
       MAX_VIDEO_MB: ${MAX_VIDEO_MB:-60}
       MAX_DOWNLOAD_MB: ${MAX_DOWNLOAD_MB:-500}
       AUTO_ASSIGN_THRESHOLD: ${AUTO_ASSIGN_THRESHOLD:-0.8}

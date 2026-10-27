@@ -1,5 +1,5 @@
 import path from "node:path";
-import { databaseEnv, loggingEnv, storageEnv } from "@magpie/shared/env";
+import { databaseEnv, loggingEnv, sourcesEnv, storageEnv } from "@magpie/shared/env";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
@@ -7,6 +7,7 @@ export const env = createEnv({
   server: {
     ...databaseEnv,
     ...loggingEnv,
+    ...sourcesEnv,
     ...storageEnv,
     COOKIES_DIR: z.string().min(1),
     SESSIONS_DIR: z.string().min(1).default("./secrets/sessions"),

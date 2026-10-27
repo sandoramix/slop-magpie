@@ -76,6 +76,8 @@ Optional: `INSTAGRAM_USERNAME`, `INSTAGRAM_PASSWORD`, `SESSIONS_DIR` (worker, de
 
 `ADMIN_WEB_UI` (api, default `true`): serves `https://<server>/admin`, a static page where the admin token is typed in to replace the Instagram session or cookies from any browser. Set `false` to remove it; the underlying `/api/v1/sources/instagram/credentials` routes stay admin-only either way. Use it over HTTPS only.
 
+`ENABLED_SOURCES` (api and worker, default `instagram`): comma list of sites with their own handling. Every site has working code (`instagram,tiktok,youtube,pinterest,x,reddit,facebook`) but only the listed ones are used; the rest save as `generic`. Give both services the same value. See [sources.md](sources.md#enabling-a-source).
+
 `REGISTRATION_MODE` (api, `invite` | `open`, default `invite`): who may create an account with `POST /auth/signup`. `invite` needs a single-use code from `POST /invites` (admin); `open` needs none. Signups are limited to 5 per IP per hour. Switch to `open` only after reading the moderation notes in [social.md](social.md).
 
 `TRUST_PROXY` (api, default `false`; `docker-compose.yml` sets `true`): take the client IP from the last `X-Forwarded-For` hop. Enable only behind a proxy that sets that header (Coolify's does), otherwise clients can spoof their IP and dodge the failed-auth rate limit.

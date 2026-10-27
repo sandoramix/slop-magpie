@@ -28,6 +28,7 @@ const deps: AppDeps = {
   trustProxy: env.TRUST_PROXY,
   adminWebUi: env.ADMIN_WEB_UI,
   registrationMode: env.REGISTRATION_MODE,
+  enabledSources: env.ENABLED_SOURCES,
   log,
   checkDb: database.ping,
   async audit(event) {

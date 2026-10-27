@@ -5,6 +5,8 @@ export const SourceInfo = z.object({
   label: z.string(),
   hosts: z.array(z.string()),
   itemCount: z.number().int().nonnegative(),
+  /** False for sources whose code exists but is switched off (`ENABLED_SOURCES`); their links save as generic. */
+  enabled: z.boolean().default(true),
 });
 export type SourceInfo = z.infer<typeof SourceInfo>;
 

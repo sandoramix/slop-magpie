@@ -25,6 +25,8 @@ export interface WorkerContext {
   maxVideoBytes: number;
   maxDownloadBytes: number;
   autoAssignThreshold: number;
+  /** Source ids with their own handling (ENABLED_SOURCES). */
+  enabledSources: readonly string[];
   /** Writes an audit entry; never throws. */
   audit: (action: string, details: Record<string, unknown>) => Promise<void>;
 }

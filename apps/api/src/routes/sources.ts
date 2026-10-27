@@ -5,7 +5,7 @@ import {
   SourceIdParam,
   type SourcesResponse,
 } from "@magpie/shared/api";
-import { allSources, isSourceId } from "@magpie/shared/sources";
+import { allSources, DEFAULT_ENABLED_SOURCES, GENERIC_SOURCE_ID, isSourceId } from "@magpie/shared/sources";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import type { AppDeps, AppEnv } from "../deps.ts";
@@ -35,6 +35,7 @@ export const sourcesRoutes = (deps: AppDeps) =>
           label: s.label,
           hosts: [...s.hosts],
           itemCount: counts.get(s.id) ?? 0,
+          enabled: s.id === GENERIC_SOURCE_ID || (deps.enabledSources ?? DEFAULT_ENABLED_SOURCES).includes(s.id),
         })),
       };
       return c.json(body, 200);

@@ -76,6 +76,8 @@ export interface AppDeps {
   createItemLimit?: number;
   /** Serve the admin page at `/admin` (default true). */
   adminWebUi?: boolean;
+  /** Source ids with their own handling (default: instagram); the rest save as generic. */
+  enabledSources?: readonly string[];
   /** Who may create an account (default `invite`). */
   registrationMode?: RegistrationMode;
   /** Social login providers that are configured; empty until the OAuth flow exists (docs/security.md#social-login). */
@@ -85,7 +87,7 @@ export interface AppDeps {
 }
 
 /** Subset handed to services. */
-export type ServiceDeps = Pick<AppDeps, "db" | "store" | "jobs" | "log" | "mediaUrlTtlSeconds"> & {
+export type ServiceDeps = Pick<AppDeps, "db" | "store" | "jobs" | "log" | "mediaUrlTtlSeconds" | "enabledSources"> & {
   /** Owner of the library being read or written; every query is scoped to it. */
   userId: string;
 };
