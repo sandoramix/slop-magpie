@@ -14,6 +14,7 @@ import { itemsRoutes } from "./routes/items.ts";
 import { mediaRoutes } from "./routes/media.ts";
 import { fieldsRoutes, foldersRoutes, smartFoldersRoutes, statsRoutes, tagsRoutes } from "./routes/organize.ts";
 import { authRoutes } from "./routes/auth.ts";
+import { organizeExtrasRoutes } from "./routes/organize-extras.ts";
 import { moderationRoutes, socialRoutes } from "./routes/social.ts";
 import { sourcesRoutes } from "./routes/sources.ts";
 import { meRoutes, usersRoutes } from "./routes/users.ts";
@@ -48,6 +49,7 @@ export function createApp(deps: AppDeps) {
     .route("/fields", fieldsRoutes(deps))
     .route("/smart-folders", smartFoldersRoutes(deps))
     .route("/stats", statsRoutes(deps))
+    .route("/", organizeExtrasRoutes(deps))
     .route("/", socialRoutes(deps))
     .route("/", moderationRoutes(deps));
 

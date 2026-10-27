@@ -173,6 +173,8 @@ export const moderationRoutes = (deps: AppDeps) =>
       await deps.audit({ action: "invite.create", ...requestMeta(c, deps.trustProxy) });
       return c.json(invite, 201);
     })
+    .get("/moderation/hidden", async (c) => c.json(await moderation.listHidden(deps.db), 200))
+    .get("/moderation/suspended", async (c) => c.json(await moderation.listSuspended(deps.db), 200))
     .get("/moderation/reports", validate("query", ReportListQuery), async (c) => c.json(await moderation.listReports(deps.db, c.req.valid("query")), 200))
     .post("/moderation/reports/:id", validate("param", IdParam), validate("json", ResolveReportBody), async (c) => {
       const { id } = c.req.valid("param");

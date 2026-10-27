@@ -1,3 +1,4 @@
+export * from "./auto.ts";
 export * from "./common.ts";
 export * from "./enums.ts";
 export * from "./errors.ts";

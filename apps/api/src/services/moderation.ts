@@ -1,8 +1,16 @@
 // Reports from users and the admin's tools to act on them. Hiding an item keeps it with its owner but
 // removes it from every public view; suspending an account signs it out and hides it and its posts.
 import { ADMIN_USER_ID, type Database, items, reports, sessions, users } from "@magpie/db";
-import type { CreateReportBody, Report, ReportListQuery, ReportListResponse, ResolveReportBody } from "@magpie/shared/api";
-import { and, count, desc, eq, gte, sql } from "drizzle-orm";
+import type {
+  CreateReportBody,
+  HiddenItemsResponse,
+  Report,
+  ReportListQuery,
+  ReportListResponse,
+  ResolveReportBody,
+  SuspendedAccountsResponse,
+} from "@magpie/shared/api";
+import { and, count, desc, eq, gte, isNotNull, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { ServiceDeps } from "../deps.ts";
@@ -127,4 +135,21 @@ export async function suspend(db: Database | Tx, userId: string, on: boolean): P
 export async function setHidden(db: Database, itemId: string, hidden: boolean): Promise<void> {
   const rows = await db.update(items).set({ hiddenAt: hidden ? new Date() : null }).where(eq(items.id, itemId)).returning({ id: items.id });
   if (rows.length === 0) throw new ApiError(404, "not_found", "Item not found");
+}
+
+/** What is currently hidden from public view, for the "restore" list. */
+export async function listHidden(db: Database): Promise<HiddenItemsResponse> {
+  const rows = await db
+    .select({ id: items.id, title: items.title, owner: users.name, hiddenAt: items.hiddenAt })
+    .from(items)
+    .innerJoin(users, eq(users.id, items.userId))
+    .where(isNotNull(items.hiddenAt))
+    .orderBy(desc(items.hiddenAt))
+    .limit(200);
+  return { items: rows.flatMap((r) => (r.hiddenAt ? [{ id: r.id, title: r.title, owner: r.owner, hiddenAt: r.hiddenAt.toISOString() }] : [])) };
+}
+
+export async function listSuspended(db: Database): Promise<SuspendedAccountsResponse> {
+  const rows = await db.select({ id: users.id, name: users.name, suspendedAt: users.suspendedAt }).from(users).where(isNotNull(users.suspendedAt)).orderBy(desc(users.suspendedAt));
+  return { accounts: rows.flatMap((r) => (r.suspendedAt ? [{ id: r.id, name: r.name, suspendedAt: r.suspendedAt.toISOString() }] : [])) };
 }
