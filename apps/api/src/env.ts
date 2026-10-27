@@ -20,6 +20,13 @@ export const env = createEnv({
     TRUST_PROXY: z.stringbool().default(false),
     // the /admin page for replacing the Instagram login from a browser; the token is typed in, never stored
     ADMIN_WEB_UI: z.stringbool().default(true),
+    // social login: a provider is offered only when both its id and secret are set (docs/security.md#social-login)
+    GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+    GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+    GITHUB_CLIENT_ID: z.string().min(1).optional(),
+    GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+    DISCORD_CLIENT_ID: z.string().min(1).optional(),
+    DISCORD_CLIENT_SECRET: z.string().min(1).optional(),
     // `invite`: signup needs a code from an admin. `open`: anyone can create an account (docs/social.md)
     REGISTRATION_MODE: z.enum(registrationModes).default("invite"),
   },

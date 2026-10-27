@@ -172,6 +172,11 @@ All additive to v1 (new routes and optional fields only, D24). Concepts in [soci
 | POST | `/notifications/read` | `{ids?}`; no ids marks everything read |
 | POST | `/reports` | `{target: item\|user, targetId, reason}` |
 | GET | `/auth/config` | public: `{mode, providers}` for the signup screen |
+| POST | `/auth/oauth/:provider/start` | public: `{url}` to open in the browser (`google`, `github`, `discord`); `404` when the provider is not configured |
+| GET | `/auth/oauth/:provider/callback` | public: the provider's redirect target; answers `302` to `magpie://oauth?status=ticket\|error&...` |
+| POST | `/auth/oauth/exchange` | public: `{ticket, username?, inviteCode?}` → `{status:"ok",token,me}` or `{status:"signup_required",suggestedUsername,inviteRequired}` |
+| GET | `/me/identities` | linked social logins and whether a password is set |
+| POST / DELETE | `/me/identities/:provider/link`, `/me/identities/:provider` | link (returns `{url}`) or remove a login method; the last way in is refused |
 | POST | `/auth/signup` | public: `{username, password, inviteCode?}` → session like `/auth/login`. Invite needed unless `REGISTRATION_MODE=open` |
 
 Admin only: `POST /invites` (single-use code, 14 days), `GET /moderation/reports?status=`, `POST /moderation/reports/:id` (`hide` / `suspend` / `dismiss`), `POST /moderation/items/:id/hide|unhide`, `POST /moderation/users/:id/suspend|unsuspend`.

@@ -1,8 +1,11 @@
 import {
   CreateUserBody,
   IdParam,
+  type IdentitiesResponse,
   type MeResponse,
+  type OAuthStartResponse,
   type PasswordResponse,
+  ProviderParam,
   SetPasswordBody,
   UpdateMeBody,
   UpdateUserBody,
@@ -16,6 +19,7 @@ import { errorResponse } from "../http/errors.ts";
 import { requestMeta } from "../http/request-meta.ts";
 import { validate } from "../http/validate.ts";
 import * as credentials from "../services/credentials.ts";
+import * as oauth from "../services/oauth.ts";
 import { getStorage } from "../services/storage.ts";
 import * as svc from "../services/users.ts";
 
@@ -40,6 +44,17 @@ export const meRoutes = (deps: AppDeps) =>
       await deps.audit({ action: "auth.password_set", ...requestMeta(c, deps.trustProxy), details: { id: principal.id } });
       const body: PasswordResponse = { token, me: svc.whoAmI({ ...principal, hasPassword: true, actingAs: null }) };
       return c.json(body, 200);
+    })
+    // linked social logins (Google, GitHub, Discord); always the token owner's, even while acting as someone else
+    .get("/identities", async (c) => c.json(await oauth.listIdentities(deps.db, c.get("principal").id) satisfies IdentitiesResponse, 200))
+    .post("/identities/:provider/link", validate("param", ProviderParam), async (c) => {
+      if (!deps.oauth) return errorResponse(c, 404, "not_found", "That login method is not available on this server");
+      const url = await oauth.start(deps.db, deps.oauth, c.req.valid("param").provider, "link", c.get("principal").id);
+      return c.json({ url } satisfies OAuthStartResponse, 200);
+    })
+    .delete("/identities/:provider", validate("param", ProviderParam), async (c) => {
+      await oauth.unlink(deps.db, c.get("principal").id, c.req.valid("param").provider);
+      return c.body(null, 204);
     })
     // signs this device out (a session token is revoked; the temporary token has nothing to revoke)
     .post("/logout", async (c) => {

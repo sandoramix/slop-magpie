@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { DEFAULT_STORAGE_LIMIT_BYTES } from "@magpie/shared/api";
-import { bigint, boolean, index, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, boolean, index, jsonb, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, timestamptz } from "./columns.ts";
 
 /** The admin account owns the library that existed before accounts did; it signs in with API_TOKEN. */
@@ -58,6 +58,26 @@ export const authIdentities = pgTable(
     lastLoginAt: timestamptz(),
   },
   (t) => [uniqueIndex("auth_identities_provider_key").on(t.provider, t.providerUserId), index("auth_identities_user_idx").on(t.userId)],
+);
+
+/**
+ * Short-lived, single-use records of a social login in progress. `state` rows bind the browser round trip
+ * to the app that started it (and hold the PKCE verifier); `ticket` rows carry the verified provider
+ * identity from the callback back to the app, which swaps it for a session. Only hashes are stored.
+ */
+export const oauthTransactions = pgTable(
+  "oauth_transactions",
+  {
+    id: id(),
+    kind: text().notNull(),
+    tokenHash: text().notNull(),
+    provider: text().notNull(),
+    // validated with zod when read (see services/oauth.ts)
+    payload: jsonb().$type<unknown>().notNull().default({}),
+    expiresAt: timestamptz().notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [uniqueIndex("oauth_transactions_hash_key").on(t.kind, t.tokenHash), index("oauth_transactions_expires_idx").on(t.expiresAt)],
 );
 
 /**

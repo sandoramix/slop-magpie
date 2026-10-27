@@ -178,6 +178,7 @@ See [social.md](social.md) for the rules. All reference `users` and `items` with
 | `blocks` | `blocker_id`, `blocked_id`, `created_at` |
 | `reports` | `reporter_id`, `target` (`item`/`user`), `item_id`, `target_user_id` (set null when gone), `reason`, `status`, `resolved_at` |
 | `invites` | `code_hash` (sha256, unique), `created_by`, `expires_at`, `used_by`, `used_at` |
+| `oauth_transactions` | `kind` (`state`/`ticket`), `token_hash`, `provider`, `payload`, `expires_at` — single-use records of a social login in progress |
 | `auth_identities` | `user_id`, `provider`, `provider_user_id` (unique pair), `email`, `last_login_at` — social login, prepared |
 
 Added columns: `items.visibility` (`private`/`public`), `items.published_at`, `items.hidden_at` (moderation), `users.bio`, `users.suspended_at`.

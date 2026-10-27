@@ -3,6 +3,7 @@ import { auditLog, createDb, items, runMigrations } from "@magpie/db";
 import { createPgBossSender } from "@magpie/jobs";
 import { createBlobStore } from "@magpie/storage";
 import { count, eq } from "drizzle-orm";
+import type { OAuthProvider } from "@magpie/shared/api";
 import { createApp } from "./app.ts";
 import type { AppDeps } from "./deps.ts";
 import { env } from "./env.ts";
@@ -11,6 +12,10 @@ import { createAccountLookup } from "./services/users.ts";
 import { APP_VERSION } from "./version.ts";
 
 const log = createLogger(env.LOG_LEVEL, env.LOG_FORMAT);
+
+/** A provider counts as configured only with both halves of its credentials. */
+const credentialsOf = (clientId: string | undefined, clientSecret: string | undefined, provider: OAuthProvider) =>
+  clientId && clientSecret ? { [provider]: { clientId, clientSecret } } : {};
 
 await runMigrations(env.DATABASE_URL);
 log.info("migrations applied");
@@ -29,6 +34,14 @@ const deps: AppDeps = {
   adminWebUi: env.ADMIN_WEB_UI,
   registrationMode: env.REGISTRATION_MODE,
   enabledSources: env.ENABLED_SOURCES,
+  oauth: {
+    publicBaseUrl: env.PUBLIC_BASE_URL,
+    credentials: {
+      ...credentialsOf(env.GOOGLE_CLIENT_ID, env.GOOGLE_CLIENT_SECRET, "google"),
+      ...credentialsOf(env.GITHUB_CLIENT_ID, env.GITHUB_CLIENT_SECRET, "github"),
+      ...credentialsOf(env.DISCORD_CLIENT_ID, env.DISCORD_CLIENT_SECRET, "discord"),
+    },
+  },
   log,
   checkDb: database.ping,
   async audit(event) {

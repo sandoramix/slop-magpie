@@ -19,6 +19,23 @@ export async function createInvite(db: Database, createdBy: string): Promise<Inv
   return { code, expiresAt: expiresAt.toISOString() };
 }
 
+type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** Marks an invite as used; throws 403 when it is unknown, used or expired. Returns its id. */
+export async function claimInvite(tx: Tx, code: string): Promise<string> {
+  const [claimed] = await tx
+    .update(invites)
+    .set({ usedAt: new Date() })
+    .where(and(eq(invites.codeHash, hashToken(code)), isNull(invites.usedAt), gt(invites.expiresAt, new Date())))
+    .returning({ id: invites.id });
+  if (!claimed) throw new ApiError(403, "forbidden", "That invite code is invalid, used or expired");
+  return claimed.id;
+}
+
+export async function markInviteUsedBy(tx: Tx, inviteId: string, userId: string): Promise<void> {
+  await tx.update(invites).set({ usedBy: userId }).where(eq(invites.id, inviteId));
+}
+
 export async function signup(
   db: Database,
   mode: RegistrationMode,
@@ -31,19 +48,10 @@ export async function signup(
 
   return db
     .transaction(async (tx) => {
-      let inviteId: string | null = null;
-      if (mode === "invite" && body.inviteCode) {
-        const [claimed] = await tx
-          .update(invites)
-          .set({ usedAt: new Date() })
-          .where(and(eq(invites.codeHash, hashToken(body.inviteCode)), isNull(invites.usedAt), gt(invites.expiresAt, new Date())))
-          .returning({ id: invites.id });
-        if (!claimed) throw new ApiError(403, "forbidden", "That invite code is invalid, used or expired");
-        inviteId = claimed.id;
-      }
+      const inviteId = mode === "invite" && body.inviteCode ? await claimInvite(tx, body.inviteCode) : null;
       const [user] = await tx.insert(users).values({ name: body.username, passwordHash }).returning({ id: users.id });
       if (!user) throw new Error("insert returned no row");
-      if (inviteId) await tx.update(invites).set({ usedBy: user.id }).where(eq(invites.id, inviteId));
+      if (inviteId) await markInviteUsedBy(tx, inviteId, user.id);
       await tx.insert(sessions).values({
         userId: user.id,
         tokenHash: hashToken(token),

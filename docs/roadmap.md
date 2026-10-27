@@ -43,7 +43,7 @@ Public posts, saves, follows, likes, quick feedback, a progress dashboard (reque
 
 - [x] 1. Docs, `visibility` column, shared enums
 - [x] 2. Publish, save (`item_saves`), delete cascade, follow, like, feed, explore, notifications
-- [x] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation (reports, blocks and signup have app UI; the admin moderation queue is API only for now). Social login (Google, GitHub, Discord) prepared in [security.md](security.md#social-login-prepared-not-implemented), not built
+- [x] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation (reports, blocks and signup have app UI; the admin moderation queue is API only for now). Social login (Google, GitHub, Discord) is built and off until a provider's credentials are set ([security.md](security.md#social-login))
 - [x] 4. Feedback prompts + "I tried it", dashboard (progress, given/received feedback), per-item feedback card
 - [x] 5. Smarter organization: keyword phrases and variant merge, "More like this" on posts (`GET /posts/:id/similar`), popularity ranking that counts saves and "worked" answers. Already existed: auto-assign above the confidence threshold, Sort screen, apply-to-similar. Not done: an undo toast for auto-filed items, embeddings (pgvector) for topic clusters
 

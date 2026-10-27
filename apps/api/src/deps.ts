@@ -1,8 +1,9 @@
 import type { Database } from "@magpie/db";
 import type { JobSender } from "@magpie/jobs";
-import type { OAuthProvider, RegistrationMode } from "@magpie/shared/api";
+import type { RegistrationMode } from "@magpie/shared/api";
 import type { BlobStore } from "@magpie/storage";
 import type { Logger } from "./logger.ts";
+import type { OAuthConfig } from "./services/oauth.ts";
 
 export interface AuditEvent {
   action: string;
@@ -80,8 +81,10 @@ export interface AppDeps {
   enabledSources?: readonly string[];
   /** Who may create an account (default `invite`). */
   registrationMode?: RegistrationMode;
-  /** Social login providers that are configured; empty until the OAuth flow exists (docs/security.md#social-login). */
-  oauthProviders?: readonly OAuthProvider[];
+  /** Social login (docs/security.md#social-login); absent or without credentials means no provider is offered. */
+  oauth?: OAuthConfig;
+  /** Social login steps per IP per hour. */
+  oauthLimit?: number;
   /** Signups per IP per hour. */
   signupLimit?: number;
 }

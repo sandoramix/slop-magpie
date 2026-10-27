@@ -2,6 +2,7 @@ import { z } from "zod";
 import { FeedbackReason, FeedbackVerdict, ItemKind, ReportStatus, ReportTarget } from "./enums.ts";
 import { Name } from "./common.ts";
 import { MediaInfo } from "./items.ts";
+import { MeResponse } from "./users.ts";
 
 const cursorQuery = {
   cursor: z.string().max(200).optional(),
@@ -256,6 +257,50 @@ export const SignupBody = z.object({
   inviteCode: z.string().trim().max(100).optional(),
 });
 export type SignupBody = z.infer<typeof SignupBody>;
+
+// ── social login ────────────────────────────────────────────────────────
+
+/** Where the browser is sent back to; the app registers this scheme (`app.config.ts`). */
+export const OAUTH_APP_REDIRECT = "magpie://oauth";
+
+/** The page to open in the system browser. */
+export const OAuthStartResponse = z.object({ url: z.url() });
+export type OAuthStartResponse = z.infer<typeof OAuthStartResponse>;
+
+/**
+ * `ticket` is what the callback handed to the app. A first-time identity has no account yet: the first
+ * answer is `signup_required` with a suggested name, and the app asks again with `username` (and the
+ * invite code when the server is invite-only).
+ */
+export const OAuthExchangeBody = z.object({
+  ticket: z.string().min(20).max(200),
+  username: z.string().trim().regex(USERNAME_PATTERN, "3-32 letters, digits, _ . -").optional(),
+  inviteCode: z.string().trim().max(100).optional(),
+});
+export type OAuthExchangeBody = z.infer<typeof OAuthExchangeBody>;
+
+export const OAuthExchangeResponse = z.discriminatedUnion("status", [
+  z.object({ status: z.literal("ok"), token: z.string(), me: z.lazy(() => MeResponse) }),
+  z.object({ status: z.literal("signup_required"), provider: OAuthProvider, suggestedUsername: z.string(), inviteRequired: z.boolean() }),
+]);
+export type OAuthExchangeResponse = z.infer<typeof OAuthExchangeResponse>;
+
+export const LinkedIdentity = z.object({
+  provider: OAuthProvider,
+  email: z.string().nullable(),
+  linkedAt: z.iso.datetime(),
+  lastLoginAt: z.iso.datetime().nullable(),
+});
+export type LinkedIdentity = z.infer<typeof LinkedIdentity>;
+
+export const IdentitiesResponse = z.object({
+  identities: z.array(LinkedIdentity),
+  hasPassword: z.boolean(),
+});
+export type IdentitiesResponse = z.infer<typeof IdentitiesResponse>;
+
+export const ProviderParam = z.object({ provider: OAuthProvider });
+export type ProviderParam = z.infer<typeof ProviderParam>;
 
 export const InviteResponse = z.object({ code: z.string(), expiresAt: z.iso.datetime() });
 export type InviteResponse = z.infer<typeof InviteResponse>;

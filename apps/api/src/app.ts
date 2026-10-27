@@ -27,6 +27,8 @@ export function createApp(deps: AppDeps) {
   const loginLimiter = createFailureLimiter({ max: 10, windowMs: 15 * 60 * 1000 });
   // counts every signup attempt per IP, successful or not
   const signupLimiter = createFailureLimiter({ max: deps.signupLimit ?? 5, windowMs: 60 * 60 * 1000 });
+  // every social login start, callback and exchange counts, per IP
+  const oauthLimiter = createFailureLimiter({ max: deps.oauthLimit ?? 60, windowMs: 60 * 60 * 1000 });
 
   const api = new Hono()
     // public: no bearer token
@@ -34,7 +36,7 @@ export function createApp(deps: AppDeps) {
     // authorized by the URL signature instead
     .route("/media", mediaRoutes(deps))
     // public too: it is how a password turns into a token
-    .route("/auth", authRoutes(deps, loginLimiter, signupLimiter))
+    .route("/auth", authRoutes(deps, loginLimiter, signupLimiter, oauthLimiter))
     // everything below needs the token, including unknown paths (401 before 404)
     .use("*", bearerAuth({ token: deps.apiToken, accounts: deps.accounts, limiter, trustProxy: deps.trustProxy, audit: deps.audit }))
     .route("/me", meRoutes(deps))
