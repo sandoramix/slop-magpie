@@ -6,6 +6,11 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-27
+### Added
+
+- Followers and following lists: tap the counts on your profile card in Settings (or on anyone's profile) to see who follows whom. Every row has a one-tap Unfollow, Follow back or Follow button.
+
 ## [2.1.0] - 2026-10-27
 ### Added
 

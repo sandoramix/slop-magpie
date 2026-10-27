@@ -46,17 +46,18 @@ const SHARE_MODES: { mode: ShareMode; label: string }[] = [
   { mode: "later", label: "Save for later" },
 ];
 
-function Count({ value, label }: { value: number | string; label: string }) {
+function Count({ value, label, onPress }: { value: number | string; label: string; onPress?: () => void }) {
   return (
-    <View className="flex-1 items-center">
+    <Pressable onPress={onPress} disabled={!onPress} className="flex-1 items-center">
       <Text className="text-lg font-bold">{value}</Text>
-      <Text className="text-xs text-muted-foreground">{label}</Text>
-    </View>
+      <Text className={onPress ? "text-xs text-primary" : "text-xs text-muted-foreground"}>{label}</Text>
+    </Pressable>
   );
 }
 
 /** Who you are and how you are doing: avatar initial, name, counts, bio and how much of the library is filed. */
 function ProfileCard() {
+  const router = useRouter();
   const me = useMe();
   const account = useActiveAccount();
   const progress = useProgress();
@@ -102,8 +103,20 @@ function ProfileCard() {
       <View className="flex-row">
         <Count value={p?.itemsImported ?? "–"} label="items" />
         <Count value={p?.publicItems ?? "–"} label="shared" />
-        <Count value={p?.followers ?? "–"} label="followers" />
-        <Count value={p?.following ?? "–"} label="following" />
+        <Count
+          value={p?.followers ?? "–"}
+          label="followers"
+          onPress={() => {
+            router.push({ pathname: "/follows", params: { name, tab: "followers" } });
+          }}
+        />
+        <Count
+          value={p?.following ?? "–"}
+          label="following"
+          onPress={() => {
+            router.push({ pathname: "/follows", params: { name, tab: "following" } });
+          }}
+        />
       </View>
 
       {editing ? (
@@ -225,6 +238,7 @@ export default function SettingsScreen() {
       <ProfileCard />
 
       <Section title="Activity">
+        <Row icon={Users} label="Followers and following" onPress={() => { router.push({ pathname: "/follows", params: { name: name ?? "", tab: "followers" } }); }} />
         <Row icon={Bell} label="Notifications" badge={notifications.data?.unreadCount} onPress={go("/notifications")} />
         <Row icon={MessageSquareHeart} label="Feedback" onPress={go("/feedback")} />
         <Row icon={Bookmark} label="Saved posts" onPress={go("/saved")} />

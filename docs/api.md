@@ -164,6 +164,7 @@ All additive to v1 (new routes and optional fields only, D24). Concepts in [soci
 | GET | `/dashboard/feedback` | `tab=given\|received`, `verdict`, `itemId`, `cursor`, `limit` |
 | GET | `/profiles/search?q=` | find people |
 | GET | `/profiles/:name`, `/profiles/:name/posts` | profile with counts; their public posts |
+| GET | `/profiles/:name/followers`, `/profiles/:name/following` | up to 200 people, newest follow first, each with `followedByMe` so a row can offer Follow or Unfollow |
 | PUT / DELETE | `/profiles/:name/follow` | follow or unfollow |
 | PUT / DELETE | `/profiles/:name/block` | block (also ends follows) or unblock |
 | GET | `/profiles/blocked` | people you blocked |

@@ -157,7 +157,7 @@ function afterPostChange(qc: QueryClient, post?: PostDetail): void {
   const { activeId, actAs } = useAccounts.getState();
   const scope = `${activeId ?? ""}:${actAs?.id ?? ""}`;
   if (post) qc.setQueryData(["post", scope, post.id], post);
-  void qc.invalidateQueries({ predicate: (q) => ["posts", "prompts", "progress", "feedback", "profile", "notifications"].includes(String(q.queryKey[0])) });
+  void qc.invalidateQueries({ predicate: (q) => ["posts", "prompts", "progress", "feedback", "profile", "notifications", "follows"].includes(String(q.queryKey[0])) });
 }
 
 export function usePostActions(id: string) {
@@ -307,4 +307,17 @@ export function useUnblock() {
 /** Deletes the signed-in account and everything in it; `confirm` is the username. */
 export function useDeleteMyAccount() {
   return useMutation({ mutationFn: (confirm: string) => request("DELETE", "/me", { body: { confirm }, schema: NoContent }) });
+}
+
+// ── followers and following ─────────────────────────────────────────────
+
+export type FollowKind = "followers" | "following";
+
+export function useFollows(name: string, kind: FollowKind) {
+  const [scope, enabled] = useScope();
+  return useQuery({
+    queryKey: ["follows", scope, name, kind],
+    enabled: enabled && name !== "",
+    queryFn: async () => (await request("GET", `/profiles/${encodeURIComponent(name)}/${kind}`, { schema: PeopleResponse })).people,
+  });
 }

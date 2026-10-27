@@ -1,7 +1,7 @@
 import type { Profile } from "@magpie/shared/api";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Flag, UserCheck, UserPlus, UserX } from "lucide-react-native";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
 import { PostGrid } from "@/components/post-grid";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -29,12 +29,24 @@ function Header({ profile }: { profile: Profile }) {
         <Text className="text-sm">
           <Text className="font-bold">{profile.postCount}</Text> posts
         </Text>
-        <Text className="text-sm">
-          <Text className="font-bold">{profile.followerCount}</Text> followers
-        </Text>
-        <Text className="text-sm">
-          <Text className="font-bold">{profile.followingCount}</Text> following
-        </Text>
+        <Pressable
+          onPress={() => {
+            router.push({ pathname: "/follows", params: { name: profile.name, tab: "followers" } });
+          }}
+        >
+          <Text className="text-sm">
+            <Text className="font-bold">{profile.followerCount}</Text> followers
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            router.push({ pathname: "/follows", params: { name: profile.name, tab: "following" } });
+          }}
+        >
+          <Text className="text-sm">
+            <Text className="font-bold">{profile.followingCount}</Text> following
+          </Text>
+        </Pressable>
       </View>
 
       {profile.isMe ? (
