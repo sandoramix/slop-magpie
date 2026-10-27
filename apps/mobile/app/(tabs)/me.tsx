@@ -4,6 +4,7 @@ import { Bell, Bookmark, MessageSquareHeart, Settings, UserRound, UserX } from "
 import { useEffect, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, View } from "react-native";
 import { ActAsBanner } from "@/components/account-chrome";
+import { AppVersionCard } from "@/components/app-version-card";
 import { ProgressBar } from "@/components/progress-bar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
@@ -69,6 +70,10 @@ export default function MeScreen() {
         <View className="gap-1 p-4">
           <Text className="text-2xl font-bold">{me.data?.displayName ?? name ?? "Me"}</Text>
           {name ? <Text className="text-sm text-muted-foreground">@{name}</Text> : null}
+        </View>
+
+        <View className="px-4 pb-4">
+          <AppVersionCard />
         </View>
 
         {p && (
@@ -170,7 +175,7 @@ export default function MeScreen() {
           icon={Settings}
           label="Settings"
           onPress={() => {
-            router.push("/(tabs)/settings");
+            router.push("/settings");
           }}
         />
         <View className="h-16" />

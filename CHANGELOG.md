@@ -5,6 +5,10 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+### Fixed
+
+- Settings opens again: it was a hidden tab that sent you back to Sort. It is a normal screen now, reached from the Me page.
+- The Me page shows the installed version, whether an update is available, a button to check, and What's new.
 
 ## [2.0.1] - 2026-10-27
 ### Fixed

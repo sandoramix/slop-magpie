@@ -62,8 +62,6 @@ export default function TabsLayout() {
           ...(unread > 0 ? { tabBarBadge: unread > 99 ? "99+" : unread } : {}),
         }}
       />
-      {/* reached from Me; kept as a tab route so it keeps the tab bar */}
-      <Tabs.Screen name="settings" options={{ title: "Settings", href: null }} />
     </Tabs>
   );
 }

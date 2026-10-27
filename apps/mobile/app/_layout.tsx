@@ -182,6 +182,7 @@ function Root() {
           <Stack.Screen name="profile/[name]" options={{ title: "" }} />
           <Stack.Screen name="feedback" options={{ title: "Feedback" }} />
           <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
+          <Stack.Screen name="settings" options={{ title: "Settings" }} />
           <Stack.Screen name="blocked" options={{ title: "Blocked people" }} />
           <Stack.Screen name="topics" options={{ title: "Topics" }} />
           <Stack.Screen name="auto-filed" options={{ title: "Filed for you" }} />
