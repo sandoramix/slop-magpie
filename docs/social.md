@@ -60,7 +60,7 @@ Every item detail shows the feedback card (my verdict, aggregate, tried-it butto
 
 ## API
 
-Everything social is `/api/v2` (D24: new required behaviour for lists, new response shapes). `/api/v1` keeps serving the owner's private library unchanged; the new columns have defaults, so migrations are additive.
+Everything social is new routes and optional fields under `/api/v1`, which D24 allows (additive only). Nothing existing changed meaning; the new columns have defaults, so migrations are additive. Full list in [api.md](api.md#social).
 
 ## Phases
 

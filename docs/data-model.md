@@ -162,6 +162,26 @@ Saved searches shown alongside folders.
 
 `deleted_tokens`: `token_hash` (sha256, primary key), `user_name`, `deleted_at`. Written when an account is deleted (its generated token and its sessions) so devices still holding one are told the account was deleted; rows older than a year are purged on the next delete.
 
+### Social tables
+
+See [social.md](social.md) for the rules. All reference `users` and `items` with `ON DELETE CASCADE`, so an owner's delete takes saves, likes and verdicts with it.
+
+| Table | Columns |
+|---|---|
+| `item_saves` | `id`, `user_id`, `item_id`, `note`, `saved_at`, `feedback_snoozed_until`; unique `(user_id, item_id)` |
+| `save_folders` / `save_tags` | `save_id`, `folder_id` / `tag_id`, `added_at`; PK on the pair |
+| `follows` | `follower_id`, `followee_id`, `created_at`; no self follows |
+| `item_likes` | `user_id`, `item_id`, `created_at` |
+| `item_feedback` | `id`, `user_id`, `item_id`, `verdict` (`worked`/`meh`/`failed`), `reasons text[]`, timestamps; unique `(user_id, item_id)` |
+| `item_tried` | `user_id`, `item_id`, `tried_at` — "I tried it" |
+| `notifications` | `id`, `user_id`, `type`, `payload jsonb`, `read_at`, `created_at` |
+| `blocks` | `blocker_id`, `blocked_id`, `created_at` |
+| `reports` | `reporter_id`, `target` (`item`/`user`), `item_id`, `target_user_id` (set null when gone), `reason`, `status`, `resolved_at` |
+| `invites` | `code_hash` (sha256, unique), `created_by`, `expires_at`, `used_by`, `used_at` |
+| `auth_identities` | `user_id`, `provider`, `provider_user_id` (unique pair), `email`, `last_login_at` — social login, prepared |
+
+Added columns: `items.visibility` (`private`/`public`), `items.published_at`, `items.hidden_at` (moderation), `users.bio`, `users.suspended_at`.
+
 ### audit_log
 
 | Column | Type | Notes |
