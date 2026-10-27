@@ -86,6 +86,10 @@ Drizzle schema, migrations and a configured client. Used by api and worker.
 ### packages/storage
 `BlobStore` interface plus drivers (`local`, later `s3`). See [storage.md](storage.md).
 
+## Social layer
+
+Items can be public; other accounts save them as reference items that share the origin's media and disappear when the owner deletes it. See [social.md](social.md).
+
 ## Request flow: saving a link
 
 1. User shares a link (reel, post, video, image, any page) to Magpie → app sends `POST /items { url }`.

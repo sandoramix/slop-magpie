@@ -37,6 +37,16 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 - [x] **Instagram credentials from the app** (admin): upload a session file / cookies without SSH. Store them in the DB (new table, additive migration), worker writes them to `SESSIONS_DIR` / a private cookies copy when they are newer than the file, then runs `session-check` immediately. Show the session state (`ok`/`dead`, last check) in the admin screen.
 - [ ] Optional: shorter `session-check` interval while the state is `dead`
 
+## Social layer
+
+Public posts, saves, follows, likes, quick feedback, a progress dashboard (requested 2026-10-27). Design in [social.md](social.md).
+
+- [ ] 1. Docs, `visibility` + `origin_item_id` schema, shared enums
+- [ ] 2. Publish, save, delete cascade, follow, like, feed, explore, notifications (`/api/v2`)
+- [ ] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation
+- [ ] 4. Feedback prompts + "I tried it", dashboard (progress, given/received feedback), per-item feedback card
+- [ ] 5. Smarter organization: auto-file with undo, keyword merge/phrases, similar posts, feed ranking
+
 ## M0 — Scaffold
 - [x] pnpm + turborepo monorepo, tsconfig base, eslint, vitest
 - [x] `packages/shared`: t3-env fragments, source registry (`instagram`, `generic`) + URL normalizer, SSRF-safe URL validation, API schemas

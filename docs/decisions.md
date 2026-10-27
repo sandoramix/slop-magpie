@@ -147,3 +147,17 @@ Instagram revokes sessions and flags server-side logins on purpose, so no single
 Replacing the Instagram session or cookies needed SSH access to the Pi, which made every expiry a chore.
 **Decision:** table `source_credentials` (`source`, `kind` = `session` | `cookies` | `state`, `content`, `updated_at`), written by admin-only routes under `/sources/:id/credentials`. It has no `user_id` on purpose: the login belongs to the deployment, not to a library. The worker syncs rows to files in `SESSIONS_DIR` when they are newer than the file (so a session the tool renewed itself is not overwritten by an older upload) and mirrors its session verdict into the `state` row for the app. The API never returns content, never logs it and audits only that a change happened.
 **Consequences:** secrets sit in Postgres next to the data they unlock; the database is the owner's own instance. The sessions volume mount stays worker-only, so the API container needs no extra volume.
+
+
+## D31 — Social layer on `items`, saves are references (2026-10-27)
+The owner wants a Pinterest-like network: public posts, saves by others, likes, follows, quick feedback. A full `posts` + `saves` split would rewrite every route, job and test.
+**Decision:** keep `items` as one entry in one library. Add `visibility` (`private` | `public`) and `origin_item_id` (FK to `items`, `ON DELETE CASCADE`). Saving someone's public item creates an item in the saver's library with the text metadata copied and no `media` rows; media is read through the origin. Details in [social.md](social.md).
+**Consequences:** search, categorize and organization work on saves without changes; only media resolution, storage accounting and the worker (never fetches a save) need to know about origins. Private items never dedupe across accounts.
+
+## D32 — The owner's delete removes the post for everyone (2026-10-27)
+**Decision:** deleting (or un-publishing) an origin item cascades to all its saves, likes and feedback immediately; savers and likers get a `post_removed` / `post_unshared` notification first. A saver's delete only removes their own row.
+**Consequences:** saves are a convenience, not an archive: nothing outlives the owner's decision. The app must warn the owner with the saver count before un-publishing.
+
+## D33 — Open registration is a switch, default invite-only (2026-10-27)
+**Decision:** `REGISTRATION_MODE=invite|open`, default `invite`. Signup, invites, rate limits, reports, blocks and moderation tools ship before `open` is supported. Supersedes the "no roles, sharing or teams" scope in D23: the admin/user roles stay as they are, and public visibility, follows and saves are the only cross-account features.
+**Consequences:** authorization must distinguish "my library" from "public to everyone"; every cross-account query goes through one visibility-aware helper.
