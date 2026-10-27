@@ -2,13 +2,14 @@ import { sql } from "drizzle-orm";
 import { bigint, boolean, check, index, integer, jsonb, pgTable, smallint, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAt, id, timestamptz, tsvector } from "./columns.ts";
 import { ownerId } from "./users.ts";
-import { availability, fetchStatus, itemKind, mediaType, workflow } from "./enums.ts";
+import { availability, fetchStatus, itemKind, mediaType, visibility, workflow } from "./enums.ts";
 
 export const items = pgTable(
   "items",
   {
     id: id(),
     userId: ownerId(),
+    visibility: visibility().notNull().default("private"),
     sourceUrl: text().notNull(),
     canonicalUrl: text().notNull(),
     // registry id, validated in app code; not a pg enum so new sources need no migration
@@ -53,6 +54,7 @@ export const items = pgTable(
   (t) => [
     uniqueIndex("items_canonical_url_key").on(t.userId, t.canonicalUrl),
     uniqueIndex("items_source_item_key").on(t.userId, t.source, t.sourceItemId).where(sql`${t.sourceItemId} is not null`),
+    index("items_public_idx").on(t.savedAt.desc()).where(sql`${t.visibility} = 'public'`),
     index("items_source_idx").on(t.source),
     index("items_saved_at_idx").on(t.userId, t.savedAt.desc()),
     index("items_workflow_idx").on(t.workflow),

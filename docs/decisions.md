@@ -149,13 +149,12 @@ Replacing the Instagram session or cookies needed SSH access to the Pi, which ma
 **Consequences:** secrets sit in Postgres next to the data they unlock; the database is the owner's own instance. The sessions volume mount stays worker-only, so the API container needs no extra volume.
 
 
-## D31 — Social layer on `items`, saves are references (2026-10-27)
-The owner wants a Pinterest-like network: public posts, saves by others, likes, follows, quick feedback. A full `posts` + `saves` split would rewrite every route, job and test.
-**Decision:** keep `items` as one entry in one library. Add `visibility` (`private` | `public`) and `origin_item_id` (FK to `items`, `ON DELETE CASCADE`). Saving someone's public item creates an item in the saver's library with the text metadata copied and no `media` rows; media is read through the origin. Details in [social.md](social.md).
-**Consequences:** search, categorize and organization work on saves without changes; only media resolution, storage accounting and the worker (never fetches a save) need to know about origins. Private items never dedupe across accounts.
-
+## D31 — Social layer on `items`, saves are bookmarks (2026-10-27)
+The owner wants a Pinterest-like network: public posts, saves by others, likes, follows, quick feedback. A save is a bookmark, not an import: the saver never gets their own copy of the post.
+**Decision:** keep `items` as one entry in one library, created only by importing. Add `items.visibility` (`private` | `public`). A save is a row in `item_saves` (FK to the item, `ON DELETE CASCADE`) with its own `save_folders` / `save_tags` links so it can be filed. Importing a URL always creates a private item, even when it matches a public one. Details in [social.md](social.md).
+**Consequences:** the existing item code is untouched; folder, tag and search views must also list saves (a union at the query layer). Private content never touches another account.
 ## D32 — The owner's delete removes the post for everyone (2026-10-27)
-**Decision:** deleting (or un-publishing) an origin item cascades to all its saves, likes and feedback immediately; savers and likers get a `post_removed` / `post_unshared` notification first. A saver's delete only removes their own row.
+**Decision:** deleting (or un-publishing) an item cascades to all its saves, likes and feedback immediately; savers and likers get a `post_removed` / `post_unshared` notification first. A saver's delete only removes their own row.
 **Consequences:** saves are a convenience, not an archive: nothing outlives the owner's decision. The app must warn the owner with the saver count before un-publishing.
 
 ## D33 — Open registration is a switch, default invite-only (2026-10-27)

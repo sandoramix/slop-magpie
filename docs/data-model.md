@@ -46,6 +46,7 @@ One saved piece of content (a reel, a post, a carousel, a pin).
 | fetch_attempts | int | default 0 |
 | availability | enum `availability` | original still online: `available`, `gone`, `unknown` |
 | availability_checked_at | timestamptz | last availability check |
+| visibility | enum `visibility` | `private` (default) or `public`; public items are readable by every account and can be saved by others ([social.md](social.md)) |
 | workflow | enum `workflow` | `inbox`, `to_try`, `done`, `reference` — default `inbox` |
 | favorite | boolean | default false |
 | rating | smallint | 1–5, nullable |

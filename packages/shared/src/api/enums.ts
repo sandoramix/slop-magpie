@@ -17,7 +17,11 @@ export const workflows = ["inbox", "to_try", "done", "reference"] as const;
 export const Workflow = z.enum(workflows);
 export type Workflow = z.infer<typeof Workflow>;
 
-export const mediaTypes = ["video", "image"] as const;
+export const visibilities = ["private", "public"] as const;
+export const Visibility = z.enum(visibilities);
+export type Visibility = z.infer<typeof Visibility>;
+
+export const mediaTypes =["video", "image"] as const;
 export const MediaType = z.enum(mediaTypes);
 export type MediaType = z.infer<typeof MediaType>;
 

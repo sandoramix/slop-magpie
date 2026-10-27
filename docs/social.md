@@ -4,39 +4,36 @@ Magpie grows from private archives into a shared place: people publish what they
 
 ## Model
 
-There is no separate "post" table. An `items` row stays one entry in one person's library (D23). Two columns add sharing:
+There is no separate "post" table. An `items` row stays one entry in one person's library and is always created by importing a URL (D23). Sharing adds:
 
-- `items.visibility` — `private` (default) or `public`. Public items are readable by every signed-in account.
-- `items.origin_item_id` — nullable FK to `items.id`, `ON DELETE CASCADE`. Set on a **save**: the copy of someone else's public item that lives in another library.
+- `items.visibility` — `private` (default) or `public`. Public items are readable by every signed-in account. Only the owner can change it.
+- `item_saves` — `(id, user_id, item_id → items ON DELETE CASCADE, note, saved_at)`. A **save** is a bookmark on someone else's public item. It is not an item: the saver owns no copy, no media and cannot edit the content. Unique `(user_id, item_id)`; owners cannot save their own items.
+- `save_folders`, `save_tags` — links from a save to the saver's own folders and tags, so saved posts can be filed alongside the saver's own items. Folder and tag views, search and smart folders list both kinds of entry.
 
-A save is a normal item for its saver: own folders, tags, notes, rating, workflow, favorite, custom fields, keywords, suggestions. At save time the text metadata is copied (`source`, `canonical_url`, `kind`, author, caption, title, `posted_at`), so search, categorize and the query language work unchanged. **Media is not copied**: a save has no `media` rows; reads resolve media through the origin (`content id = origin_item_id ?? id`). The worker never fetches a save.
+Importing is separate from saving: pasting or sharing a URL always creates a normal private item and downloads its own media, even when the URL matches someone's public item. Two accounts importing the same URL have two independent items.
 
 ### Ownership and deletion
 
-The owner of the origin item controls its existence.
+The owner of an item controls its existence (D32).
 
-- Owner deletes the item → the cascade removes every save of it, plus its likes and feedback. Media exists once, under the origin, and is deleted with it.
-- Before the delete, everyone who saved or liked it gets a `post_removed` notification (title + owner handle only; no media remains).
+- Owner deletes a public item → its saves, likes and feedback are removed by the FK cascade. Before the delete, everyone who saved or liked it gets a `post_removed` notification (title + owner handle only; no media remains).
 - Owner switches a public item back to private → same cascade and a `post_unshared` notification. The app warns first with the number of savers.
-- Saver deletes a save → only that row goes; the origin and its media are untouched.
-- Deleting an account deletes its items and therefore its saves in other libraries, with notifications.
-
-Same URL imported separately by two people are two independent origin items with their own media (private content never dedupes across accounts, so one person's delete cannot reach into another's private library). Pasting a URL that matches someone's **public** item answers "already on Magpie" and offers a save instead of a download.
+- Saver deletes a save → only that bookmark (and its folder/tag links) goes; the item is untouched.
+- Deleting an account deletes its items and therefore the saves of them in other libraries, with notifications.
 
 ### Storage accounting
 
-A save has no media rows, so it counts 0 bytes toward the saver's limit (D27).
-
+A save adds no media, so it counts 0 bytes toward the saver's limit (D27).
 ## Other tables (added in phase 2+)
 
 | Table | Purpose |
 |---|---|
 | `follows` | `(follower_id, followee_id)` — the feed is public items of followed accounts |
-| `item_likes` | `(user_id, item_id)` — like count on the origin; liking a save likes its origin |
+| `item_likes` | `(user_id, item_id)` — like count on the item |
 | `notifications` | `user_id`, `type`, `payload` (jsonb, zod validated), `read_at` |
 | `reports`, `blocks` | safety: a report on an item or account, a block between two accounts |
 | `invites` | single-use codes when `REGISTRATION_MODE=invite` |
-| `item_feedback` | `(user_id, origin item, verdict, reason chips, tried_at)` — see below |
+| `item_feedback` | `(user_id, item_id, verdict, reason chips, tried_at)` — see below |
 
 Profiles: `users.handle` (the username), `display_name`, `bio`, `avatar_key` (a BlobStore key).
 
@@ -50,7 +47,7 @@ One tap, never a free-text form.
 
 - Verdict: `worked` | `meh` | `failed`, optional reason chips from a fixed list.
 - Prompted once per save, a few days after saving a post from someone else (on the home feed), and anytime through an **I tried it** button on the item. Dismissing "not yet" snoozes it; the prompt never repeats after an answer. The verdict can always be changed.
-- The origin shows an aggregate ("worked for 82% of 31"). Its owner also sees the reason-chip breakdown.
+- The item shows an aggregate ("worked for 82% of 31"). Its owner also sees the reason-chip breakdown.
 
 ### Dashboard
 
@@ -67,8 +64,8 @@ Everything social is `/api/v2` (D24: new required behaviour for lists, new respo
 
 ## Phases
 
-1. Docs, `visibility` + `origin_item_id` schema, shared enums.
-2. Save/publish/delete cascade, follow, like, feed, explore, notifications.
+1. Docs, `visibility` column, shared enums.
+2. Publish, save (`item_saves`), delete cascade, follow, like, feed, explore, notifications.
 3. Safety: `REGISTRATION_MODE`, invites, signup, rate limits, reports, blocks, moderation.
 4. Feedback and the dashboard.
 5. Smarter organization (auto-file with undo, keyword merge, similar posts, ranking).

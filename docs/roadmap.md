@@ -41,8 +41,8 @@ Organizing is the focus of the app: keywords, suggestions and tags first, everyt
 
 Public posts, saves, follows, likes, quick feedback, a progress dashboard (requested 2026-10-27). Design in [social.md](social.md).
 
-- [ ] 1. Docs, `visibility` + `origin_item_id` schema, shared enums
-- [ ] 2. Publish, save, delete cascade, follow, like, feed, explore, notifications (`/api/v2`)
+- [ ] 1. Docs, `visibility` column, shared enums
+- [ ] 2. Publish, save (`item_saves`), delete cascade, follow, like, feed, explore, notifications (`/api/v2`)
 - [ ] 3. Safety: `REGISTRATION_MODE` (default `invite`), invites, signup, rate limits, reports, blocks, moderation
 - [ ] 4. Feedback prompts + "I tried it", dashboard (progress, given/received feedback), per-item feedback card
 - [ ] 5. Smarter organization: auto-file with undo, keyword merge/phrases, similar posts, feed ranking

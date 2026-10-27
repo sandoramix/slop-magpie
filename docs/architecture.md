@@ -88,7 +88,7 @@ Drizzle schema, migrations and a configured client. Used by api and worker.
 
 ## Social layer
 
-Items can be public; other accounts save them as reference items that share the origin's media and disappear when the owner deletes it. See [social.md](social.md).
+Items can be public; other accounts bookmark them (`item_saves`) and file the bookmark in their own folders and tags. A bookmark disappears when the owner deletes or un-publishes the item. See [social.md](social.md).
 
 ## Request flow: saving a link
 
