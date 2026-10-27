@@ -5,6 +5,8 @@ All notable changes to Magpie are listed here. The format follows [Keep a Change
 This file is shown in the app ("What's new") and used as the GitHub release notes, so entries are written for users, not as commit messages. See [docs/releases.md](docs/releases.md).
 
 ## [Unreleased]
+
+## [2.0.0] - 2026-10-27
 ### Added
 
 - Share what you save: turn an item public and other people can like it, save it to their own folders and tags, and follow you. A new **Explore** tab shows posts from people you follow, new posts and popular ones, and lets you find people.
@@ -19,11 +21,17 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 - Sign in or sign up with Google, GitHub or Discord, and link them to an existing account in Settings. The buttons are always visible; each one is greyed out until the server you use has it set up. Admins can see reports and create invite codes under Settings.
 - Delete your own account from Settings, and see or undo the people you blocked from the Me tab.
 - Report and block people. Servers can now allow sign-up from the app (with an invite code from the admin by default).
+- Links from TikTok, YouTube, Pinterest, X, Reddit and Facebook are now recognized: duplicates of the same post are caught across URL variants, share and short links are followed, Reddit comments you share are kept, and a blocked site still saves a bookmark with title and preview.
 
 ### Changed
 
 - Keywords are smarter: `#SlowCooker`, `#slow_cooker` and "slow cooker" are now the same keyword, phrases that repeat in a caption are kept, and plurals merge with their singular. Use "Refresh suggestions" in the Sort tab once to apply this to items you already saved.
 
+### Upgrade notes
+
+- New server settings, all optional: `REGISTRATION_MODE` (`invite` by default, or `open`), `DISABLED_SOURCES` and `DISABLED_STRATEGIES` (comma lists; every site and download method is on unless listed), `EMBEDDER` (`hash` by default, `transformers`, or `off`), and `GOOGLE_`, `GITHUB_` and `DISCORD_` `CLIENT_ID` / `CLIENT_SECRET` pairs that switch each social login on. Give `DISABLED_SOURCES` the same value on the API and the worker.
+- The database gets five additive migrations on startup. Older app builds keep working.
+- Items saved before this version get topics and the new keyword spelling after you run "Refresh suggestions" once in the Sort tab.
 ## [1.8.0] - 2026-10-26
 ### Changed
 
