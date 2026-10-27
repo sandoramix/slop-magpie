@@ -169,6 +169,15 @@ export default function SettingsScreen() {
         </View>
       ) : null}
 
+      <Button
+        variant="outline"
+        onPress={() => {
+          router.push("/stop-terms");
+        }}
+      >
+        <Text>Ignored keywords</Text>
+      </Button>
+
       {me.data ? <IdentitiesSection /> : null}
       {me.data ? <DeleteAccountSection username={me.data.name} isRoot={me.data.id === ROOT_ADMIN_ID} /> : null}
 

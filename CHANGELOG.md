@@ -11,6 +11,10 @@ This file is shown in the app ("What's new") and used as the GitHub release note
 - Quick feedback: a few days after you save someone's post the app asks "How did it go?" (worked, meh, didn't work, with optional reasons), or tap "I tried it" yourself. Every shared post shows how it worked out for others.
 - A **Me** tab with your progress (how much of your library is filed, streak, shares and saves) and all feedback, either given by you or received on your posts, filterable per post.
 - Notifications, shown on the Me tab: new followers, saves and feedback on your posts, and a notice when a post you saved is deleted or made private by its owner (it then disappears from your saved posts).
+- After the app files items for you, a banner asks whether to keep or undo it (Review lists them one by one). Undone filing is remembered and not proposed again.
+- A Topics view groups your library by what items are about and turns a group into a folder in one tap (Sort tab, "Find topics in my library"). Older items join after "Refresh suggestions".
+- Ignored keywords (Settings): words like "recipe" that should never become keywords; adding one clears it from everything already saved.
+- Admins can restore hidden posts and suspended accounts from the moderation screen.
 - Posts show "More like this" from other people, and Popular ranks posts by saves and how many people said they worked.
 - Sign in or sign up with Google, GitHub or Discord, and link them to an existing account in Settings. The buttons are always visible; each one is greyed out until the server you use has it set up. Admins can see reports and create invite codes under Settings.
 - Delete your own account from Settings, and see or undo the people you blocked from the Me tab.

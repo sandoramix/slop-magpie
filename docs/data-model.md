@@ -181,6 +181,8 @@ See [social.md](social.md) for the rules. All reference `users` and `items` with
 | `oauth_transactions` | `kind` (`state`/`ticket`), `token_hash`, `provider`, `payload`, `expires_at` — single-use records of a social login in progress |
 | `auth_identities` | `user_id`, `provider`, `provider_user_id` (unique pair), `email`, `last_login_at` — social login, prepared |
 
+Also: `items.embedding real[]` (see [worker-pipeline.md](worker-pipeline.md#embeddings-and-topics)), `stop_terms(user_id, term)`, `item_folder_rejections` and `item_tag_rejections(item_id, folder_id|tag_id)`.
+
 Added columns: `items.visibility` (`private`/`public`), `items.published_at`, `items.hidden_at` (moderation), `users.bio`, `users.suspended_at`.
 
 ### audit_log

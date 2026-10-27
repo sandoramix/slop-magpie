@@ -49,6 +49,12 @@ Builds `item_keywords`:
 - `caption`: top terms from caption (stopwords IT+EN removed). Two-word phrases that repeat in the caption are terms too, and a plural counts as its singular when both appear.
 - `transcript` / `ocr`: same, once v2 steps exist.
 
+### Embeddings and topics
+`extract` also stores a meaning vector in `items.embedding` (a `real[]` of 384 numbers, no database extension needed, so D8 still holds). `EMBEDDER` picks how: `hash` (default: feature hashing of the item's keywords, no model, no download), `transformers` (a sentence model through transformers.js; not a dependency, install `@huggingface/transformers` in `apps/worker` first, falls back to `hash` with a log line if it cannot start) or `off`. `GET /topics` clusters one library's vectors (`packages/shared/src/topics`: leader clustering plus a refinement pass, labelled by the words members share). Changing the embedder leaves old vectors of another length behind; the API clusters the larger group, and "Refresh suggestions" re-extracts everything.
+
+### Stop terms and undone filing
+`extract` drops keywords on the owner's stop list (`stop_terms`, a term or any word of a phrase). `categorize` skips folders and tags the owner undid (`item_folder_rejections`, `item_tag_rejections`), so automatic filing is never repeated after an undo.
+
 ### categorize
 Produces folder/tag suggestions with confidence 0–1.
 - **v1 — rules:** keyword → folder/tag rules learned from manual assignments: for each keyword, count how often items carrying it ended up in each folder/tag. Score = weighted vote, normalized.

@@ -183,6 +183,9 @@ function Root() {
           <Stack.Screen name="feedback" options={{ title: "Feedback" }} />
           <Stack.Screen name="notifications" options={{ title: "Notifications" }} />
           <Stack.Screen name="blocked" options={{ title: "Blocked people" }} />
+          <Stack.Screen name="topics" options={{ title: "Topics" }} />
+          <Stack.Screen name="auto-filed" options={{ title: "Filed for you" }} />
+          <Stack.Screen name="stop-terms" options={{ title: "Ignored words" }} />
           <Stack.Screen name="saved" options={{ title: "Saved posts" }} />
           <Stack.Screen name="list" options={{ title: "" }} />
           <Stack.Screen name="triage" options={{ title: "Sort" }} />
