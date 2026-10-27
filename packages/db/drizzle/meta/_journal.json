@@ -71,6 +71,13 @@
       "when": 1793092551978,
       "tag": "0009_cute_owl",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793092845008,
+      "tag": "0010_brave_reavers",
+      "breakpoints": true
     }
   ]
 }

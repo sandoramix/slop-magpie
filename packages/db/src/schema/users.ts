@@ -21,6 +21,10 @@ export const users = pgTable(
     passwordHash: text(),
     // cap on the bytes of original media the account may store; null = unlimited. Set by the admin.
     storageLimitBytes: bigint({ mode: "number" }).default(DEFAULT_STORAGE_LIMIT_BYTES),
+    // shown on the public profile
+    bio: text(),
+    // a suspended account cannot sign in or be seen (moderation)
+    suspendedAt: timestamptz(),
     createdAt: createdAt(),
   },
   (t) => [

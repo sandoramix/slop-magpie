@@ -21,7 +21,24 @@ export const visibilities = ["private", "public"] as const;
 export const Visibility = z.enum(visibilities);
 export type Visibility = z.infer<typeof Visibility>;
 
-export const mediaTypes =["video", "image"] as const;
+export const feedbackVerdicts = ["worked", "meh", "failed"] as const;
+export const FeedbackVerdict = z.enum(feedbackVerdicts);
+export type FeedbackVerdict = z.infer<typeof FeedbackVerdict>;
+
+/** Quick reason chips on a verdict; a fixed list so answers can be counted. */
+export const feedbackReasons = ["easy", "useful", "inspiring", "too_hard", "too_long", "outdated", "not_as_described", "broken"] as const;
+export const FeedbackReason = z.enum(feedbackReasons);
+export type FeedbackReason = z.infer<typeof FeedbackReason>;
+
+export const reportTargets = ["item", "user"] as const;
+export const ReportTarget = z.enum(reportTargets);
+export type ReportTarget = z.infer<typeof ReportTarget>;
+
+export const reportStatuses = ["open", "actioned", "dismissed"] as const;
+export const ReportStatus = z.enum(reportStatuses);
+export type ReportStatus = z.infer<typeof ReportStatus>;
+
+export const mediaTypes = ["video", "image"] as const;
 export const MediaType = z.enum(mediaTypes);
 export type MediaType = z.infer<typeof MediaType>;
 

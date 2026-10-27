@@ -10,6 +10,8 @@ export const items = pgTable(
     id: id(),
     userId: ownerId(),
     visibility: visibility().notNull().default("private"),
+    // set by a moderator: the item stays with its owner but drops out of every public view
+    hiddenAt: timestamptz(),
     sourceUrl: text().notNull(),
     canonicalUrl: text().notNull(),
     // registry id, validated in app code; not a pg enum so new sources need no migration
